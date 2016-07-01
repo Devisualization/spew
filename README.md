@@ -24,3 +24,6 @@ So why should we take you seriously? After all glib exists. Well, you're still r
 - [ ] Threading
 - [ ] File system
 - [ ] Timer
+
+## License
+Boost
