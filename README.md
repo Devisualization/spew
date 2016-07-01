@@ -11,7 +11,7 @@ So why should we take you seriously? After all glib exists. Well, you're still r
 ## Tasks
 
 - [ ] General structure
-- [ ] Event loop (basic implementation)
+- [x] Event loop (basic implementation)
 - [ ] Event loop wells:
   - [ ] X11
   - [ ] WinAPI
