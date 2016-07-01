@@ -890,3 +890,8 @@ misc stuff for webpage
 	float: right;
 }
 
+hr.hr_goal {
+	margin-top: 4px;
+	margin-bottom: 14px;
+}
+
