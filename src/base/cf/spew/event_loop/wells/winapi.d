@@ -82,7 +82,7 @@ final class WinAPI_EventLoop_SourceRetriever : EventLoopSourceRetriever {
 		import core.sys.windows.windows : DefWindowProc;
 
 		// only valid for window based events
-		if (msg.hwnd !is null)
+		if (msg.hwnd !is null/+ && msgContextKnown(msg) +/)
 			DefWindowProc(msg.hwnd, msg.message, msg.wParam, msg.lParam);
 	}
 
