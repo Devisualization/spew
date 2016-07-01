@@ -1,5 +1,7 @@
 ﻿module cf.spew.event_loop.defs;
 import cf.spew.events.defs : EventSource, Event;
+import std.experimental.allocator : IAllocator;
+import core.time : Duration;
 
 interface IEventLoopThing {
 	@property {
@@ -13,11 +15,7 @@ interface EventLoopSource : IEventLoopThing {
 		EventSource identifier();
 	}
 
-	/**
-	 * Returns:
-	 * 		If a valid event
-	 */
-	bool nextEvent(ref Event event);
+	EventLoopSourceRetriever nextEventGenerator(IAllocator);
 }
 
 interface EventLoopConsumer : IEventLoopThing {
@@ -35,4 +33,17 @@ interface EventLoopConsumer : IEventLoopThing {
 	 * 		If the event is consumed
 	 */
 	bool processEvent(ref Event event);
+}
+
+interface EventLoopSourceRetriever {
+	/**
+	 * Returns:
+	 * 		If a valid event
+	 */
+	bool nextEvent(ref Event event);
+
+	void handledEvent(ref Event event);
+	void unhandledEvent(ref Event event);
+
+	void hintTimeout(Duration timeout);
 }

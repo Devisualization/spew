@@ -2,12 +2,12 @@
 version(Windows):
 
 import cf.spew.events.defs;
-import core.sys.windows.windows;
+import core.sys.windows.windows : MSG;
 
 enum WinAPI_Events_Types {
-	____ = EventType.from("wapi", "...."),
+	Unknown = EventType.from("wapi", "uknw"),
 }
 
-struct WinAPI_Events {
-	int ____;
+union WinAPI_Events {
+	MSG raw;
 }

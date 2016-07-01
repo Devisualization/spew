@@ -7,6 +7,7 @@
 module cf.spew.event_loop.manager;
 public import cf.spew.event_loop.defs;
 import core.thread : thread_isMainThread;
+import core.time : Duration, seconds;
 
 void execute(bool isMainThread = thread_isMainThread()) {
 	// Execution doesn't just happen in a vacuum.
@@ -35,14 +36,16 @@ void execute(bool isMainThread = thread_isMainThread()) {
 //
 
 void stopExecution(bool stopWithMainThread=true) {
-	atomicStore(stopAuxillaryThreads, true);
+	if (atomicLoad(auxillaryThreadsRunning) > 0)
+		atomicStore(stopAuxillaryThreads, true);
 	
-	if (stopWithMainThread)
+	if (atomicLoad(mainThreadRunning) && stopWithMainThread)
 		atomicStore(stopMainThreadOnly, true);
 }
 
 void stopExecutingOnlyMainThread() {
-	atomicStore(stopMainThreadOnly, true);
+	if (atomicLoad(mainThreadRunning))
+		atomicStore(stopMainThreadOnly, true);
 }
 
 //
@@ -92,6 +95,10 @@ void clearConsumers() {
 bool isMainThreadRunning() { return mainThreadRunning; }
 uint countAuxilaryThreadsRunning() { return auxillaryThreadsRunning; }
 
+void setPerSourceTimeout(Duration timeout = 20.seconds) {
+	perSourceTimeout = timeout;
+}
+
 //
 
 private {
@@ -101,6 +108,8 @@ private {
 	__gshared {
 		IAllocator _allocator;
 		Mutex inUpdateIteration;
+
+		Duration perSourceTimeout;
 
 		EventLoopSource[] sources;
 		EventLoopConsumer[] consumers;
@@ -137,12 +146,8 @@ public import cf.spew.events.defs;
 import core.atomic : atomicLoad, atomicStore, atomicOp;
 
 final class Impl {
-	struct Step {
-		bool delegate(ref Event) source;
-		bool delegate(ref Event)[] consumers;
-	}
-
-	Step[] steps;
+	EventLoopSource[] sources;
+	bool delegate(ref Event)[][] consumers;
 
 	// life time management
 
@@ -155,11 +160,12 @@ final class Impl {
 	~this() {
 		import std.experimental.allocator : dispose;
 
-		foreach(step; steps) {
-			_allocator.dispose(step.consumers);
+		foreach(step; consumers) {
+			_allocator.dispose(step);
 		}
 
-		_allocator.dispose(steps);
+		_allocator.dispose(consumers);
+		_allocator.dispose(sources);
 	}
 
 	void addRef() {
@@ -193,7 +199,6 @@ void performEventImplUpdate() {
 			shared Impl mainThreadImpl = _allocator.make!(shared Impl);
 			shared Impl auxillaryThreadsImpl = _allocator.make!(shared Impl);
 
-
 			size_t mtSc, atSc;
 			foreach(source; sources) {
 				if (source.onMainThread)
@@ -202,8 +207,11 @@ void performEventImplUpdate() {
 					atSc++;
 			}
 
-			mainThreadImpl.steps = cast(shared)_allocator.makeArray!(Impl.Step)(mtSc);
-			auxillaryThreadsImpl.steps = cast(shared)_allocator.makeArray!(Impl.Step)(atSc);
+			mainThreadImpl.sources = cast(shared)_allocator.makeArray!EventLoopSource(mtSc);
+			auxillaryThreadsImpl.sources = cast(shared)_allocator.makeArray!EventLoopSource(atSc);
+
+			mainThreadImpl.consumers = cast(shared)_allocator.makeArray!(bool delegate(ref Event)[])(mtSc);
+			auxillaryThreadsImpl.consumers = cast(shared)_allocator.makeArray!(bool delegate(ref Event)[])(atSc);
 
 			size_t mtSi, atSi;
 			foreach(source; sources) {
@@ -225,11 +233,11 @@ void performEventImplUpdate() {
 				}
 
 				if (source.onMainThread) {
-					mainThreadImpl.steps[mtSi].source = &source.nextEvent;
-					mainThreadImpl.steps[mtSi].consumers = cast(shared)_allocator.makeArray!(bool delegate(ref Event))(mtCc);
+					mainThreadImpl.sources[mtSi] = cast(shared)source;
+					mainThreadImpl.consumers[mtSi] = cast(shared)_allocator.makeArray!(bool delegate(ref Event))(mtCc);
 
 					size_t mtCi;
-					byte lastPriority = byte.min;
+					short lastPriority = byte.min;
 					
 					while(mtCi < mtCc) {
 						foreach(consumer; consumers) {
@@ -237,23 +245,25 @@ void performEventImplUpdate() {
 							
 							if (!consumerToPairWith.isNull && consumerToPairWith.get == sourceId) {
 								if (consumer.onMainThread && lastPriority <= consumer.priority) {
-									mainThreadImpl.steps[mtSi].consumers[mtCi] = cast(shared)&consumer.processEvent;
+									mainThreadImpl.consumers[mtSi][mtCi] = cast(shared)&consumer.processEvent;
 									lastPriority = consumer.priority;
 									mtCi++;
 								}
 							}
 						}
+
+						lastPriority++;
 					}
 
 					mtSi++;
 				}
 				
 				if (source.onAdditionalThreads) {
-					auxillaryThreadsImpl.steps[atSi].source = &source.nextEvent;
-					auxillaryThreadsImpl.steps[mtSi].consumers = cast(shared)_allocator.makeArray!(bool delegate(ref Event))(mtCc);
+					auxillaryThreadsImpl.sources[atSi] = cast(shared)source;
+					auxillaryThreadsImpl.consumers[atSi] = cast(shared)_allocator.makeArray!(bool delegate(ref Event))(mtCc);
 
 					size_t atCi;
-					byte lastPriority = byte.min;
+					short lastPriority = byte.min;
 
 					while(atCi < mtCc) {
 						foreach(consumer; consumers) {
@@ -261,12 +271,14 @@ void performEventImplUpdate() {
 							
 							if (!consumerToPairWith.isNull && consumerToPairWith.get == sourceId) {
 								if (consumer.onAdditionalThreads && lastPriority <= consumer.priority) {
-									auxillaryThreadsImpl.steps[atSi].consumers[atCi] = cast(shared)&consumer.processEvent;
+									auxillaryThreadsImpl.consumers[atSi][atCi] = cast(shared)&consumer.processEvent;
 									lastPriority = consumer.priority;
 									atCi++;
 								}
 							}
 						}
+
+						lastPriority++;
 					}
 
 					atSi++;
@@ -282,43 +294,69 @@ void performEventImplUpdate() {
 }
 
 void executeMainThread() {
+	import std.experimental.allocator : makeArray, dispose;
+
 	assert(!atomicLoad(mainThreadRunning));
 	atomicStore(mainThreadRunning, true);
 
-	Impl impl = atomicLoad(implementationMainloop);
-	impl.addRef;
-	
+	Impl impl;
+	EventLoopSourceRetriever[] sources;
+
 	for(;;) {
 		if (atomicLoad(stopMainThreadOnly)) {
 			atomicStore(stopMainThreadOnly, false);
 			break;
 		}
-		
+
 		performEventImplUpdate();
-		
-		//
 
-		Event event = void;
+		auto impl2 = atomicLoad(implementationMainloop);
+		if (impl !is impl2) {
+			if (impl !is null)
+				impl.removeRef;
 
-	F1: foreach(step; impl.steps) {
-			while(step.source(event)) {
-				foreach(consumer; step.consumers) {
-					if (consumer(event))
-						continue F1;
-				}
+			impl = impl2;
+			impl.addRef;
+
+			sources = _allocator.makeArray!EventLoopSourceRetriever(impl.sources.length);
+			foreach(i, source; impl.sources) {
+				sources[i] = source.nextEventGenerator(_allocator);
+				sources[i].hintTimeout(perSourceTimeout);
 			}
 		}
+
+		//
+
+		Event event;
+
+	F1: foreach(i, source; sources) {
+			while(source.nextEvent(event)) {
+				foreach(consumer; impl.consumers[i]) {
+					if (consumer(event))
+						goto HandledEvent;
+				}
+			}
+
+		UnhandledEvent:
+			source.unhandledEvent(event);
+			continue;
+		HandledEvent:
+			source.handledEvent(event);
+			continue;
+		}
 	}
-	
+
 	impl.removeRef;
+	_allocator.dispose(sources);
 	atomicStore(mainThreadRunning, false);
 }
 
 void executeNonMainThread() {
+	import std.experimental.allocator : makeArray, dispose;
 	atomicOp!"+="(auxillaryThreadsRunning, 1);
 	
-	Impl impl = atomicLoad(implementationAuxillaryLoops);
-	impl.addRef;
+	Impl impl;
+	EventLoopSourceRetriever[] sources;
 
 	for(;;) {
 		if (atomicLoad(stopAuxillaryThreads)) {
@@ -328,20 +366,43 @@ void executeNonMainThread() {
 
 		performEventImplUpdate();
 		
+		auto impl2 = atomicLoad(implementationAuxillaryLoops);
+		if (impl !is impl2) {
+			if (impl !is null)
+				impl.removeRef;
+			
+			impl = impl2;
+			impl.addRef;
+			
+			sources = _allocator.makeArray!EventLoopSourceRetriever(impl.sources.length);
+			foreach(i, source; impl.sources) {
+				sources[i] = source.nextEventGenerator(_allocator);
+				sources[i].hintTimeout(perSourceTimeout);
+			}
+		}
+		
 		//
 
-		Event event = void;
+		Event event;
 
-	F1: foreach(step; impl.steps) {
-			while(step.source(event)) {
-				foreach(consumer; step.consumers) {
+	F1: foreach(i, source; sources) {
+			while(source.nextEvent(event)) {
+				foreach(consumer; impl.consumers[i]) {
 					if (consumer(event))
-						continue F1;
+						goto HandledEvent;
 				}
 			}
+			
+		UnhandledEvent:
+			source.unhandledEvent(event);
+			continue;
+		HandledEvent:
+			source.handledEvent(event);
+			continue;
 		}
 	}
 
 	impl.removeRef;
+	_allocator.dispose(sources);
 	atomicOp!"-="(auxillaryThreadsRunning, 1);
 }

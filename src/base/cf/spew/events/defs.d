@@ -10,7 +10,6 @@ struct Event {
 	///
 	EventType type;
 	
-
 	///
 	union {
 		///
