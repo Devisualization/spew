@@ -16,7 +16,8 @@ So why should we take you seriously? After all glib exists. Well, you're still r
 - [x] Event loop (basic implementation)
 - [ ] Event loop wells:
   - [ ] X11
-  - [ ] WinAPI
+  - [x] WinAPI
+	Although needs translators for the messages it gains from WinAPI.
   - [ ] Cocoa
 - [ ] Event loop consumers:
   - [ ] X11
