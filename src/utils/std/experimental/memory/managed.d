@@ -8,9 +8,9 @@
  * Copyright: <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
  * Authors: $(LINK2 http://cattermole.co.nz, Richard Andrew Cattermole)
  */
-module cf.spew.memory.managed;
+module std.experimental.memory.managed;
 public import std.typecons : tuple;
-import cf.spew.allocator : IAllocator, theAllocator, make, dispose, makeArray;
+import std.experimental.allocator : IAllocator, theAllocator, make, dispose, makeArray;
 import std.typecons : Tuple;
 import std.traits : isArray, isBasicType;
 import std.range : ForeachType;
@@ -123,7 +123,7 @@ interface IMemoryManager {
  *      IMemoryManager, managers, Ownership
  */
 struct managed(MyType) {
-    // this exists for support for e.g. cf.spew.image
+    // this exists for support for e.g. std.experimental.image
     alias PayLoadType = MyType;
 
 @trusted:
