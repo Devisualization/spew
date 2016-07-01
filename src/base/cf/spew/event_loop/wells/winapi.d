@@ -36,7 +36,7 @@ final class WinAPI_EventLoop_SourceRetriever : EventLoopSourceRetriever {
 			QS_ALLINPUT, WAIT_TIMEOUT,
 			MWMO_ALERTABLE, MWMO_INPUTAVAILABLE,
 			PeekMessageW, PM_REMOVE,
-			TranslateMessage;
+			TranslateMessage, DispatchMessageW;
 
 		if (needToWait) {
 			MsgWaitForMultipleObjectsEx(
@@ -48,23 +48,31 @@ final class WinAPI_EventLoop_SourceRetriever : EventLoopSourceRetriever {
 			needToWait = false;
 		}
 
-		if (PeekMessageW(&msg, null, 0, 0, PM_REMOVE) == 0) {
-			needToWait = true;
-			return false;
-		} else {
-			if (msg.hwnd !is null && shouldTranslate)
-				TranslateMessage(&msg);
+		for (;;) {
+			if (PeekMessageW(&msg, null, 0, 0, PM_REMOVE) == 0) {
+				needToWait = true;
+				return false;
+			} else {
+				if (msg.hwnd !is null && shouldTranslate)
+					TranslateMessage(&msg);
 
-			// TODO: translate windowing messages
-			// TODO: translate threading messages
-			// TODO: translate timer messages
-			// TODO: 
+				if (false/+ msgContextKnown(msg) +/) {
 
-			event.source = EventSources.WinAPI;
-			event.type = WinAPI_Events_Types.Unknown;
-			event.winapi.raw = msg;
+					// TODO: translate windowing messages
+					// TODO: translate threading messages
+					// TODO: translate timer messages
+					// TODO: 
 
-			return true;
+					event.source = EventSources.WinAPI;
+					event.type = WinAPI_Events_Types.Unknown;
+					event.winapi.raw = msg;
+
+					return true;
+				} else {
+					DispatchMessageW(&msg);
+					continue;
+				}
+			}
 		}
 	}
 
