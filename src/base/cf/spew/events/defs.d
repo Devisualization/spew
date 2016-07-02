@@ -10,7 +10,7 @@ struct Event {
 	///
 	EventType type;
 	
-	///
+	/// Context e.g. window handle
 	union {
 		///
 		void* wellData1Ptr;
@@ -24,6 +24,14 @@ struct Event {
 		void* wellData2Ptr;
 		///
 		size_t wellData2Value;
+	}
+
+	///
+	union {
+		///
+		void* wellData3Ptr;
+		///
+		size_t wellData3Value;
 	}
 
 	union {
@@ -78,51 +86,5 @@ union EventSource {
 	}
 }
 
-/**
- * 
- * 
- */
-union EventType {
-	private char[8] text_;
-
-	///
-	ulong value;
-	alias value this;
-	
-	struct {
-		///
-		char[4] source;
-		///
-		char[4] identifier;
-	}
-
-	/**
-	 * 
-	 */
-	static EventType from(string source, string identifier)
-	in {
-		assert(source.length <= 4);
-		assert(identifier.length <= 4);
-	} body {
-		char[8] ret = ' ';
-		
-		if (source.length > 0)
-			ret[0 .. source.length] = source[];
-		if (identifier.length > 0)
-			ret[4 .. 4 + identifier.length] = identifier[];
-		
-		return EventType(ret);
-	}
-
-	///
-	string toString() const {
-		import std.string : lastIndexOf;
-		
-		ptrdiff_t i = text_.lastIndexOf(' ');
-		
-		if (i <= 0)
-			return null;
-		else
-			return cast(immutable)text_[0 .. i];
-	}
-}
+///
+alias EventType = EventSource;

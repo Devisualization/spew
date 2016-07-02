@@ -1,14 +1,26 @@
 ﻿module cf.spew.events.windowing;
 import cf.spew.events.defs;
 
+enum Windowing_Events_Types {
+	/// Prefix to determine if it is standard windowing types
+	Prefix = EventType.from("w_"),
+	///
+	Window_Moved = EventType.from("w_moved"),
+	Window_Resized = EventType.from("w_resize"),
+	Window_Focused = EventType.from("w_focus"),
+	Window_RequestClose = EventType.from("w_reqclo"),
+	Window_CursorMoved = EventType.from("w_curmvd"),
+
+}
+
 union Windowing_Events {
 	struct {
-		// cursor moved and stopped moving
+		// cursor moved and stopped moving + window moved
 
 		///
-		CursorEventAction cursorAction;
+		//REMOVE CursorEventAction cursorAction;
 		///
-		int x, y;
+		int newX, newY;
 	}
 
 	struct {
@@ -27,13 +39,6 @@ union Windowing_Events {
 
 		///
 		uint newWidth, newHeight;
-	}
-
-	struct {
-		// window moved
-
-		///
-		int newX, newY;
 	}
 
 	struct {
