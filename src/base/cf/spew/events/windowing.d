@@ -10,24 +10,44 @@ enum Windowing_Events_Types {
 	Window_Focused = EventType.from("w_focus"),
 	Window_RequestClose = EventType.from("w_reqclo"),
 	Window_CursorMoved = EventType.from("w_curmvd"),
+	Window_CursorAction = EventType.from("w_curac"),
+	Window_CursorActionEnd = EventType.from("w_/curac"),
+	Window_CursorActionDo = EventType.from("w_!curac"),
+	Window_CursorScroll = EventType.from("w_cursc"),
+	Window_KeyDown = EventType.from("w_kdw"),
+	Window_KeyUp = EventType.from("w_k/dw"),
+	Window_KeyInput = EventType.from("w_ki"),
 
 }
 
 union Windowing_Events {
 	struct {
-		// cursor moved and stopped moving + window moved
-
-		///
-		//REMOVE CursorEventAction cursorAction;
-		///
+		/// cursor moved + stopped moving + window moved + cursor action
 		int newX, newY;
 	}
 
 	struct {
-		// scroll
+		union {
+			struct {
+				// cursor action
+
+				/// 
+				CursorEventAction cursorAction;
+				///
+				bool isDoubleClick;
+			}
+
+			struct {
+				// scroll
+				
+				///
+				int amount;
+			}
+
+		}
 
 		///
-		int amount;
+		int atX, atY;
 	}
 
 	struct {
@@ -46,8 +66,8 @@ union Windowing_Events {
 
 		////
 		dchar key;
-		///
-		KeyModifiers keyModifiers;
+		/// See_Also: KeyModifiers
+		ushort keyModifiers;
 		///
 		SpecialKey keySpecial;
 	}

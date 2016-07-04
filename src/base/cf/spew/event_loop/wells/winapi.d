@@ -1,10 +1,15 @@
-﻿module cf.spew.event_loop.wells.winapi;
+﻿/**
+ * TODO:
+ * 	-	Remove usage of HIWORD and LOWORD and replace with GET_X_LPARAM and GET_Y_LPARAM.
+ */
+module cf.spew.event_loop.wells.winapi;
 version(Windows):
 
 import cf.spew.event_loop.defs;
 import cf.spew.event_loop.known_implementations;
 import cf.spew.events.defs;
 import cf.spew.events.winapi;
+import cf.spew.events.windowing;
 import std.experimental.allocator : IAllocator, make;
 import core.sys.windows.windows : LRESULT, WPARAM, LPARAM, HWND;
 import core.time : Duration;
@@ -153,11 +158,9 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 	import cf.spew.events.windowing;
 	import core.sys.windows.windows;
 
-	if (_event is null) // ERROR
-		return DefWindowProcW(hwnd, uMsg, wParam, lParam);
-
 	EventLoopAlterationCallbacks* callbacks = cast(EventLoopAlterationCallbacks*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
-
+	if (_event is null || callbacks is null) // ERROR
+		return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 	_event.wellData1Ptr = hwnd;
 
 	switch(uMsg) {
@@ -273,8 +276,6 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 			_event.type = WinAPI_Events_Types.Window_SystemColorsChanged;
 			return 0;
 
-		//case WM_SYSTEMERROR:
-		//case WM_CTLCOLOR:
 		case WM_DEVMODECHANGE:
 			import std.utf : byChar, codeLength;
 
@@ -313,15 +314,138 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 			return 0;
 
 		case WM_LBUTTONDOWN:
+			_event.type = Windowing_Events_Types.Window_CursorAction;
+			_event.wellData2Value = wParam;
+			_event.windowing.cursorAction = CursorEventAction.Select;
+			_event.windowing.isDoubleClick = false;
+			_event.windowing.atX = LOWORD(lParam);
+			_event.windowing.atY = HIWORD(lParam);
+			return 0;
+
 		case WM_LBUTTONUP:
+			_event.type = Windowing_Events_Types.Window_CursorActionEnd;
+			_event.wellData2Value = wParam;
+			_event.windowing.cursorAction = CursorEventAction.Select;
+			_event.windowing.isDoubleClick = false;
+			_event.windowing.atX = LOWORD(lParam);
+			_event.windowing.atY = HIWORD(lParam);
+			return 0;
+
 		case WM_LBUTTONDBLCLK:
+			_event.type = Windowing_Events_Types.Window_CursorActionDo;
+			_event.wellData2Value = wParam;
+			_event.windowing.cursorAction = CursorEventAction.Select;
+			_event.windowing.isDoubleClick = true;
+			_event.windowing.atX = LOWORD(lParam);
+			_event.windowing.atY = HIWORD(lParam);
+			return 0;
+
 		case WM_RBUTTONDOWN:
+			_event.type = Windowing_Events_Types.Window_CursorAction;
+			_event.wellData2Value = wParam;
+			_event.windowing.cursorAction = CursorEventAction.Alter;
+			_event.windowing.isDoubleClick = false;
+			_event.windowing.atX = LOWORD(lParam);
+			_event.windowing.atY = HIWORD(lParam);
+			return 0;
+
 		case WM_RBUTTONUP:
+			_event.type = Windowing_Events_Types.Window_CursorActionEnd;
+			_event.wellData2Value = wParam;
+			_event.windowing.cursorAction = CursorEventAction.Alter;
+			_event.windowing.isDoubleClick = false;
+			_event.windowing.atX = LOWORD(lParam);
+			_event.windowing.atY = HIWORD(lParam);
+			return 0;
+
 		case WM_RBUTTONDBLCLK:
+			_event.type = Windowing_Events_Types.Window_CursorActionDo;
+			_event.wellData2Value = wParam;
+			_event.windowing.cursorAction = CursorEventAction.Alter;
+			_event.windowing.isDoubleClick = true;
+			_event.windowing.atX = LOWORD(lParam);
+			_event.windowing.atY = HIWORD(lParam);
+			return 0;
+
 		case WM_MBUTTONDOWN:
+			_event.type = Windowing_Events_Types.Window_CursorAction;
+			_event.wellData2Value = wParam;
+			_event.windowing.cursorAction = CursorEventAction.ViewChange;
+			_event.windowing.isDoubleClick = false;
+			_event.windowing.atX = LOWORD(lParam);
+			_event.windowing.atY = HIWORD(lParam);
+			return 0;
+
 		case WM_MBUTTONUP:
+			_event.type = Windowing_Events_Types.Window_CursorActionEnd;
+			_event.wellData2Value = wParam;
+			_event.windowing.cursorAction = CursorEventAction.ViewChange;
+			_event.windowing.isDoubleClick = false;
+			_event.windowing.atX = LOWORD(lParam);
+			_event.windowing.atY = HIWORD(lParam);
+			return 0;
+
 		case WM_MBUTTONDBLCLK:
+			_event.type = Windowing_Events_Types.Window_CursorActionDo;
+			_event.wellData2Value = wParam;
+			_event.windowing.cursorAction = CursorEventAction.ViewChange;
+			_event.windowing.isDoubleClick = true;
+			_event.windowing.atX = LOWORD(lParam);
+			_event.windowing.atY = HIWORD(lParam);
+			return 0;
+
 		case WM_MOUSEWHEEL:
+			_event.type = Windowing_Events_Types.Window_CursorScroll;
+			_event.windowing.amount = GET_WHEEL_DELTA_WPARAM(wParam);
+			_event.windowing.atX = LOWORD(lParam);
+			_event.windowing.atY = HIWORD(lParam);
+			return 0;
+
+		//case WM_KEYFIRST: same as WM_KEYDOWN
+		case WM_KEYDOWN:
+			if (translateKeyCall(wParam, lParam, _event.windowing.key, _event.windowing.keySpecial, _event.windowing.keyModifiers)) {
+				_event.type = Windowing_Events_Types.Window_KeyDown;
+				_event.wellData2Value = wParam;
+				_event.wellData3Value = lParam;
+
+				return 0;
+			} else
+				return DefWindowProcW(hwnd, uMsg, wParam, lParam);
+
+		case WM_KEYUP:
+			if (translateKeyCall(wParam, lParam, _event.windowing.key, _event.windowing.keySpecial, _event.windowing.keyModifiers)) {
+				_event.type = Windowing_Events_Types.Window_KeyUp;
+				_event.wellData2Value = wParam;
+				_event.wellData3Value = lParam;
+
+				return 0;
+			} else
+				return DefWindowProcW(hwnd, uMsg, wParam, lParam);
+
+		case WM_CHAR:
+			switch(wParam) {
+				case 0: .. case ' ':
+				case '\\': case '|':
+				case '-': case '_':
+				/+case '=': +/case '+':
+				case ':': .. case '?':
+				case '\'': case '"':
+					break;
+					
+				default:
+					_event.type = Windowing_Events_Types.Window_KeyInput;
+					_event.wellData2Value = wParam;
+					_event.wellData3Value = lParam;
+					_event.windowing.key = cast(dchar)wParam;
+					_event.windowing.keySpecial = SpecialKey.None;
+
+					processModifiers(_event.windowing.keyModifiers);
+					break;
+			}
+			return 0;
+
+		//case WM_SYSTEMERROR:
+		//case WM_CTLCOLOR:
 
 		case WM_FONTCHANGE:
 		case WM_TIMECHANGE:
@@ -383,11 +507,7 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 		case WM_NCMBUTTONDOWN:
 		case WM_NCMBUTTONUP:
 		case WM_NCMBUTTONDBLCLK:
-			
-		//case WM_KEYFIRST: same as WM_KEYDOWN
-		case WM_KEYDOWN:
-		case WM_KEYUP:
-		case WM_CHAR:
+
 		case WM_DEADCHAR:
 		case WM_SYSKEYDOWN:
 		case WM_SYSKEYUP:
@@ -420,8 +540,6 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 		case WM_CTLCOLORSCROLLBAR:
 		case WM_CTLCOLORSTATIC:
 
-
-			
 		case WM_PARENTNOTIFY:
 		case WM_ENTERMENULOOP:
 		case WM_EXITMENULOOP:
@@ -524,4 +642,139 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 	}
 
 	assert(0);
+}
+
+pragma(inline, true)
+void processModifiers(out ushort modifiers) nothrow {
+	import core.sys.windows.windows;
+
+	if (HIWORD(GetKeyState(VK_LMENU)) != 0)
+		modifiers |= KeyModifiers.LAlt;
+	else if (HIWORD(GetKeyState(VK_RMENU)) != 0)
+		modifiers |= KeyModifiers.RAlt;
+	
+	if (HIWORD(GetKeyState(VK_LCONTROL)) != 0)
+		modifiers |= KeyModifiers.LControl;
+	else if (HIWORD(GetKeyState(VK_RCONTROL)) != 0)
+		modifiers |= KeyModifiers.RControl;
+	
+	if (HIWORD(GetKeyState(VK_LSHIFT)) != 0)
+		modifiers |= KeyModifiers.LShift;
+	else if (HIWORD(GetKeyState(VK_RSHIFT)) != 0)
+		modifiers |= KeyModifiers.RShift;
+	
+	if (GetKeyState(VK_CAPITAL) != 0)
+		modifiers |= KeyModifiers.Capslock;
+	
+	if (GetKeyState(VK_NUMLOCK) != 0)
+		modifiers |= KeyModifiers.Numlock;
+	
+	if (HIWORD(GetKeyState(VK_LWIN)) != 0)
+		modifiers |= KeyModifiers.LSuper;
+	else if (HIWORD(GetKeyState(VK_RWIN)) != 0)
+		modifiers |= KeyModifiers.RSuper;
+}
+
+bool translateKeyCall(WPARAM code, LPARAM lParam, out dchar key, out SpecialKey specialKey, out ushort modifiers) nothrow {
+	import core.sys.windows.windows;
+	enum Atoa = 'a' - 'A';
+
+	key = 0;
+	specialKey = SpecialKey.None;
+	
+	bool isShift, isCapital, isCtrl;
+	
+	processModifiers(modifiers);
+
+	isShift = (modifiers & KeyModifiers.Shift) == KeyModifiers.Shift;
+	isCapital = isShift || 
+		(modifiers & KeyModifiers.Capslock) == KeyModifiers.Capslock;
+	isCtrl = (modifiers & KeyModifiers.Control) == KeyModifiers.Control;
+	
+	switch (code)
+	{
+		case VK_NUMPAD0: .. case VK_NUMPAD9:
+			key = cast(dchar)('0' + (code - VK_NUMPAD0));
+			modifiers |= KeyModifiers.Numlock; break;
+		case 'A': .. case 'Z':
+			if (isCtrl)
+				key = cast(dchar)(isCapital ? code : (code + Atoa));
+			break;
+		case VK_LEFT:
+			specialKey = SpecialKey.LeftArrow; break;
+		case VK_RIGHT:
+			specialKey = SpecialKey.RightArrow; break;
+		case VK_UP:
+			specialKey = SpecialKey.UpArrow; break;
+		case VK_DOWN:
+			specialKey = SpecialKey.DownArrow; break;
+		case VK_F1: .. case VK_F12:
+			specialKey =  cast(SpecialKey)(SpecialKey.F1 + (code - VK_F1)); break;
+		case VK_OEM_1:
+			key = isShift ? ':' : ';'; break;
+		case VK_OEM_2:
+			key = isShift ? '?' : '/'; break;
+		case VK_OEM_PLUS:
+			key = isShift ? '+' : '='; break;
+		case VK_OEM_MINUS:
+			key = isShift ? '_' : '-'; break;
+		case VK_OEM_COMMA:
+			key = isShift ? '<' : ','; break;
+		case VK_OEM_PERIOD:
+			key = isShift ? '>' : '.'; break;
+		case VK_OEM_7:
+			key = isShift ? '"' : '\''; break;
+		case VK_OEM_5:
+			key = isShift ? '|' : '\\'; break;
+		case VK_DECIMAL:
+			key = '.';
+			modifiers |= KeyModifiers.Numlock; break;
+		case VK_ESCAPE:
+			specialKey = SpecialKey.Escape; break;
+		case VK_SPACE:
+			key = ' '; break;
+		case VK_RETURN:
+			specialKey = SpecialKey.Enter; break;
+		case VK_BACK:
+			specialKey = SpecialKey.Backspace; break;
+		case VK_TAB:
+			specialKey = SpecialKey.Tab; break;
+		case VK_PRIOR:
+			specialKey = SpecialKey.PageUp; break;
+		case VK_NEXT:
+			specialKey = SpecialKey.PageDown; break;
+		case VK_END:
+			specialKey = SpecialKey.End; break;
+		case VK_HOME:
+			specialKey = SpecialKey.Home; break;
+		case VK_INSERT:
+			specialKey = SpecialKey.Insert; break;
+		case VK_DELETE:
+			specialKey = SpecialKey.Delete; break;
+		case VK_ADD:
+			key = '+';
+			modifiers |= KeyModifiers.Numlock; break;
+		case VK_SUBTRACT:
+			key = '-';
+			modifiers |= KeyModifiers.Numlock; break;
+		case VK_MULTIPLY:
+			key = '*';
+			modifiers |= KeyModifiers.Numlock; break;
+		case VK_DIVIDE:
+			key = '/';
+			modifiers |= KeyModifiers.Numlock; break;
+		case VK_PAUSE:
+			specialKey = SpecialKey.Pause; break;
+		case VK_SCROLL:
+			specialKey = SpecialKey.ScrollLock; break;
+			
+		default:
+			break;
+	}
+	
+	if (key > 0 || specialKey > 0) {
+		return true;
+	} else {
+		return false;
+	}
 }
