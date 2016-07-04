@@ -622,8 +622,6 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 			
 		case WM_USER:
 		case WM_APP:
-			break;
-
 		case WM_QUERYOPEN:
 			// boring, nothing to do
 
