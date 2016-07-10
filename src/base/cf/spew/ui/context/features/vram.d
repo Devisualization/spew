@@ -4,7 +4,7 @@
  * Copyright: <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
  * Authors: $(LINK2 http://cattermole.co.nz, Richard Andrew Cattermole)
  */
-module cf.spew.ui.context_features.vram;
+module cf.spew.ui.context.features.vram;
 import cf.spew.ui.rendering;
 import cf.spew.ui.window.defs;
 import std.experimental.graphic.image : ImageStorage;

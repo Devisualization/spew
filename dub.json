@@ -8,6 +8,10 @@
 	"license": "proprietary",
 	"targetType": "none",
 
+	"dependencies": {
+		"spew:base": "*"
+	},
+
 	"subPackages": [
 		{
 			"name": "base",
@@ -17,7 +21,6 @@
 				"spew:utils": "*"
 			}
 		},
-
 		{
 			"name": "utils",
 			"sourcePaths": ["src/utils"],

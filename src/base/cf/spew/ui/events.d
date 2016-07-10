@@ -13,9 +13,9 @@ alias EventOnForcedDrawDel = void delegate();
 alias EventOnForcedDrawFunc = void function();
 
 ///
-alias EventOnCursorMoveDel = void delegate(short x, short y);
+alias EventOnCursorMoveDel = void delegate(int x, int y);
 ///
-alias EventOnCursorMoveFunc = void function(short x, short y);
+alias EventOnCursorMoveFunc = void function(int x, int y);
 
 ///
 alias EventOnCursorActionDel = void delegate(CursorEventAction action);
@@ -23,9 +23,9 @@ alias EventOnCursorActionDel = void delegate(CursorEventAction action);
 alias EventOnCursorActionFunc = void function(CursorEventAction action);
 
 ///
-alias EventOnScrollDel = void delegate(short amount);
+alias EventOnScrollDel = void delegate(int amount);
 ///
-alias EventOnScrollFunc = void function(short amount);
+alias EventOnScrollFunc = void function(int amount);
 
 ///
 alias EventOnCloseDel = void delegate();
@@ -38,9 +38,9 @@ alias EventOnKeyDel = void delegate(dchar key, SpecialKey specialKey, ushort Key
 alias EventOnKeyFunc = void function(dchar key, SpecialKey specialKey, ushort KeyModifiers);
 
 ///
-alias EventOnSizeChangeDel = void delegate(ushort width, ushort height);
+alias EventOnSizeChangeDel = void delegate(uint width, uint height);
 ///
-alias EventOnSizeChangeFunc = void function(ushort width, ushort height);
+alias EventOnSizeChangeFunc = void function(uint width, uint height);
 
 /**
  * Group of hookable events for rendering upon

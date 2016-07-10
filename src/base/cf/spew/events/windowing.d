@@ -21,56 +21,66 @@ enum Windowing_Events_Types {
 }
 
 union Windowing_Events {
-	struct {
-		/// cursor moved + stopped moving + window moved + cursor action
-		int newX, newY;
-	}
+	///
+	Windowing_Event_Cursor_Action cursorAction;
+	/// 
+	Windowing_Event_Moved cursorMoved;
+	///
+	Windowing_Event_Scroll scroll;
 
-	struct {
-		union {
-			struct {
-				// cursor action
+	///
+	Windowing_Event_Resized windowResized;
+	/// 
+	Windowing_Event_Moved windowMoved;
+	/// 
+	Windowing_Event_Moved stoppedMoving;
 
-				/// 
-				CursorEventAction cursorAction;
-				///
-				bool isDoubleClick;
-			}
+	///
+	Windowing_Event_Key keyDown;
+	///
+	Windowing_Event_Key keyUp;
+	/// singular event aka press
+	Windowing_Event_Key keyInput;
+}
 
-			struct {
-				// scroll
-				
-				///
-				int amount;
-			}
+///
+struct Windowing_Event_Moved {
+	///
+	int newX, newY;
+}
 
-		}
+///
+struct Windowing_Event_Cursor_Action {
+	///
+	int x, y;
+	///
+	CursorEventAction action;
+	///
+	bool isDoubleClick;
+}
 
-		///
-		int atX, atY;
-	}
+///
+struct Windowing_Event_Scroll {
+	///
+	int x, y;
+	///
+	int amount;
+}
 
-	struct {
-		// close
-	}
+///
+struct Windowing_Event_Resized {
+	///
+	uint newWidth, newHeight;
+}
 
-	struct {
-		// window size changed
-
-		///
-		uint newWidth, newHeight;
-	}
-
-	struct {
-		// key down + up
-
-		////
-		dchar key;
-		/// See_Also: KeyModifiers
-		ushort keyModifiers;
-		///
-		SpecialKey keySpecial;
-	}
+///
+struct Windowing_Event_Key {
+	///
+	dchar key;
+	/// See_Also: KeyModifiers
+	ushort modifiers;
+	///
+	SpecialKey special;
 }
 
 ///

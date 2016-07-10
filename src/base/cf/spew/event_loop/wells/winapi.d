@@ -14,10 +14,23 @@ import std.experimental.allocator : IAllocator, make;
 import core.sys.windows.windows : LRESULT, WPARAM, LPARAM, HWND;
 import core.time : Duration;
 
+/**
+ * Hooks per window that this well supports
+ * 
+ * TIP: if you align(0) this into your own struct (as first field)
+ *  you can use the pointer given via e.g. unhandledEvent to your own data structure.
+ * 
+ */
 struct EventLoopAlterationCallbacks {
+	private immutable ulong MAGIC = 0xBEAF75;
+
+	bool canTranslate = true;
+
 	bool delegate(bool logoff, bool force, bool closeapp) nothrow canShutdown;
 	void delegate(bool isShuttingDown, bool logoff, bool force, bool closeapp) nothrow systemShutdownResult;
 	bool delegate(LPARAM lParam) nothrow modifySetCursor;
+
+	LRESULT delegate(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam, ref EventLoopAlterationCallbacks callbacks, ref Event event) nothrow unhandledEvent;
 }
 
 final class WinAPI_EventLoop_Source : EventLoopSource {
@@ -44,11 +57,13 @@ final class WinAPI_EventLoop_SourceRetriever : EventLoopSourceRetriever {
 	}
 
 	bool nextEvent(ref Event event) {
-		import core.sys.windows.windows : MsgWaitForMultipleObjectsEx,
+		import core.sys.windows.windows :
+			MsgWaitForMultipleObjectsEx, GetWindowLongPtrW,
 			QS_ALLINPUT, WAIT_TIMEOUT,
 			MWMO_ALERTABLE, MWMO_INPUTAVAILABLE,
 			PeekMessageW, PM_REMOVE,
-			TranslateMessage, DispatchMessageW;
+			TranslateMessage, DispatchMessageW,
+			GWLP_USERDATA;
 
 		if (needToWait) {
 			MsgWaitForMultipleObjectsEx(
@@ -73,8 +88,14 @@ final class WinAPI_EventLoop_SourceRetriever : EventLoopSourceRetriever {
 				needToWait = true;
 				return false;
 			} else {
-				if (msg.hwnd !is null && shouldTranslate)
-					TranslateMessage(&msg);
+				if (msg.hwnd !is null) {
+					_callbacks = cast(EventLoopAlterationCallbacks*)GetWindowLongPtrW(msg.hwnd, GWLP_USERDATA);
+
+					if (*(cast(ulong*)_callbacks) == 0xBEAF7588) {
+						if (_callbacks.canTranslate && shouldTranslate)
+							TranslateMessage(&msg);
+					}
+				}
 
 				event.winapi.raw = msg;
 				DispatchMessageW(&msg);
@@ -142,6 +163,7 @@ private {
 	 * Thread local, non issue since only one event loop ever runs
 	 */
 	Event* _event;
+	EventLoopAlterationCallbacks* _callbacks;
 
 	enum {
 		ENDSESSION_CRITICAL = 0x40000000,
@@ -152,14 +174,14 @@ private {
 /**
  * Use this callback when registering a WinAPI window to allow auto hooking into any
  *  WinAPI_EventLoop_SourceRetriever event retriever that may exist.
+ * Assuming usage of this callback, you MUST use EventLoopAlterationCallbacks via a pointer stored in user data.
  */
 extern(Windows)
 LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam) nothrow {
 	import cf.spew.events.windowing;
 	import core.sys.windows.windows;
 
-	EventLoopAlterationCallbacks* callbacks = cast(EventLoopAlterationCallbacks*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
-	if (_event is null || callbacks is null) // ERROR
+	if (_event is null || _callbacks is null) // ERROR
 		return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 	_event.wellData1Ptr = hwnd;
 
@@ -182,16 +204,16 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 
 		case WM_MOVE:
 			_event.type = Windowing_Events_Types.Window_Moved;
-			_event.windowing.newX = LOWORD(lParam);
-			_event.windowing.newY = HIWORD(lParam);
+			_event.windowing.windowMoved.newX = LOWORD(lParam);
+			_event.windowing.windowMoved.newY = HIWORD(lParam);
 			return 0;
 
 		case WM_SIZE:
 			_event.type = Windowing_Events_Types.Window_Moved;
 			_event.wellData2Value = wParam;
 
-			_event.windowing.newWidth = LOWORD(lParam);
-			_event.windowing.newHeight = HIWORD(lParam);
+			_event.windowing.windowResized.newWidth = LOWORD(lParam);
+			_event.windowing.windowResized.newHeight = HIWORD(lParam);
 			return 0;
 
 		case WM_ACTIVATE:
@@ -234,8 +256,8 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 			return 0;
 
 		case WM_QUERYENDSESSION:
-			if (callbacks.canShutdown !is null) {
-				if (!callbacks.canShutdown(
+			if (_callbacks.canShutdown !is null) {
+				if (!_callbacks.canShutdown(
 						(lParam & ENDSESSION_LOGOFF) == ENDSESSION_LOGOFF,
 						(lParam & ENDSESSION_CRITICAL) == ENDSESSION_CRITICAL,
 						(lParam & ENDSESSION_CLOSEAPP) == ENDSESSION_CLOSEAPP)) {
@@ -246,8 +268,8 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 			return TRUE;
 
 		case WM_ENDSESSION:
-			if (callbacks.systemShutdownResult !is null) {
-				callbacks.systemShutdownResult(wParam == TRUE,
+			if (_callbacks.systemShutdownResult !is null) {
+				_callbacks.systemShutdownResult(wParam == TRUE,
 					(lParam & ENDSESSION_LOGOFF) == ENDSESSION_LOGOFF,
 					(lParam & ENDSESSION_CRITICAL) == ENDSESSION_CRITICAL,
 					(lParam & ENDSESSION_CLOSEAPP) == ENDSESSION_CLOSEAPP);
@@ -286,8 +308,8 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 			return 0;
 
 		case WM_SETCURSOR:
-			if (callbacks.modifySetCursor !is null) {
-				if (callbacks.modifySetCursor(lParam)) {
+			if (_callbacks.modifySetCursor !is null) {
+				if (_callbacks.modifySetCursor(lParam)) {
 					_event.type = WinAPI_Events_Types.Window_SetCursor;
 					_event.wellData2Value = lParam;
 
@@ -309,101 +331,101 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 			_event.type = Windowing_Events_Types.Window_CursorMoved;
 			_event.wellData2Value = wParam;
 			_event.wellData3Value = lParam;
-			_event.windowing.newX = LOWORD(lParam);
-			_event.windowing.newY = HIWORD(lParam);
+			_event.windowing.cursorMoved.newX = LOWORD(lParam);
+			_event.windowing.cursorMoved.newY = HIWORD(lParam);
 			return 0;
 
 		case WM_LBUTTONDOWN:
 			_event.type = Windowing_Events_Types.Window_CursorAction;
 			_event.wellData2Value = wParam;
-			_event.windowing.cursorAction = CursorEventAction.Select;
-			_event.windowing.isDoubleClick = false;
-			_event.windowing.atX = LOWORD(lParam);
-			_event.windowing.atY = HIWORD(lParam);
+			_event.windowing.cursorAction.action = CursorEventAction.Select;
+			_event.windowing.cursorAction.isDoubleClick = false;
+			_event.windowing.cursorAction.x = LOWORD(lParam);
+			_event.windowing.cursorAction.y = HIWORD(lParam);
 			return 0;
 
 		case WM_LBUTTONUP:
 			_event.type = Windowing_Events_Types.Window_CursorActionEnd;
 			_event.wellData2Value = wParam;
-			_event.windowing.cursorAction = CursorEventAction.Select;
-			_event.windowing.isDoubleClick = false;
-			_event.windowing.atX = LOWORD(lParam);
-			_event.windowing.atY = HIWORD(lParam);
+			_event.windowing.cursorAction.action = CursorEventAction.Select;
+			_event.windowing.cursorAction.isDoubleClick = false;
+			_event.windowing.cursorAction.x = LOWORD(lParam);
+			_event.windowing.cursorAction.y = HIWORD(lParam);
 			return 0;
 
 		case WM_LBUTTONDBLCLK:
 			_event.type = Windowing_Events_Types.Window_CursorActionDo;
 			_event.wellData2Value = wParam;
-			_event.windowing.cursorAction = CursorEventAction.Select;
-			_event.windowing.isDoubleClick = true;
-			_event.windowing.atX = LOWORD(lParam);
-			_event.windowing.atY = HIWORD(lParam);
+			_event.windowing.cursorAction.action = CursorEventAction.Select;
+			_event.windowing.cursorAction.isDoubleClick = true;
+			_event.windowing.cursorAction.x = LOWORD(lParam);
+			_event.windowing.cursorAction.y = HIWORD(lParam);
 			return 0;
 
 		case WM_RBUTTONDOWN:
 			_event.type = Windowing_Events_Types.Window_CursorAction;
 			_event.wellData2Value = wParam;
-			_event.windowing.cursorAction = CursorEventAction.Alter;
-			_event.windowing.isDoubleClick = false;
-			_event.windowing.atX = LOWORD(lParam);
-			_event.windowing.atY = HIWORD(lParam);
+			_event.windowing.cursorAction.action = CursorEventAction.Alter;
+			_event.windowing.cursorAction.isDoubleClick = false;
+			_event.windowing.cursorAction.x = LOWORD(lParam);
+			_event.windowing.cursorAction.y = HIWORD(lParam);
 			return 0;
 
 		case WM_RBUTTONUP:
 			_event.type = Windowing_Events_Types.Window_CursorActionEnd;
 			_event.wellData2Value = wParam;
-			_event.windowing.cursorAction = CursorEventAction.Alter;
-			_event.windowing.isDoubleClick = false;
-			_event.windowing.atX = LOWORD(lParam);
-			_event.windowing.atY = HIWORD(lParam);
+			_event.windowing.cursorAction.action = CursorEventAction.Alter;
+			_event.windowing.cursorAction.isDoubleClick = false;
+			_event.windowing.cursorAction.x = LOWORD(lParam);
+			_event.windowing.cursorAction.y = HIWORD(lParam);
 			return 0;
 
 		case WM_RBUTTONDBLCLK:
 			_event.type = Windowing_Events_Types.Window_CursorActionDo;
 			_event.wellData2Value = wParam;
-			_event.windowing.cursorAction = CursorEventAction.Alter;
-			_event.windowing.isDoubleClick = true;
-			_event.windowing.atX = LOWORD(lParam);
-			_event.windowing.atY = HIWORD(lParam);
+			_event.windowing.cursorAction.action = CursorEventAction.Alter;
+			_event.windowing.cursorAction.isDoubleClick = true;
+			_event.windowing.cursorAction.x = LOWORD(lParam);
+			_event.windowing.cursorAction.y = HIWORD(lParam);
 			return 0;
 
 		case WM_MBUTTONDOWN:
 			_event.type = Windowing_Events_Types.Window_CursorAction;
 			_event.wellData2Value = wParam;
-			_event.windowing.cursorAction = CursorEventAction.ViewChange;
-			_event.windowing.isDoubleClick = false;
-			_event.windowing.atX = LOWORD(lParam);
-			_event.windowing.atY = HIWORD(lParam);
+			_event.windowing.cursorAction.action = CursorEventAction.ViewChange;
+			_event.windowing.cursorAction.isDoubleClick = false;
+			_event.windowing.cursorAction.x = LOWORD(lParam);
+			_event.windowing.cursorAction.y = HIWORD(lParam);
 			return 0;
 
 		case WM_MBUTTONUP:
 			_event.type = Windowing_Events_Types.Window_CursorActionEnd;
 			_event.wellData2Value = wParam;
-			_event.windowing.cursorAction = CursorEventAction.ViewChange;
-			_event.windowing.isDoubleClick = false;
-			_event.windowing.atX = LOWORD(lParam);
-			_event.windowing.atY = HIWORD(lParam);
+			_event.windowing.cursorAction.action = CursorEventAction.ViewChange;
+			_event.windowing.cursorAction.isDoubleClick = false;
+			_event.windowing.cursorAction.x = LOWORD(lParam);
+			_event.windowing.cursorAction.y = HIWORD(lParam);
 			return 0;
 
 		case WM_MBUTTONDBLCLK:
 			_event.type = Windowing_Events_Types.Window_CursorActionDo;
 			_event.wellData2Value = wParam;
-			_event.windowing.cursorAction = CursorEventAction.ViewChange;
-			_event.windowing.isDoubleClick = true;
-			_event.windowing.atX = LOWORD(lParam);
-			_event.windowing.atY = HIWORD(lParam);
+			_event.windowing.cursorAction.action = CursorEventAction.ViewChange;
+			_event.windowing.cursorAction.isDoubleClick = true;
+			_event.windowing.cursorAction.x = LOWORD(lParam);
+			_event.windowing.cursorAction.y = HIWORD(lParam);
 			return 0;
 
 		case WM_MOUSEWHEEL:
 			_event.type = Windowing_Events_Types.Window_CursorScroll;
-			_event.windowing.amount = GET_WHEEL_DELTA_WPARAM(wParam);
-			_event.windowing.atX = LOWORD(lParam);
-			_event.windowing.atY = HIWORD(lParam);
+			_event.windowing.scroll.amount = GET_WHEEL_DELTA_WPARAM(wParam);
+			_event.windowing.scroll.x = LOWORD(lParam);
+			_event.windowing.scroll.y = HIWORD(lParam);
 			return 0;
 
 		//case WM_KEYFIRST: same as WM_KEYDOWN
 		case WM_KEYDOWN:
-			if (translateKeyCall(wParam, lParam, _event.windowing.key, _event.windowing.keySpecial, _event.windowing.keyModifiers)) {
+			if (translateKeyCall(wParam, lParam, _event.windowing.keyDown.key, _event.windowing.keyDown.special, _event.windowing.keyDown.modifiers)) {
 				_event.type = Windowing_Events_Types.Window_KeyDown;
 				_event.wellData2Value = wParam;
 				_event.wellData3Value = lParam;
@@ -413,7 +435,7 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 				return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 
 		case WM_KEYUP:
-			if (translateKeyCall(wParam, lParam, _event.windowing.key, _event.windowing.keySpecial, _event.windowing.keyModifiers)) {
+			if (translateKeyCall(wParam, lParam, _event.windowing.keyUp.key, _event.windowing.keyUp.special, _event.windowing.keyUp.modifiers)) {
 				_event.type = Windowing_Events_Types.Window_KeyUp;
 				_event.wellData2Value = wParam;
 				_event.wellData3Value = lParam;
@@ -436,10 +458,10 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 					_event.type = Windowing_Events_Types.Window_KeyInput;
 					_event.wellData2Value = wParam;
 					_event.wellData3Value = lParam;
-					_event.windowing.key = cast(dchar)wParam;
-					_event.windowing.keySpecial = SpecialKey.None;
+					_event.windowing.keyInput.key = cast(dchar)wParam;
+					_event.windowing.keyInput.special = SpecialKey.None;
 
-					processModifiers(_event.windowing.keyModifiers);
+					processModifiers(_event.windowing.keyInput.modifiers);
 					break;
 			}
 			return 0;
@@ -636,7 +658,14 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 
 			// use the default behaviour, too complex to override
 		default:
-			return DefWindowProcW(hwnd, uMsg, wParam, lParam);
+			// this allows you to do something when it is unhandled
+
+			LRESULT ret;
+			if (_callbacks.unhandledEvent !is null)
+				ret = _callbacks.unhandledEvent(hwnd, uMsg, wParam, lParam, *_callbacks, *_event);
+			if (_event.type == WinAPI_Events_Types.Unknown)
+				ret = DefWindowProcW(hwnd, uMsg, wParam, lParam);
+			return ret;
 	}
 
 	assert(0);
