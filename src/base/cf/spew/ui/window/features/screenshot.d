@@ -8,7 +8,7 @@ module cf.spew.ui.window.features.screenshot;
 import cf.spew.ui.window.defs;
 import std.experimental.graphic.image : ImageStorage;
 import std.experimental.allocator : IAllocator, theAllocator;
-//import std.experimental.platform : IPlatform;
+import cf.spew.platform : IPlatform;
 import cf.spew.ui.rendering : IDisplay;
 import std.experimental.graphic.color : RGB8;
 import std.experimental.memory.managed;
@@ -23,7 +23,7 @@ interface Feature_ScreenShot {
 
 @property {
     /// Takes a screenshot or null if not possible
-    managed!(ImageStorage!RGB8) screenshot(T)(T self, IAllocator alloc=theAllocator()) if (is(T : IWindow) || is(T : IDisplay)/+ || is(T : IPlatform)+/) {
+    managed!(ImageStorage!RGB8) screenshot(T)(T self, IAllocator alloc=theAllocator()) if (is(T : IWindow) || is(T : IDisplay) || is(T : IPlatform)) {
 		if (!self.capableOfScreenShot)
 			return (managed!(ImageStorage!RGB8)).init;
 		else {
@@ -32,7 +32,7 @@ interface Feature_ScreenShot {
 		}
     }
 
-	ImageStorage!RGB8 screenshot(T)(T self, IAllocator alloc=theAllocator()) if (!(is(T : IWindow) || is(T : IDisplay)/+ || is(T : IPlatform)+/)) {
+	ImageStorage!RGB8 screenshot(T)(T self, IAllocator alloc=theAllocator()) if (!(is(T : IWindow) || is(T : IDisplay) || is(T : IPlatform))) {
         static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow, IDisplay or IPlatform types.");
     }
 
@@ -45,7 +45,7 @@ interface Feature_ScreenShot {
 	 * Returns:
 	 * 		If the window/display/platform supports having a screenshot taken of it
 	 */
-	bool capableOfScreenShot(T)(T self) if (is(T : IWindow) || is(T : IDisplay)/+ || is(T : IPlatform)+/) {
+	bool capableOfScreenShot(T)(T self) if (is(T : IWindow) || is(T : IDisplay) || is(T : IPlatform)) {
 		if (self is null)
 			return false;
 		else if (Have_ScreenShot ss = cast(Have_ScreenShot)self)
@@ -54,7 +54,7 @@ interface Feature_ScreenShot {
 			return false;
 	}
 
-	bool capableOfScreenShot(T)(T self) if (!(is(T : IWindow) || is(T : IDisplay)/+ || is(T : IPlatform)+/)) {
+	bool capableOfScreenShot(T)(T self) if (!(is(T : IWindow) || is(T : IDisplay) || is(T : IPlatform))) {
 		static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow, IDisplay or IPlatform types.");
 	}
 }

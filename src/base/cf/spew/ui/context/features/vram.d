@@ -7,6 +7,7 @@
 module cf.spew.ui.context.features.vram;
 import cf.spew.ui.rendering;
 import cf.spew.ui.window.defs;
+import cf.spew.ui.context.defs;
 import std.experimental.graphic.image : ImageStorage;
 import std.experimental.graphic.color : RGB8, RGBA8;
 

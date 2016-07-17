@@ -6,13 +6,13 @@
  */
 module cf.spew.ui.features.notifications;
 import cf.spew.ui.window.defs;
+import cf.spew.platform : IPlatform;
 import std.experimental.graphic.image : ImageStorage;
 import std.experimental.graphic.color : RGBA8;
-//import std.experimental.platform : IPlatform;
 import std.experimental.memory.managed;
 import std.experimental.allocator : IAllocator, theAllocator;
 import std.traits : isSomeString;
-__EOF__:
+
 interface Have_Notification {
     Feature_Notification __getFeatureNotification();
 }

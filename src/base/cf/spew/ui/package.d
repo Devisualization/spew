@@ -4,5 +4,5 @@ public import cf.spew.ui.rendering;
 public import cf.spew.ui.display;
 
 public import cf.spew.ui.context;
-//public import cf.spew.ui.features;
-//public import cf.spew.ui.window;
+public import cf.spew.ui.features;
+public import cf.spew.ui.window;
