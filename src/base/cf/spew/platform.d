@@ -3,7 +3,6 @@ import cf.spew.ui : IWindow, IDisplay, IWindowCreator, IRenderPoint, IRenderPoin
 import std.experimental.memory.managed;
 import std.experimental.allocator : IAllocator, processAllocator, theAllocator;
 import std.datetime : Duration, seconds;
-import core.atomic : atomicStore, atomicLoad;
 
 ///
 interface IPlatform {
@@ -31,23 +30,23 @@ interface IPlatform {
 	}
 
 	///
-	final void setAsTheImplementation() { atomicStore(thePlatform_, cast(shared)this); }
+	final void setAsTheImplementation() { thePlatform_ = this; }
 }
 
 ///
-IPlatform thePlatform() { return atomicLoad(thePlatform_); }
+IPlatform thePlatform() { return thePlatform_; }
 ///
-IPlatform defaultPlatform() { return atomicLoad(defaultPlatform_); }
+IPlatform defaultPlatform() { return defaultPlatform_; }
 
-private shared {
+private __gshared {
 	IPlatform defaultPlatform_;
 	IPlatform thePlatform_;
 
 	shared static this() {
 		import cf.spew.implementation.platform;
-		shared PlatformImpl impl = cast(shared)new PlatformImpl;
+		PlatformImpl impl = new PlatformImpl;
 
-		atomicStore(defaultPlatform_, impl);
-		atomicStore(thePlatform_, impl);
+		defaultPlatform_ = impl;
+		thePlatform_ = impl;
 	}
 }
