@@ -53,7 +53,9 @@ void stopExecutingOnlyMainThread() {
 void addSource(EventLoopSource[] source...) {
 	import std.experimental.allocator : expandArray;
 	initCall();
-	
+
+	// TODO: are we already in?
+
 	synchronized(inUpdateIteration) {
 		_allocator.expandArray(sources, source.length);
 		sources[$ - source.length .. $] = source[];
@@ -64,6 +66,8 @@ void addSource(EventLoopSource[] source...) {
 void addConsumer(EventLoopConsumer[] consumer...) {
 	import std.experimental.allocator : expandArray;
 	initCall();
+
+	// TODO: are we already in?
 
 	synchronized(inUpdateIteration) {
 		_allocator.expandArray(consumers, consumer.length);

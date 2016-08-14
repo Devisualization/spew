@@ -10,7 +10,7 @@ import cf.spew.event_loop.known_implementations;
 import cf.spew.events.defs;
 import cf.spew.events.winapi;
 import cf.spew.events.windowing;
-import std.experimental.allocator : IAllocator, make, processAllocator;
+import std.experimental.allocator : IAllocator, make;
 import core.sys.windows.windows : LRESULT, WPARAM, LPARAM, HWND;
 import core.time : Duration;
 
@@ -34,14 +34,6 @@ struct EventLoopAlterationCallbacks {
 }
 
 final class WinAPI_EventLoop_Source : EventLoopSource {
-	private static WinAPI_EventLoop_Source instance_;
-
-	@property static WinAPI_EventLoop_Source instance() {
-		if (instance_ is null)
-			instance_ = processAllocator().make!WinAPI_EventLoop_Source;
-		return instance_;
-	}
-
 	@property {
 		bool onMainThread() { return true; }
 		bool onAdditionalThreads() { return true; }
@@ -259,7 +251,7 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 			return 0;
 
 		case WM_CLOSE:
-			_event.type = Windowing_Events_Types.Window_RequestClose;
+			_event.type = WinAPI_Events_Types.Window_RequestClose;
 			// call DestroyWindow if you do wish to close the window
 			return 0;
 

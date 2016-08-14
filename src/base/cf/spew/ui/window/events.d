@@ -8,9 +8,9 @@ module cf.spew.ui.window.events;
 import cf.spew.ui.events;
 
 ///
-alias EventOnMoveDel = void delegate(short x, short y);
+alias EventOnMoveDel = void delegate(int x, int y);
 ///
-alias EventOnMoveFunc = void function(short x, short y);
+alias EventOnMoveFunc = void function(int x, int y);
 
 /**
  * Group of hookable events for rendering upon

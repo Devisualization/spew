@@ -24,7 +24,7 @@ interface EventLoopConsumer : IEventLoopThing {
 	@property {
 		Nullable!EventSource pairOnlyWithSource();
 
-		/// If you transform and not consume, make this negative
+		/// If you transform and not consume, make this negative, 0 to just "see" it and do nothing.
 		byte priority();
 	}
 

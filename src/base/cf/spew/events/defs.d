@@ -52,8 +52,8 @@ struct Event {
 /**
  * 
  */
-union EventSource {
-	private char[8] text_;
+struct EventSource {
+	//private char[8] text_;
 
 	///
 	ulong value;
@@ -66,23 +66,39 @@ union EventSource {
 	in {
 		assert(from.length <= 8);
 	} body {
+		import std.conv : to;
 		char[8] ret = ' ';
 		
 		if (from.length > 0)
 			ret[0 .. from.length] = from[];
-		return EventSource(ret);
+
+		ulong reti;
+
+		foreach(i; 0 .. 8) {
+			reti += ret[i];
+			reti *= 10;
+		}
+
+		return EventSource(reti);
 	}
 
 	///
 	string toString() const {
 		import std.string : lastIndexOf;
-		
-		ptrdiff_t i = text_.lastIndexOf(' ');
+
+		char[8] text;
+		ulong temp = value;
+		foreach(i; 0 .. 8) {
+			text[i] = cast(char)temp;
+			temp /= 10;
+		}
+
+		ptrdiff_t i = text.lastIndexOf(' ');
 		
 		if (i <= 0)
 			return null;
 		else
-			return cast(immutable)text_[0 .. i];
+			return text[0 .. i].idup;
 	}
 }
 

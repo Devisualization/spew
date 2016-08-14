@@ -29,13 +29,13 @@ interface IWindow : IRenderPoint {
         void title(dstring);
         
         /// Moves the window on its display
-        void location(vec2!short);
+		void location(vec2!int);
 
         /// Gets the window location relative to its display
-		vec2!short location();
+		vec2!int location();
         
         /// Sets the size of the window (user area)
-        void size(vec2!ushort);
+		void size(vec2!uint);
 
         /// Is the window currently being displayed?
         bool visible();

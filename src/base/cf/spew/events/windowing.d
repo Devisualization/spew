@@ -6,18 +6,26 @@ enum Windowing_Events_Types {
 	Prefix = EventType.from("w_"),
 	///
 	Window_Moved = EventType.from("w_moved"),
+	///
 	Window_Resized = EventType.from("w_resize"),
+	///
 	Window_Focused = EventType.from("w_focus"),
-	Window_RequestClose = EventType.from("w_reqclo"),
+	///
 	Window_CursorMoved = EventType.from("w_curmvd"),
+	///
 	Window_CursorAction = EventType.from("w_curac"),
+	///
 	Window_CursorActionEnd = EventType.from("w_/curac"),
+	///
 	Window_CursorActionDo = EventType.from("w_!curac"),
+	///
 	Window_CursorScroll = EventType.from("w_cursc"),
+	///
 	Window_KeyDown = EventType.from("w_kdw"),
+	///
 	Window_KeyUp = EventType.from("w_k/dw"),
+	///
 	Window_KeyInput = EventType.from("w_ki"),
-
 }
 
 union Windowing_Events {
