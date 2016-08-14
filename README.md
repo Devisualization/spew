@@ -22,7 +22,7 @@ So why should we take you seriously? After all glib exists. Well, you're still r
   - [ ] Cocoa
 - [ ] Event loop consumers:
   - [ ] X11
-  - [ ] WinAPI
+  - [x] WinAPI
   - [ ] Cocoa
 - [ ] Sockets
 - [ ] Threading
@@ -30,7 +30,13 @@ So why should we take you seriously? After all glib exists. Well, you're still r
 - [ ] Timer
 - [ ] Windowing
   - [ ] X11
-  - [ ] WinAPI
+  - [x] WinAPI
+
+    Contexts:
+    - [x] VRAM
+    - [ ] DirectX
+    - [ ] OpenGL
+    - [ ] Vulkan
   - [ ] Cocoa
 
 ## License
