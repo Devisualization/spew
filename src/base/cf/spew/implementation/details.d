@@ -99,14 +99,15 @@ version(Windows) {
 			if (window is null) {
 
 			} else if (WindowImpl_WinAPI w = cast(WindowImpl_WinAPI)window) {
+				WindowImpl w2 = cast(WindowImpl)w;
 				switch(event.type) {
 					case Windowing_Events_Types.Window_Resized:
 						winapi.InvalidateRgn(event.wellData1Ptr, null, 0);
-						w.onSizeChangeDel(event.windowing.windowResized.newWidth, event.windowing.windowResized.newHeight);
+						w2.onSizeChangeDel(event.windowing.windowResized.newWidth, event.windowing.windowResized.newHeight);
 						return true;
 					case Windowing_Events_Types.Window_Moved:
 						winapi.InvalidateRgn(event.wellData1Ptr, null, 0);
-						w.onMoveDel(event.windowing.windowMoved.newX, event.windowing.windowMoved.newY);
+						w2.onMoveDel(event.windowing.windowMoved.newX, event.windowing.windowMoved.newY);
 						return true;
 
 					case WinAPI_Events_Types.Window_Create:

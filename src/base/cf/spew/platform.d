@@ -39,14 +39,12 @@ IPlatform thePlatform() { return thePlatform_; }
 IPlatform defaultPlatform() { return defaultPlatform_; }
 
 private __gshared {
-	IPlatform defaultPlatform_;
+	import cf.spew.implementation.platform;
+
+	static IPlatform defaultPlatform_ = new PlatformImpl;
 	IPlatform thePlatform_;
 
-	shared static this() {
-		import cf.spew.implementation.platform;
-		PlatformImpl impl = new PlatformImpl;
-
-		defaultPlatform_ = impl;
-		thePlatform_ = impl;
+	static this() {
+		thePlatform_ = defaultPlatform_;
 	}
 }
