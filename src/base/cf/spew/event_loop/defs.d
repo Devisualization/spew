@@ -64,13 +64,17 @@ interface EventLoopSourceRetriever {
 
 
 enum ThreadState : ubyte {
+	/// /error/ /error/ /error/
 	Unknown,
 
+	/// not running and not initialized
 	Uninitialized,
+
+	/// running
 	Started,
-	Stopped,
-	Initialized,
-	Initializing
+
+	/// is initialized but not running
+	Stopped
 }
 
 abstract class IEventLoopManager {
@@ -88,7 +92,7 @@ abstract class IEventLoopManager {
 
 		Map!(ThreadID, ThreadState) threadsState = void;
 
-		Mutex mutex_threadsStateAlter;
+		Mutex mutex_threadsStateAlter, mutex_threadsStateModify;
 	}
 
 	this(IAllocator allocator = processAllocator(), ThreadID mainThreadID = Thread.getThis().id) {
@@ -97,33 +101,89 @@ abstract class IEventLoopManager {
 		this.threadsState = Map!(ThreadID, ThreadState)(allocator);
 
 		this.mutex_threadsStateAlter = allocator.make!Mutex;
+		this.mutex_threadsStateModify = allocator.make!Mutex;
 	}
 
 	abstract {
+		/**
+		 * Adds the provided consumers to the list.
+		 * 
+		 * If a consumer is already stored, it will be ignored.
+		 */
 		void addConsumers(EventLoopConsumer[]...);
+
+		/**
+		 * Adds the provided sources to the list.
+		 * 
+		 * If a source is already stored, it will be ignored.
+		 */
 		void addSources(EventLoopSource[]...);
+
+		/// Removes all consumers from the list.
 		void clearConsumers();
+
+		/// Removes all the sources from the list.
 		void clearSources();
 
+		/// Does the main thread have an event loop executing?
 		bool runningOnMainThread();
+
+		/// Does any of the auxillary threads have an event loop executing?
 		bool runningOnAuxillaryThreads();
+
+		/// How many of the auxillary threads have an event loop executing? 
 		uint countRunningOnAuxillaryThread();
 
+		/// Is the event loop running on the current thread?
+		bool runningOnCurrentThread();
+
+		/// Stop the event loop only on the main thread
 		void stopMainThread();
+
+		/// Stop the event loop only on auxillary threads
 		void stopAuxillaryThreads();
+
+		/// Stop the event loop on all threads
 		void stopAllThreads();
+
+		/// Stop the event loop on the current thread
 		void stopCurrentThread();
 
+		/// For each source, set the timeout hint
 		void setSourceTimeout(Duration duration = 0.seconds);
-		void executeImpl(ThreadID threadId);
+
+		/// Notifies that this thread should be "registered"
+		void notifyOfThread(ThreadID id = Thread.getThis().id);
 	}
 
+	/**
+	 * Starts the event loop for the current thread.
+	 * 
+	 * Will stop when the state of the thread is set to stopped.
+	 * 
+	 * Implementation:
+	 * 		1. If the thread is not already stored, it is stored and set to uninitialized
+	 *		2. If possible remove all non-existant threads
+	 * 		3. If state has changed (per thread)
+	 *			- If no event loops are executing
+	 *				- Initialize the internal workings for all known (and hence "alive") threads
+	 *			- else
+	 *				- Initialize the internal workings for current thread
+	 *		4. Use the internals for the current thread to execute the current event loop
+	 */
 	void execute() {
+		if (runningOnCurrentThread) {
+			// UMM WHAT! /error/ /error/ /error/
+			return;
+		}
+
 		ThreadID currentThread = Thread.getThis().id;
 
 		// this code block must execute for this thread
 		//  otherwise we won't have a proper state
 		synchronized(mutex_threadsStateAlter) {
+			// prevents somebody else from adding/removing entries
+
 			bool found;
 			foreach(k; threadsState.keys) {
 				if (currentThread == k) {
@@ -140,8 +200,44 @@ abstract class IEventLoopManager {
 		// however it is not urgent as to when it should run
 		cleanup();
 
+		void* execute_ctx;
+		synchronized(mutex_threadsStateModify) {
+			// prevents somebody else from removing/modifying the entries
+
+			if (runningOnAuxillaryThreads || runningOnMainThread) {
+				execute_ctx = initializeImpl(currentThread);
+
+				// Not running but it has been initialized
+				threadsState[currentThread] = ThreadState.Stopped;
+			} else {
+				foreach(id, ref state; threadsState) {
+					void* ctx = initializeImpl(id);
+
+					if (id == currentThread)
+						execute_ctx = ctx;
+
+					// Not running but it has been initialized
+					state = ThreadState.Stopped;
+				}
+			}
+
+			threadsState[currentThread] = ThreadState.Started;
+		}
+
 		// ok now implementation code can execute as it is all nice and happy
-		executeImpl(currentThread);
+
+		executeImpl(currentThread, execute_ctx);
+
+		synchronized(mutex_threadsStateModify) {
+			threadsState[currentThread] = ThreadState.Stopped;
+		}
+	}
+
+	abstract protected {
+		void* initializeImpl(ThreadID threadId);
+
+		/// params are the current thread id and the context returned by initializeImpl
+		void executeImpl(ThreadID threadId, void* ctx);
 	}
 
 	protected {
@@ -156,10 +252,14 @@ abstract class IEventLoopManager {
 
 		void cleanup() {
 			// not urgent that we clean up, so don't worry about it
+			// prevents somebody else from adding/removing entries
 			if (mutex_threadsStateAlter.tryLock) {
-				foreach(ThreadID k; threadsState.keys) {
-					if (!isThreadAlive(k)) {
-						threadsState.remove(k);
+				// don't let somebody else go modify existing entries while we are removing
+				synchronized(mutex_threadsStateModify) {
+					foreach(ThreadID k; threadsState.keys) {
+						if (!isThreadAlive(k)) {
+							threadsState.remove(k);
+						}
 					}
 				}
 
