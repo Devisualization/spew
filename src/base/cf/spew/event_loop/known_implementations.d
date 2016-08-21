@@ -6,9 +6,12 @@ import cf.spew.events.defs : EventSource;
  */
 enum EventSources {
 	///
-	WinAPI = EventSource.from("winapi"),
+	Prefix = EventSource.from("s_"),
+
 	///
-	X11 = EventSource.from("x11"),
+	WinAPI = EventSource.from("s_winapi"),
 	///
-	Cocoa = EventSource.from("cocoa")
+	X11 = EventSource.from("s_x11"),
+	///
+	Cocoa = EventSource.from("s_cocoa")
 }

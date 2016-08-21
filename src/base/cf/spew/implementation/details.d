@@ -77,8 +77,12 @@ abstract class EventLoopConsumerImpl : EventLoopConsumer {
 	
 	@property {
 		Nullable!EventSource pairOnlyWithSource() { return Nullable!EventSource(); }
-		
+
+		EventType pairOnlyWithEvents() { return EventType.all; }
+
 		byte priority() { return 127; }
+
+		string description() { return null; }
 	}
 }
 

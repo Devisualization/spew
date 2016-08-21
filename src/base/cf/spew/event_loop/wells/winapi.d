@@ -39,6 +39,8 @@ final class WinAPI_EventLoop_Source : EventLoopSource {
 		bool onAdditionalThreads() { return true; }
 
 		EventSource identifier() { return EventSources.WinAPI; }
+
+		string description() { return "Windows API event source implementation with multi-events(timeout) support."; }
 	}
 
 	EventLoopSourceRetriever nextEventGenerator(IAllocator alloc) {
@@ -107,7 +109,7 @@ final class WinAPI_EventLoop_SourceRetriever : EventLoopSourceRetriever {
 	}
 
 	void handledEvent(ref Event event) {}
-
+	void handledErrorEvent(ref Event event) { unhandledEvent(event); }
 	void unhandledEvent(ref Event event) {
 		import core.sys.windows.windows : DefWindowProc;
 

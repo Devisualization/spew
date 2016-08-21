@@ -82,6 +82,10 @@ struct EventSource {
 		return EventSource(reti);
 	}
 
+	@property static EventSource all() {
+		return EventSource(0x2020202020202020);
+	}
+
 	///
 	string toString() const {
 		import std.string : lastIndexOf;
