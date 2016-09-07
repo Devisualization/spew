@@ -6,10 +6,12 @@
 	"description": "A minimal D application.",
 	"copyright": "Copyright © 2016, rikki",
 	"license": "proprietary",
-	"targetType": "none",
 
+	"sourcePaths": [],
+	"mainSourceFile": "src/diagnostic.d",
+	"targetType": "executable",
 	"dependencies": {
-		"spew:base": "*"
+		"spew:implementation": "*"
 	},
 
 	"subPackages": [
@@ -17,14 +19,27 @@
 			"name": "base",
 			"sourcePaths": ["src/base"],
 			"importPaths": ["src/base"],
+
+			"targetType": "sourceLibrary",
 			"dependencies": {
+				"spew:utils": "*"
+			}
+		},
+		{
+			"name": "implementation",
+			"sourcePaths": ["src/implementation"],
+			"importPaths": ["src/implementation"],
+
+			"libs-windows": ["gdi32", "user32", "dxva2"],
+			"dependencies": {
+				"spew:base": "*",
 				"spew:utils": "*"
 			}
 		},
 		{
 			"name": "utils",
 			"sourcePaths": ["src/utils"],
-			"importPaths": ["src/utils"]
+			"importPaths": ["src/utils"],
 		}
 	]
 }

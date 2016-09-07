@@ -1,6 +1,8 @@
 ﻿module cf.spew.implementation.platform;
 import cf.spew.implementation.details;
 
+__EOF__;
+
 class PlatformImpl : IPlatform, PlatformInterfaces {
 	IRenderPoint createARenderPoint(IAllocator alloc = theAllocator()) { return createAWindow(alloc); }
 	IWindow createAWindow(IAllocator alloc = theAllocator()) {
@@ -22,9 +24,9 @@ class PlatformImpl : IPlatform, PlatformInterfaces {
 	}
 	
 	@property {
-		managed!IDisplay primaryDisplay(IAllocator alloc = processAllocator());
-		managed!(IDisplay[]) displays(IAllocator alloc = processAllocator());
-		managed!(IWindow[]) windows(IAllocator alloc = processAllocator());
+		managed!IDisplay primaryDisplay(IAllocator alloc = processAllocator()) {assert(0);}
+		managed!(IDisplay[]) displays(IAllocator alloc = processAllocator()) {assert(0);}
+		managed!(IWindow[]) windows(IAllocator alloc = processAllocator()) {assert(0);}
 	}
 
 	//
@@ -39,12 +41,12 @@ class PlatformImpl : IPlatform, PlatformInterfaces {
 	}
 
 	@property {
-		ImageStorage!RGBA8 getNotificationIcon(IAllocator alloc=theAllocator);
-		void setNotificationIcon(ImageStorage!RGBA8 icon, IAllocator alloc=theAllocator);
+		ImageStorage!RGBA8 getNotificationIcon(IAllocator alloc=theAllocator) {assert(0);}
+		void setNotificationIcon(ImageStorage!RGBA8 icon, IAllocator alloc=theAllocator) {assert(0);}
 	}
 
-	void notify(ImageStorage!RGBA8 icon, dstring title, dstring text, IAllocator alloc=theAllocator);
-	void clearNotifications();
+	void notify(ImageStorage!RGBA8 icon, dstring title, dstring text, IAllocator alloc=theAllocator) {assert(0);}
+	void clearNotifications() {assert(0);}
 
 	//
 
@@ -98,7 +100,7 @@ package(cf.spew):
 			import cf.spew.event_loop.wells.winapi;
 			// TODO: timers ext.
 
-			addConsumer(allocator.make!EventLoopConsumerImpl_WinAPI(this));
+			//addConsumer(allocator.make!EventLoopConsumerImpl_WinAPI(this));
 			enable_notifications = true;
 			return;
 		}

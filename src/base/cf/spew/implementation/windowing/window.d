@@ -5,6 +5,8 @@ import cf.spew.implementation.windowing.display;
 import cf.spew.implementation.windowing.menu;
 import cf.spew.ui.window;
 
+__EOF__;
+
 abstract class WindowImpl : IWindow, IWindowEvents {
 	package(cf.spew) {
 		PlatformImpl platform;

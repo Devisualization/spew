@@ -3,6 +3,7 @@
 public import cf.spew.ui;
 public import cf.spew.platform;
 public import cf.spew.event_loop;
+public import cf.spew.events;
 public import std.experimental.graphic.image : ImageStorage;
 public import std.experimental.graphic.color : RGB8, RGBA8;
 public import std.experimental.containers.list;
@@ -10,12 +11,11 @@ public import std.experimental.containers.map;
 public import std.experimental.allocator : IAllocator, processAllocator, theAllocator, dispose, make, makeArray, expandArray, shrinkArray;
 public import std.experimental.memory.managed;
 
+__EOF__;
+
 version(Windows) {
 	public import winapi = core.sys.windows.windows;
 
-	pragma(lib, "gdi32");
-	pragma(lib, "user32");
-	
 	public import cf.spew.implementation.features.notifications;
 	interface PlatformInterfaces : Feature_Notification, Have_Notification {}
 } else {

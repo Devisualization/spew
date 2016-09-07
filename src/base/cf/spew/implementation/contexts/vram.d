@@ -6,6 +6,8 @@ import std.experimental.graphic.image : ImageStorage;
 import std.experimental.graphic.color : RGB8, RGBA8;
 import std.experimental.allocator : IAllocator;
 
+__EOF__;
+
 private {
 	version(Windows) {
 		import core.sys.windows.windows : HWND, HDC, GetDC, CreateCompatibleDC, IsWindowVisible,

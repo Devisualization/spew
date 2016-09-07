@@ -2,6 +2,8 @@
 import cf.spew.implementation.details;
 import cf.spew.implementation.platform;
 
+__EOF__;
+
 abstract class WindowCreatorImpl : IWindowCreator { 
 	package(cf.spew) {
 		PlatformImpl platform;

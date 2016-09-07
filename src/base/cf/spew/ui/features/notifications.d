@@ -6,7 +6,7 @@
  */
 module cf.spew.ui.features.notifications;
 import cf.spew.ui.window.defs;
-import cf.spew.platform : IPlatform;
+import cf.spew.instance;
 import std.experimental.graphic.image : ImageStorage;
 import std.experimental.graphic.color : RGBA8;
 import std.experimental.memory.managed;
@@ -35,7 +35,7 @@ interface Feature_Notification {
  * 		to		=	The image to assign as
  * 		alloc	=	The allocator to use during assignment
  */
-void notificationIcon(IPlatform self, ImageStorage!RGBA8 to, IAllocator alloc=theAllocator) {
+void notificationIcon(Management_UserInterface self, ImageStorage!RGBA8 to, IAllocator alloc=theAllocator) {
     if (self is null)
         return;
     if (Have_Notification ss = cast(Have_Notification)self) {
@@ -56,7 +56,7 @@ void notificationIcon(IPlatform self, ImageStorage!RGBA8 to, IAllocator alloc=th
  * Returns:
  * 		The notification icon for the current process (will auto deallocate)
  */
-managed!(ImageStorage!RGBA8) notificationIcon(IPlatform self, IAllocator alloc=theAllocator) {
+managed!(ImageStorage!RGBA8) notificationIcon(Management_UserInterface self, IAllocator alloc=theAllocator) {
     if (self is null)
         return (managed!(ImageStorage!RGBA8)).init;
     if (Have_Notification ss = cast(Have_Notification)self) {
@@ -81,7 +81,7 @@ managed!(ImageStorage!RGBA8) notificationIcon(IPlatform self, IAllocator alloc=t
  * 		text	=	The message text to tell the user
  * 		alloc	=	Allocator to allocate and copy resources for while notification is active
  */
-void notify(S1, S2)(IPlatform self, ImageStorage!RGBA8 image=null, S1 title=null, S2 text=null, IAllocator alloc=theAllocator) if (isSomeString!S1 && isSomeString!S2) {
+void notify(S1, S2)(Management_UserInterface self, ImageStorage!RGBA8 image=null, S1 title=null, S2 text=null, IAllocator alloc=theAllocator) if (isSomeString!S1 && isSomeString!S2) {
     if (self is null)
         return;
     if (Have_Notification ss = cast(Have_Notification)self) {
@@ -129,7 +129,7 @@ void notify(S1, S2)(IPlatform self, ImageStorage!RGBA8 image=null, S1 title=null
  * Params:
  * 		self	=	The platform instance
  */
-void clearNotifications(IPlatform self) {
+void clearNotifications(Management_UserInterface self) {
     if (self is null)
         return;
     if (Have_Notification ss = cast(Have_Notification)self) {
@@ -149,7 +149,7 @@ void clearNotifications(IPlatform self) {
  * Returns:
  * 		If the platform supports notifications
  */
-@property bool capableOfNotifications(IPlatform self) {
+@property bool capableOfNotifications(Management_UserInterface self) {
 	if (self is null)
 		return false;
 	else if (Have_Notification ss = cast(Have_Notification)self)

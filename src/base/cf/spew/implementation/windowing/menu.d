@@ -7,6 +7,8 @@ import std.experimental.allocator : IAllocator;
 import std.experimental.graphic.image : ImageStorage;
 import std.experimental.graphic.color : RGB8, RGBA8;
 
+__EOF__;
+
 abstract class MenuItemImpl : MenuItem {
 	import std.experimental.containers.list;
 	

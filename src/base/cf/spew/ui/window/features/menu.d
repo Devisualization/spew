@@ -6,7 +6,7 @@
  */
 module cf.spew.ui.window.features.menu;
 import cf.spew.ui.window.defs;
-import cf.spew.platform : IPlatform;
+import cf.spew.instance;
 import std.experimental.graphic.image : ImageStorage;
 import std.experimental.graphic.color : RGB8;
 import std.experimental.memory.managed;
@@ -74,7 +74,7 @@ interface MenuItem {
 
 @property {
     /// Retrives the menu instance or null if non existant
-    Feature_Menu menu(T)(T self) if (is(T : IWindow) || is(T : IPlatform)) {
+	Feature_Menu menu(T)(T self) if (is(T : IWindow) || is(T : Management_UserInterface)) {
 		if (!self.capableOfMenu)
 			return null;
 		else {
@@ -82,8 +82,8 @@ interface MenuItem {
 		}
     }
 
-    Feature_Menu menu(T)(T self) if (!(is(T : IWindow) || is(T : IPlatform))) {
-        static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or IPlatform.");
+	Feature_Menu menu(T)(T self) if (!(is(T : IWindow) || is(T : Management_UserInterface))) {
+		static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or Management_UserInterface.");
     }
 
 	/**
@@ -95,7 +95,7 @@ interface MenuItem {
 	 * Returns:
 	 * 		If the window/platform supports having an icon
 	 */
-	bool capableOfMenu(T)(T self) if (is(T : IWindow) || is(T : IPlatform)) {
+	bool capableOfMenu(T)(T self) if (is(T : IWindow) || is(T : Management_UserInterface)) {
 		if (self is null)
 			return false;
 		else if (Have_Menu ss = cast(Have_Menu)self)
@@ -104,7 +104,7 @@ interface MenuItem {
 			return false;
 	}
 
-	bool capableOfMenu(T)(T self) if (!(is(T : IWindow) || is(T : IPlatform))) {
-		static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or IPlatform types.");
+	bool capableOfMenu(T)(T self) if (!(is(T : IWindow) || is(T : Management_UserInterface))) {
+		static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or Management_UserInterface types.");
 	}
 }
