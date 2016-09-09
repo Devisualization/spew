@@ -10,7 +10,10 @@ enum ThreadState : ubyte {
 	
 	/// not running and not initialized
 	Uninitialized,
-	
+
+	/// Ready to go
+	Initialized,
+
 	/// running
 	Started,
 	

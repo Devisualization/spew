@@ -20,7 +20,7 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 		List!EventLoopConsumer consumers = void;
 
 		Mutex mutex_threadData;
-		Map!(ThreadID, InternalData) threadData;
+		Map!(ThreadID, InternalData) threadData = void;
 	}
 
 	this(IAllocator allocator = processAllocator(), ThreadID mainThreadID = Thread.getThis().id) {
@@ -35,6 +35,9 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 		this.mutex_sourcesAlter = allocator.make!Mutex;
 		this.mutex_consumersAlter = allocator.make!Mutex;
 		this.mutex_threadData = allocator.make!Mutex;
+
+		this.threadData = Map!(ThreadID, InternalData)(allocator);
+		initializeImpl(mainThreadID);
 	}
 
 	void addConsumers(EventLoopConsumer[] toAdd...) {
@@ -64,7 +67,7 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 						dontAdd = true;
 					}
 				}
-				
+
 				if (!dontAdd)
 					sources ~= v;
 			}
@@ -87,8 +90,71 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 		this.hintSourceTimeout = duration;
 	}
 
-	string describeRules() { assert(0); }
-	string describeRulesFor(ThreadID id = Thread.getThis().id) { assert(0); }
+	string describeRules() { 
+		import std.array : appender;
+		import std.conv : text;
+
+		auto result = appender!string;
+		size_t countEle = threadsState.keys.length;
+		result.reserve(100 * countEle + 1);
+
+		result ~= "There are currently ";
+		result ~= countEle.text;
+		result ~= " threads registered with the event loop manager.\n";
+
+		result ~= "The thread ids are: [";
+		if (countEle > 3)
+			result ~= "\n\t";
+		foreach(i, tid; threadsState.keys) {
+			result ~= tid.text;
+			if (i + 1 < countEle)
+				result ~= ", ";
+		}
+		result ~= "]\n\n";
+
+		foreach(tid; threadsState.keys) {
+			result ~= describeRulesFor(tid);
+		}
+
+		return result.data;
+	}
+
+	string describeRulesFor(ThreadID id = Thread.getThis().id) {
+		import std.array : appender;
+		import std.conv : text;
+		import std.string : lineSplitter, KeepTerminator;
+		
+		auto result = appender!string;
+
+		result ~= "Thread id: ";
+		result ~= id.text;
+
+		if (isMainThread(id))
+			result ~= " [MAIN] {\n";
+		else
+			result ~= " [AUXILLARY] {\n";
+
+		result ~= "\tCurrent state: ";
+		result ~= threadsState[id].text;
+		result ~= "\n";
+
+		InternalData data = threadData[id];
+		if (data !is null) {
+			foreach(instance; data.instances) {
+				result ~= "\tSource [";
+				result ~= instance.source.identifier.toString;
+				result ~= "]:\n";
+
+				foreach(line; lineSplitter!(KeepTerminator.yes)(instance.source.description)) {
+					result ~= "\t\t";
+					result ~= line;
+				}
+			}
+		}
+
+		result ~= "}\n";
+		return result.data;
+	}
 
 	protected {
 		void onErrorDelegateDefaultImpl(ThreadID, Exception) {}
@@ -139,6 +205,7 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 				short lastPriority = byte.min;
 				size_t countAddedSoFar;
 
+				ret.instances[i].source = source;
 				ret.instances[i].retriever = source.nextEventGenerator(allocator);
 				ret.instances[i].retriever.hintTimeout(hintSourceTimeout);
 
@@ -165,6 +232,7 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 
 			synchronized(mutex_threadData) {
 				threadData[threadId] = ret;
+				threadsState[threadId] = ThreadState.Initialized;
 				return cast(void*)ret;
 			}
 		}
@@ -219,6 +287,7 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 
 		struct Instance {
 			EventLoopSourceRetriever retriever;
+			EventLoopSource source;
 			EventLoopConsumer[] consumers;
 		}
 	}

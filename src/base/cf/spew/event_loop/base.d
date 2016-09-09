@@ -27,6 +27,8 @@ abstract class EventLoopManager_Base : IEventLoopManager {
 		
 		this.mutex_threadsStateAlter = allocator.make!Mutex;
 		this.mutex_threadsStateModify = allocator.make!Mutex;
+
+		this.threadsState[mainThreadID] = ThreadState.Uninitialized;
 	}
 	
 	bool runningOnThreadFor(ThreadID id = Thread.getThis().id) {

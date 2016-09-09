@@ -57,8 +57,9 @@ final class DefaultImplementation : Instance {
 
 			_mainEventSource_ = allocator.make!WinAPI_EventLoop_Source;
 			_eventLoop.manager.addSources(_mainEventSource_);
-			//_mainEventConsumer_ = allocator.make!EventLoopConsumerImpl_WinAPI(this);
+			_mainEventConsumer_ = allocator.make!EventLoopConsumerImpl_WinAPI(this);
 			_eventLoop.manager.addConsumers(_mainEventConsumer_);
+			_userInterface = allocator.make!UIInstance_WinAPI(allocator);
 		}
 	}
 }
@@ -88,3 +89,47 @@ final class EventLoopWrapper : Management_EventLoop {
 	@property IEventLoopManager manager() { return _manager; }
 }
 
+abstract class UIInstance : Management_UserInterface {
+	import cf.spew.ui : IWindow, IDisplay, IWindowCreator, IRenderPoint, IRenderPointCreator;
+	import std.experimental.allocator : IAllocator, processAllocator;
+	import std.experimental.memory.managed;
+
+	this(IAllocator allocator) {
+		this.allocator = allocator;
+	}
+
+	IAllocator allocator;
+
+	///
+	managed!IRenderPointCreator createRenderPoint(IAllocator alloc = processAllocator()) { assert(0); }
+	
+	/// completely up to platform implementation to what the defaults are
+	IRenderPoint createARenderPoint(IAllocator alloc = processAllocator()) { assert(0); }
+	
+	///
+	managed!IWindowCreator createWindow(IAllocator alloc = processAllocator()) { assert(0); }
+	
+	/// completely up to platform implementation to what the defaults are
+	IWindow createAWindow(IAllocator alloc = processAllocator()) { assert(0); }
+	
+	@property {
+		///
+		managed!IDisplay primaryDisplay(IAllocator alloc = processAllocator()) { assert(0); }
+		
+		///
+		managed!(IDisplay[]) displays(IAllocator alloc = processAllocator()) { assert(0); }
+		
+		///
+		managed!(IWindow[]) windows(IAllocator alloc = processAllocator()) { assert(0); }
+	}
+}
+
+version(Windows) {
+	final class UIInstance_WinAPI : UIInstance {
+		this(IAllocator allocator) {
+			super(allocator);
+		}
+
+
+	}
+}

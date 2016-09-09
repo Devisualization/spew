@@ -75,8 +75,8 @@ struct EventSource {
 		ulong reti;
 
 		foreach(i; 0 .. 8) {
-			reti += ret[i];
-			reti *= 10;
+			reti *= 256;
+			reti += ret[7-i];
 		}
 
 		return EventSource(reti);
@@ -94,13 +94,16 @@ struct EventSource {
 		ulong temp = value;
 		foreach(i; 0 .. 8) {
 			text[i] = cast(char)temp;
-			temp /= 10;
+
+			temp /= 256;
 		}
 
 		ptrdiff_t i = text.lastIndexOf(' ');
 		
-		if (i <= 0)
+		if (i == 0)
 			return null;
+		else if (i == -1)
+			return text.idup;
 		else
 			return text[0 .. i].idup;
 	}

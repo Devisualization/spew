@@ -8,7 +8,9 @@ abstract class Instance {
 		Management_EventLoop eventLoop();
 		/// The user interfacing implementation for this application
 		Management_UserInterface userInterface();
-		alias ui = userInterface;
+		///
+		pragma(inline, true)
+		final Management_UserInterface ui() { return userInterface; }
 	}
 
 	///
