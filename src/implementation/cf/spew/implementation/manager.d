@@ -140,6 +140,8 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 		result ~= "\n";
 
 		InternalData data = threadData[id];
+		atomicOp!"+="(data.refCount, 1);
+
 		if (data !is null) {
 			result ~= "\n\tSources:\n";
 			foreach(i, instance; data.instances) {
@@ -197,6 +199,10 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 				result ~= "\n";
 			}
 		}
+
+		atomicOp!"-="(data.refCount, 1);
+		if (atomicLoad(data.refCount) == 0)
+			allocator.dispose(data);
 
 		result ~= "}\n";
 		return result.data;
