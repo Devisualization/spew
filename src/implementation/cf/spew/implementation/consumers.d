@@ -73,7 +73,7 @@ abstract class EventLoopConsumerImpl : EventLoopConsumer {
 		
 		byte priority() { return byte.max / 2; }
 		
-		string description() { return null; }
+		string description() { return "Default implementation consumer for Windowing."; }
 	}
 }
 

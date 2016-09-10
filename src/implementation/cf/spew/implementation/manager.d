@@ -37,7 +37,6 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 		this.mutex_threadData = allocator.make!Mutex;
 
 		this.threadData = Map!(ThreadID, InternalData)(allocator);
-		initializeImpl(mainThreadID);
 	}
 
 	void addConsumers(EventLoopConsumer[] toAdd...) {
@@ -123,7 +122,9 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 		import std.array : appender;
 		import std.conv : text;
 		import std.string : lineSplitter, KeepTerminator;
-		
+
+		initializeImpl(id);
+
 		auto result = appender!string;
 
 		result ~= "Thread id: ";
@@ -140,15 +141,60 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 
 		InternalData data = threadData[id];
 		if (data !is null) {
+			result ~= "\n\tSources:\n";
+			foreach(i, instance; data.instances) {
+				result ~= "\t\t[";
+				result ~= i.text;
+				result ~= "] ";
+				result ~= instance.source.identifier.toString;
+				result ~= "\n";
+
+				foreach(line; lineSplitter!(KeepTerminator.yes)(instance.source.description)) {
+					result ~= "\t\t\t";
+					result ~= line;
+				}
+				result ~= "\n";
+			}
+
 			foreach(instance; data.instances) {
 				result ~= "\tSource [";
 				result ~= instance.source.identifier.toString;
 				result ~= "]:\n";
 
-				foreach(line; lineSplitter!(KeepTerminator.yes)(instance.source.description)) {
-					result ~= "\t\t";
-					result ~= line;
+				foreach(consumer; instance.consumers) {
+					result ~= "\t\t- [PRIORITY ";
+					result ~= consumer.priority.text;
+					result ~= "]";
+
+					if (consumer.onMainThread) {
+						result ~= " [MAIN]";
+					}
+
+					if (consumer.onAdditionalThreads) {
+						result ~= " [AUXILLARY]";
+					}
+
+					if (!consumer.pairOnlyWithSource.isNull) {
+						result ~= " [ONLY SOURCE ";
+						result ~= consumer.pairOnlyWithSource.get.toString;
+						result ~= "]";
+					}
+
+					if (consumer.pairOnlyWithEvents != EventType.all) {
+						result ~= " [ONLY EVENTS ";
+						result ~= consumer.pairOnlyWithEvents.toString;
+						result ~= "]";
+					}
+
+					result ~= ":\n";
+
+					foreach(line; lineSplitter!(KeepTerminator.yes)(consumer.description)) {
+						result ~= "\t\t\t";
+						result ~= line;
+					}
+					result ~= "\n";
 				}
+				result ~= "\n";
 			}
 		}
 
@@ -197,7 +243,7 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 					i++;
 				}
 			}
-			allSourcesSlice = allSourcesSlice[0 .. i];
+			allSourcesSlice = allSources[0 .. i];
 			ret.instances = allocator.makeArray!(InternalData.Instance)(allSourcesSlice.length);
 
 			i = 0;
