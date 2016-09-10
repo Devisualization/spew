@@ -144,12 +144,12 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 
 		if (data !is null) {
 			result ~= "\n\tSources:\n";
-			foreach(i, instance; data.instances) {
-				result ~= "\t\t[";
-				result ~= i.text;
-				result ~= "] ";
+			foreach(instance; data.instances) {
+				result ~= "\t\t- [";
 				result ~= instance.source.identifier.toString;
-				result ~= "\n";
+				result ~= "] ";
+				result ~= (cast(Object)instance.source).classinfo.name;
+				result ~= ":\n";
 
 				foreach(line; lineSplitter!(KeepTerminator.yes)(instance.source.description)) {
 					result ~= "\t\t\t";
@@ -161,20 +161,20 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 			foreach(instance; data.instances) {
 				result ~= "\tSource [";
 				result ~= instance.source.identifier.toString;
-				result ~= "]:\n";
+				result ~= "] {\n";
 
 				foreach(consumer; instance.consumers) {
-					result ~= "\t\t- [PRIORITY ";
+					result ~= "\t\t- ";
+					result ~= (cast(Object)consumer).classinfo.name;
+					if (consumer.onMainThread)
+						result ~= " [MAIN]";
+					if (consumer.onAdditionalThreads)
+						result ~= " [AUXILLARY]";
+					result ~= "\n";
+
+					result ~= "\t\t\t[PRIORITY ";
 					result ~= consumer.priority.text;
 					result ~= "]";
-
-					if (consumer.onMainThread) {
-						result ~= " [MAIN]";
-					}
-
-					if (consumer.onAdditionalThreads) {
-						result ~= " [AUXILLARY]";
-					}
 
 					if (!consumer.pairOnlyWithSource.isNull) {
 						result ~= " [ONLY SOURCE ";
@@ -196,7 +196,7 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 					}
 					result ~= "\n";
 				}
-				result ~= "\n";
+				result ~= "\n\t}\n";
 			}
 		}
 
