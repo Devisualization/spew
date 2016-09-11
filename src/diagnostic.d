@@ -77,7 +77,7 @@ int main() {
 
 	writeln("So it looks like:");
 	writeln("\t- Event loop");
-	writeln("\t- User interface");
+	//writeln("\t- User interface");
 	writeln("are all provided and functioning correctly.");
 
 	return 0;
