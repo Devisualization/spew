@@ -10,34 +10,58 @@ Well not much, just a unified event loop, bindings and of course interfacing to 
 
 So why should we take you seriously? After all glib exists. Well, you're still reading this aren't you.
 
+## Platform support
+- Windows 7+ (tested on Windows 10 officially only)
+
 ## Tasks
 
 - [ ] General structure
-- [x] Event loop (basic implementation)
-- [ ] Event loop wells:
-  - [ ] X11
-  - [x] WinAPI
-  
-	Although needs translators for the messages it gains from WinAPI.
-  - [ ] Cocoa
-- [ ] Event loop consumers:
-  - [ ] X11
-  - [x] WinAPI
-  - [ ] Cocoa
+- [ ] Event loop
+  - [x] Abstraction
+  - [x] Basic implementation
+  - [ ] Wells:
+    - [ ] X11
+    - [x] WinAPI
+    - [ ] Cocoa
+  - [ ] Consumers:
+    - [ ] X11
+    - [x] WinAPI
+    - [ ] Cocoa
 - [ ] Sockets
 - [ ] Threading
 - [ ] File system
 - [ ] Timer
 - [ ] Windowing
   - [ ] X11
-  - [x] WinAPI
-
+    - [ ] Core
+    - [ ] Features:
+       - [ ] notifications
+       - [ ] cursor
+       - [ ] icon
+       - [ ] menu
+       - [ ] screenshot
+    - [ ] Contexts:
+       - [ ] VRAM
+       - [ ] OpenGL
+       - [ ] Vulkan
+  - [ ] WinAPI
+    - [ ] Core
+    - [ ] Features:
+       - [ ] notifications
+       - [ ] cursor
+       - [ ] icon
+       - [ ] menu
+       - [ ] screenshot
+    - [ ] Contexts:
+       - [ ] VRAM
+       - [ ] OpenGL
+       - [ ] DirectX
+       - [ ] Vulkan
+  - [ ] Cocoa
     Contexts:
-    - [x] VRAM
-    - [ ] DirectX
+    - [ ] VRAM
     - [ ] OpenGL
     - [ ] Vulkan
-  - [ ] Cocoa
 
 ## License
 Boost
