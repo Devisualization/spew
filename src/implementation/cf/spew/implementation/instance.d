@@ -1,6 +1,8 @@
 ﻿module cf.spew.implementation.instance;
 import cf.spew.instance;
 import std.experimental.allocator : IAllocator, make, dispose, processAllocator;
+import std.experimental.memory.managed;
+import cf.spew.ui.rendering : vec2;
 
 final class DefaultImplementation : Instance {
 	import cf.spew.event_loop.defs : EventLoopSource, EventLoopConsumer;
@@ -100,36 +102,49 @@ abstract class UIInstance : Management_UserInterface {
 
 	IAllocator allocator;
 
-	///
-	managed!IRenderPointCreator createRenderPoint(IAllocator alloc = processAllocator()) { assert(0); }
-	
-	/// completely up to platform implementation to what the defaults are
-	IRenderPoint createARenderPoint(IAllocator alloc = processAllocator()) { assert(0); }
-	
-	///
 	managed!IWindowCreator createWindow(IAllocator alloc = processAllocator()) { assert(0); }
-	
-	/// completely up to platform implementation to what the defaults are
-	IWindow createAWindow(IAllocator alloc = processAllocator()) { assert(0); }
+
+	managed!IRenderPointCreator createRenderPoint(IAllocator alloc = processAllocator())
+	{ return cast(managed!IRenderPointCreator)createWindow(alloc); }
+
+	IRenderPoint createARenderPoint(IAllocator alloc = processAllocator())
+	{ return createAWindow(alloc); }
+
+	IWindow createAWindow(IAllocator alloc = processAllocator()) {
+		import cf.spew.ui.context.features.vram;
+
+		auto creator = createWindow(alloc);
+		creator.size = vec2!ushort(cast(short)800, cast(short)600);
+		creator.assignVRamContext;
+		return creator.createWindow();
+	}
 	
 	@property {
-		///
 		managed!IDisplay primaryDisplay(IAllocator alloc = processAllocator()) { assert(0); }
-		
-		///
 		managed!(IDisplay[]) displays(IAllocator alloc = processAllocator()) { assert(0); }
-		
-		///
 		managed!(IWindow[]) windows(IAllocator alloc = processAllocator()) { assert(0); }
 	}
 }
 
 version(Windows) {
 	final class UIInstance_WinAPI : UIInstance {
+		import cf.spew.implementation.windowing.window_creator : WindowCreatorImpl_WinAPI;
+		import std.typecons : tuple;
+
 		this(IAllocator allocator) {
 			super(allocator);
 		}
 
+		override {
+			managed!IWindowCreator createWindow(IAllocator alloc = processAllocator()) {
+				return cast(managed!IWindowCreator)managed!WindowCreatorImpl_WinAPI(managers(), tuple(this, alloc), alloc);
+			}
 
+			@property {
+				managed!IDisplay primaryDisplay(IAllocator alloc = processAllocator()) { assert(0); }
+				managed!(IDisplay[]) displays(IAllocator alloc = processAllocator()) { assert(0); }
+				managed!(IWindow[]) windows(IAllocator alloc = processAllocator()) { assert(0); }
+			}
+		}
 	}
 }

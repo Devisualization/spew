@@ -1,10 +1,12 @@
-﻿module cf.spew.events.winapi;
+﻿///
+module cf.spew.events.winapi;
 version(Windows):
 
 import cf.spew.events.defs;
 import std.experimental.memory.managed;
 import core.sys.windows.windows : MSG, CREATESTRUCT, HWND;
 
+///
 enum WinAPI_Events_Types {
 	///
 	Prefix = EventType.from("|w"),
@@ -44,18 +46,19 @@ enum WinAPI_Events_Types {
 	Window_RequestClose = EventType.from("|wreqclo"),
 }
 
+///
 union WinAPI_Events {
-	// WM_ERASEBKGND
+	/// WM_ERASEBKGND
 	MSG raw;
 
-	// WM_CREATE
+	/// WM_CREATE
 	CREATESTRUCT window_create;
 
-	// WM_SETFOCUS
+	/// WM_SETFOCUS
 	HWND lostFocusWindow;
-	// WM_KILLFOCUS
+	/// WM_KILLFOCUS
 	HWND gainedFocusWindow;
 
-	// WM_SETREDRAW
+	/// WM_SETREDRAW
 	bool redrawState;
 }

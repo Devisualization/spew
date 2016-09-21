@@ -24,12 +24,17 @@ import core.time : Duration;
 struct EventLoopAlterationCallbacks {
 	private immutable ulong MAGIC = 0xBEAF75;
 
+	///
 	bool canTranslate = true;
 
+	///
 	bool delegate(bool logoff, bool force, bool closeapp) nothrow canShutdown;
+	///
 	void delegate(bool isShuttingDown, bool logoff, bool force, bool closeapp) nothrow systemShutdownResult;
+	///
 	bool delegate(LPARAM lParam) nothrow modifySetCursor;
 
+	///
 	LRESULT delegate(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam, ref EventLoopAlterationCallbacks callbacks, ref Event event) nothrow unhandledEvent;
 }
 

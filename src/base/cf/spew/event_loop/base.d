@@ -1,4 +1,5 @@
-﻿module cf.spew.event_loop.base;
+﻿///
+module cf.spew.event_loop.base;
 import cf.spew.event_loop.defs;
 import cf.spew.events.defs;
 import std.experimental.allocator;
@@ -20,6 +21,7 @@ abstract class EventLoopManager_Base : IEventLoopManager {
 		Mutex mutex_threadsStateAlter, mutex_threadsStateModify;
 	}
 	
+	///
 	this(IAllocator allocator = processAllocator(), ThreadID mainThreadID = Thread.getThis().id) {
 		this.allocator = allocator;
 		this.mainThreadID = mainThreadID;
@@ -31,18 +33,21 @@ abstract class EventLoopManager_Base : IEventLoopManager {
 		this.threadsState[mainThreadID] = ThreadState.Uninitialized;
 	}
 	
+	///
 	bool runningOnThreadFor(ThreadID id = Thread.getThis().id) {
 		synchronized(mutex_threadsStateModify) {
 			return threadsState[id] == ThreadState.Started;
 		}
 	}
 	
+	///
 	void stopMainThread() {
 		synchronized(mutex_threadsStateModify) {
 			threadsState[mainThreadID] = ThreadState.Stop;
 		}
 	}
 	
+	///
 	void stopAuxillaryThreads() {
 		synchronized(mutex_threadsStateModify) {
 			foreach(id, ref state; threadsState) {
@@ -52,6 +57,7 @@ abstract class EventLoopManager_Base : IEventLoopManager {
 		}
 	}
 	
+	///
 	void stopAllThreads() {
 		synchronized(mutex_threadsStateModify) {
 			foreach(id, ref state; threadsState) {
@@ -61,6 +67,7 @@ abstract class EventLoopManager_Base : IEventLoopManager {
 		}
 	}
 	
+	///
 	void stopThreadFor(ThreadID id = Thread.getThis().id) {
 		synchronized(mutex_threadsStateModify) {
 			if (threadsState[id] == ThreadState.Started)
@@ -68,16 +75,19 @@ abstract class EventLoopManager_Base : IEventLoopManager {
 		}
 	}
 	
+	///
 	bool runningOnMainThread() {
 		synchronized(mutex_threadsStateModify) {
 			return threadsState[mainThreadID] == ThreadState.Started;
 		}
 	}
 	
+	///
 	bool runningOnAuxillaryThreads() {
 		return countRunningOnAuxillaryThread > 0;
 	}
 	
+	///
 	uint countRunningOnAuxillaryThread() {
 		synchronized(mutex_threadsStateModify) {
 			uint ret;
@@ -89,6 +99,7 @@ abstract class EventLoopManager_Base : IEventLoopManager {
 		}
 	}
 	
+	///
 	void notifyOfThread(ThreadID id = Thread.getThis().id) {
 		// this code block must execute for this thread
 		//  otherwise we won't have a proper state
@@ -108,6 +119,7 @@ abstract class EventLoopManager_Base : IEventLoopManager {
 		}
 	}
 	
+	///
 	void registerOnErrorDelegate(void delegate(ThreadID, Exception) del) {
 		onErrorDelegate = del;
 	}
@@ -174,11 +186,13 @@ abstract class EventLoopManager_Base : IEventLoopManager {
 	}
 	
 	abstract protected {
+		///
 		void* initializeImpl(ThreadID threadId);
 		
 		/// params are the current thread id and the context returned by initializeImpl
 		void executeImpl(ThreadID threadId, void* ctx);
 		
+		///
 		void cleanupRemovingImpl(ThreadID);
 	}
 	

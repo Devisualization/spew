@@ -1,9 +1,11 @@
-﻿module cf.spew.event_loop.defs;
+﻿///
+module cf.spew.event_loop.defs;
 import cf.spew.events.defs : EventSource, Event, EventType;
 import std.experimental.allocator : IAllocator;
 import core.time : Duration, seconds;
 import core.thread : ThreadID, Thread;
 
+///
 enum ThreadState : ubyte {
 	/// /error/ /error/ /error/
 	Unknown,
@@ -22,26 +24,35 @@ enum ThreadState : ubyte {
 	Stop
 }
 
+///
 interface IEventLoopThing {
 	@property {
+		///
 		bool onMainThread();
+		///
 		bool onAdditionalThreads();
+		///
 		string description();
 	}
 }
 
+///
 interface EventLoopSource : IEventLoopThing {
 	@property {
+		///
 		EventSource identifier();
 	}
 	
+	///
 	EventLoopSourceRetriever nextEventGenerator(IAllocator);
 }
 
+///
 interface EventLoopConsumer : IEventLoopThing {
 	import std.typecons : Nullable;
 	
 	@property {
+		///
 		Nullable!EventSource pairOnlyWithSource();
 		
 		// prefix for the event types
@@ -58,6 +69,7 @@ interface EventLoopConsumer : IEventLoopThing {
 	bool processEvent(ref Event event);
 }
 
+///
 interface EventLoopSourceRetriever {
 	/**
 	 * Returns:
@@ -65,13 +77,18 @@ interface EventLoopSourceRetriever {
 	 */
 	bool nextEvent(ref Event event);
 	
+	///
 	void handledEvent(ref Event event);
+	///
 	void unhandledEvent(ref Event event);
+	///
 	void handledErrorEvent(ref Event event);
 	
+	///
 	void hintTimeout(Duration timeout);
 }
 
+///
 interface IEventLoopManager {
 	/**
 	 * Adds the provided consumers to the list.

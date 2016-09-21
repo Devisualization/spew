@@ -1,4 +1,5 @@
-﻿module cf.spew.event_loop.known_implementations;
+﻿///
+module cf.spew.event_loop.known_implementations;
 import cf.spew.events.defs : EventSource;
 
 /**

@@ -1,4 +1,5 @@
-﻿module cf.spew.events.defs;
+﻿///
+module cf.spew.events.defs;
 import cf.spew.events.windowing;
 
 /**
@@ -82,6 +83,7 @@ struct EventSource {
 		return EventSource(reti);
 	}
 
+	///
 	@property static EventSource all() {
 		return EventSource(0x2020202020202020);
 	}

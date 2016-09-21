@@ -1,4 +1,5 @@
-﻿module cf.spew.instance;
+﻿///
+module cf.spew.instance;
 
 ///
 abstract class Instance {

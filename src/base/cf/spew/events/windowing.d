@@ -1,6 +1,8 @@
-﻿module cf.spew.events.windowing;
+﻿///
+module cf.spew.events.windowing;
 import cf.spew.events.defs;
 
+///
 enum Windowing_Events_Types {
 	/// Prefix to determine if it is standard windowing types
 	Prefix = EventType.from("w_"),
@@ -28,6 +30,7 @@ enum Windowing_Events_Types {
 	Window_KeyInput = EventType.from("w_ki"),
 }
 
+///
 union Windowing_Events {
 	///
 	Windowing_Event_Cursor_Action cursorAction;

@@ -1,3 +1,5 @@
+module diagnostic;
+
 int main() {
 	import cf.spew.instance;
 
