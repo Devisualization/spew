@@ -92,10 +92,9 @@ version(Windows) {
 			}
 			
 			managed!(IWindow[]) windows() {
-				/+GetWindows ctx = GetWindows(alloc, cast()platform, cast()this);
+				GetWindows_WinAPI ctx = GetWindows_WinAPI(alloc, cast()uiInstance, cast()this);
 				ctx.call;
-				return managed!(IWindow[])(ctx.windows, managers(), Ownership.Secondary, alloc);+/
-				return managed!(IWindow[]).init;
+				return managed!(IWindow[])(ctx.windows, managers(), Ownership.Secondary, alloc);
 			}
 			
 			void* __handle() {

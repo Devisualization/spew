@@ -133,6 +133,7 @@ abstract class UIInstance : Management_UserInterface {
 version(Windows) {
 	final class UIInstance_WinAPI : UIInstance {
 		import cf.spew.implementation.windowing.window_creator : WindowCreatorImpl_WinAPI;
+		import cf.spew.implementation.windowing.misc;
 		import std.typecons : tuple;
 
 		this(IAllocator allocator) {
@@ -145,9 +146,27 @@ version(Windows) {
 			}
 
 			@property {
-				managed!IDisplay primaryDisplay(IAllocator alloc = processAllocator()) { assert(0); }
-				managed!(IDisplay[]) displays(IAllocator alloc = processAllocator()) { assert(0); }
-				managed!(IWindow[]) windows(IAllocator alloc = processAllocator()) { assert(0); }
+				managed!IDisplay primaryDisplay(IAllocator alloc = processAllocator()) {
+					GetPrimaryDisplay_WinAPI ctx = GetPrimaryDisplay_WinAPI(alloc, this);
+					ctx.call;
+
+					if (ctx.display is null)
+						return managed!IDisplay.init;
+					else
+						return managed!IDisplay(ctx.display, managers(), Ownership.Secondary, alloc);
+				}
+
+				managed!(IDisplay[]) displays(IAllocator alloc = processAllocator()) {
+					GetDisplays_WinAPI ctx = GetDisplays_WinAPI(alloc, this);
+					ctx.call;
+					return managed!(IDisplay[])(ctx.displays, managers(), Ownership.Secondary, alloc);
+				}
+
+				managed!(IWindow[]) windows(IAllocator alloc = processAllocator()) {
+					GetWindows_WinAPI ctx = GetWindows_WinAPI(alloc, this);
+					ctx.call;
+					return managed!(IWindow[])(ctx.windows, managers(), Ownership.Secondary, alloc);
+				}
 			}
 		}
 	}

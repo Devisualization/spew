@@ -1,4 +1,7 @@
 ﻿module cf.spew.implementation.windowing.misc;
+import cf.spew.ui.display;
+import cf.spew.ui.context.defs;
+import cf.spew.ui.window.defs;
 
 version(Windows) {
 	public import winapi = core.sys.windows.windows;
@@ -260,5 +263,115 @@ version(Windows) {
 		winapi.DeleteDC(hMemDC2);
 		
 		return hBitmap1;
+	}
+
+	struct GetDisplays_WinAPI {
+		import cf.spew.implementation.instance;
+		IAllocator alloc;
+		UIInstance uiInstance;
+		
+		IDisplay[] displays;
+
+		void call() {
+			winapi.EnumDisplayMonitors(null, null, &callbackGetDisplays_WinAPI, cast(winapi.LPARAM)cast(void*)&this);
+		}
+	}
+
+	struct GetPrimaryDisplay_WinAPI {
+		import cf.spew.implementation.instance;
+		IAllocator alloc;
+		UIInstance uiInstance;
+		
+		IDisplay display;
+		
+		void call() {
+			winapi.EnumDisplayMonitors(null, null, &callbackGetDisplays_WinAPI, cast(winapi.LPARAM)cast(void*)&this);
+		}
+	}
+	
+	struct GetWindows_WinAPI {
+		import cf.spew.implementation.instance;
+		IAllocator alloc;
+		
+		UIInstance uiInstance;
+		IDisplay display;
+		
+		IWindow[] windows;
+		
+		void call() {
+			winapi.EnumWindows(&callbackGetWindows_WinAPI, cast(winapi.LPARAM)&this);
+		}
+	}
+	
+	extern(Windows) {
+		int callbackGetDisplays_WinAPI(winapi.HMONITOR hMonitor, winapi.HDC, winapi.LPRECT, winapi.LPARAM lParam) nothrow {
+			import cf.spew.implementation.windowing.display;
+			GetDisplays_WinAPI* ctx = cast(GetDisplays_WinAPI*)lParam;
+
+			try {
+				DisplayImpl_WinAPI display = ctx.alloc.make!DisplayImpl_WinAPI(hMonitor, ctx.alloc, ctx.uiInstance);
+				ctx.alloc.expandArray(ctx.displays, 1);
+				ctx.displays[$-1] = display;
+			} catch (Exception e) {}
+			
+			return true;
+		}
+
+		int callbackGetPrimaryDisplay_WinAPI(winapi.HMONITOR hMonitor, winapi.HDC, winapi.LPRECT, winapi.LPARAM lParam) nothrow {
+			import cf.spew.implementation.windowing.display;
+			GetPrimaryDisplay_WinAPI* ctx = cast(GetPrimaryDisplay_WinAPI*)lParam;
+			
+			winapi.MONITORINFOEXA info;
+			info.cbSize = winapi.MONITORINFOEXA.sizeof;
+			winapi.GetMonitorInfoA(hMonitor, &info);
+			
+			if ((info.dwFlags & winapi.MONITORINFOF_PRIMARY) != winapi.MONITORINFOF_PRIMARY) {
+				return true;
+			}
+			
+			try {
+				ctx.display = ctx.alloc.make!DisplayImpl_WinAPI(hMonitor, ctx.alloc, ctx.uiInstance);
+				return false;
+			} catch (Exception e) {}
+			
+			return true;
+		}
+		
+		int callbackGetWindows_WinAPI(winapi.HWND hwnd, winapi.LPARAM lParam) nothrow {
+			import cf.spew.implementation.windowing.window;
+			GetWindows_WinAPI* ctx = cast(GetWindows_WinAPI*)lParam;
+			
+			if (!winapi.IsWindowVisible(hwnd))
+				return true;
+			
+			winapi.RECT rect;
+			winapi.GetWindowRect(hwnd, &rect);
+			
+			if (rect.right - rect.left == 0 || rect.bottom - rect.top == 0)
+				return true;
+			
+			try {
+				WindowImpl_WinAPI window = ctx.alloc.make!WindowImpl_WinAPI(hwnd, cast(IContext)null, ctx.alloc, ctx.uiInstance);
+				
+				if (ctx.display is null) {
+					ctx.alloc.expandArray(ctx.windows, 1);
+					ctx.windows[$-1] = window;
+				} else {
+					auto display2 = window.display;
+					if (display2 is null) {
+						ctx.alloc.dispose(window);
+						return true;
+					}
+					
+					if (display2.name == ctx.display.name) {
+						ctx.alloc.expandArray(ctx.windows, 1);
+						ctx.windows[$-1] = window;
+					} else
+						ctx.alloc.dispose(window);
+				}
+			} catch(Exception e) {}
+			
+			return true;
+		}
 	}
 }
