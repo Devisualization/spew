@@ -21,7 +21,7 @@ final class DefaultImplementation : Instance {
 	bool __Initialized;
 	IAllocator allocator;
 	Management_EventLoop _eventLoop;
-	Management_UserInterface _userInterface;
+	UIInstance _userInterface;
 
 	@property {
 		override Management_EventLoop eventLoop() {
@@ -95,12 +95,16 @@ abstract class UIInstance : Management_UserInterface {
 	import cf.spew.ui : IWindow, IDisplay, IWindowCreator, IRenderPoint, IRenderPointCreator;
 	import std.experimental.allocator : IAllocator, processAllocator;
 	import std.experimental.memory.managed;
+	import std.experimental.containers.map;
 
 	this(IAllocator allocator) {
 		this.allocator = allocator;
+		windowToIdMapper = Map!(size_t, IWindow)(allocator);
 	}
 
 	IAllocator allocator;
+	/// ONLY use this if IWindow has events enabled!
+	Map!(size_t, IWindow) windowToIdMapper = void;
 
 	managed!IWindowCreator createWindow(IAllocator alloc = processAllocator()) { assert(0); }
 
