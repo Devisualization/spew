@@ -13,7 +13,7 @@ public import std.experimental.memory.managed;
 
 abstract class EventLoopConsumerImpl : EventLoopConsumer {
 	import cf.spew.events.windowing;
-	//import cf.spew.implementation.windowing.window;
+	import cf.spew.implementation.windowing.window;
 	import cf.spew.implementation.instance;
 	import std.typecons : Nullable;
 
@@ -26,7 +26,8 @@ abstract class EventLoopConsumerImpl : EventLoopConsumer {
 	}
 	
 	bool processEvent(ref Event event) {
-		/+IWindow window = uiInstance.windowToIdMapper[event.wellData1Value];
+		// umm shouldn't we check that you know this is a windowing event?
+		IWindow window = uiInstance.windowToIdMapper[event.wellData1Value];
 		
 		if (window is null) {
 			
@@ -61,7 +62,7 @@ abstract class EventLoopConsumerImpl : EventLoopConsumer {
 				default:
 					return false;
 			}
-		}+/
+		}
 		
 		return false;
 	}
@@ -82,7 +83,7 @@ version(Windows) {
 
 	final class EventLoopConsumerImpl_WinAPI : EventLoopConsumerImpl {
 		import cf.spew.implementation.instance;
-		//import cf.spew.implementation.windowing.window;
+		import cf.spew.implementation.windowing.window;
 		import cf.spew.events.windowing;
 		import cf.spew.events.winapi;
 		
@@ -91,8 +92,7 @@ version(Windows) {
 		}
 		
 		override bool processEvent(ref Event event) {
-			/+
-			IWindow window = platform.windowToIdMapper[event.wellData1Value];
+			IWindow window = uiInstance.windowToIdMapper[event.wellData1Value];
 
 			if (window is null) {
 
@@ -111,7 +111,8 @@ version(Windows) {
 					case WinAPI_Events_Types.Window_Create:
 						return false;
 					case WinAPI_Events_Types.Window_Destroy:
-						return false;
+						w2.onCloseDel();
+						return true;
 					case WinAPI_Events_Types.Window_Quit:
 						return false;
 					case WinAPI_Events_Types.Window_GainedKeyboardFocus:
@@ -124,22 +125,34 @@ version(Windows) {
 						return false;
 					case WinAPI_Events_Types.Window_SetRedraw:
 						return false;
+					
 					case WinAPI_Events_Types.Window_Paint:
-						return false;
+						return handlePaint(event, w, w2);
 					case WinAPI_Events_Types.Window_SystemColorsChanged:
 						return false;
 					case WinAPI_Events_Types.Window_DevModeChanged:
 						return false;
 					case WinAPI_Events_Types.Window_SetCursor:
+						if (winapi.LOWORD(event.wellData2Value) == winapi.HTCLIENT && w.cursorStyle != WindowCursorStyle.Underterminate) {
+							winapi.SetCursor(w.hCursor);
+							return true;
+						}
 						return false;
 					case WinAPI_Events_Types.Window_EnterSizeMove:
 						return false;
 					case WinAPI_Events_Types.Window_ExitSizeMove:
+						winapi.InvalidateRgn(event.wellData1Ptr, null, 0);
+						w2.onSizeChangeDel(event.windowing.windowResized.newWidth, event.windowing.windowResized.newHeight);
 						return false;
 					case WinAPI_Events_Types.Window_RequestClose:
 						return false;
 
 					default:
+						if (event.type == WinAPI_Events_Types.Raw) {
+							if (event.winapi.raw.message == winapi.WM_ERASEBKGND) {
+								return handlePaint(event, w, w2);
+							}
+						}
 						break;
 				}
 			}
@@ -147,13 +160,34 @@ version(Windows) {
 			if (super.processEvent(event))
 				return true;
 			else
-				return false;+/
-			return super.processEvent(event);
+				return false;
 		}
 
 		@property {
 			bool onMainThread() { return true; }
 			bool onAdditionalThreads() { return true; }
+		}
+
+		bool handlePaint(ref Event event, WindowImpl_WinAPI w, WindowImpl w2) {
+			if (w2.onDrawDel is null || w2.context_ is null) {
+				// This fixes a bug where when a window is fullscreen Windows
+				//  will not auto draw the background of a window.
+				// If the context is not yet assigned or VRAM, it
+				//  should default to this.
+				
+				winapi.PAINTSTRUCT ps;
+				winapi.HDC hdc = winapi.BeginPaint(event.wellData1Ptr, &ps);
+				winapi.FillRect(hdc, &ps.rcPaint, cast(winapi.HBRUSH) (winapi.COLOR_WINDOW+1));
+				winapi.EndPaint(event.wellData1Ptr, &ps);
+			} else {
+				try {
+					w2.onDrawDel();
+				} catch (Exception e) {}
+
+				winapi.ValidateRgn(event.wellData1Ptr, null);
+			}
+
+			return true;
 		}
 	}
 }

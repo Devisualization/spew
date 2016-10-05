@@ -11,7 +11,7 @@ import std.experimental.graphic.image : ImageStorage;
 import std.experimental.graphic.color : RGBA8, RGB8;
 
 abstract class WindowImpl : IWindow, IWindowEvents {
-	package(cf.spew) {
+	package(cf.spew.implementation) {
 		UIInstance instance;
 		IAllocator alloc;
 		IContext context_;
@@ -73,7 +73,7 @@ version(Windows) {
 		import std.experimental.containers.map;
 		import core.sys.windows.windows;
 
-		package(cf.spew) {
+		package(cf.spew.implementation) {
 			HWND hwnd;
 			HMENU hMenu;
 			HCURSOR hCursor;
