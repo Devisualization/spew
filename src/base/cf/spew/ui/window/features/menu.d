@@ -98,7 +98,7 @@ interface MenuItem {
 	bool capableOfMenu(T)(T self) if (is(T : IWindow) || is(T : Management_UserInterface)) {
 		if (self is null)
 			return false;
-		else if (Have_Menu ss = cast(Have_Menu)self)
+		else if (auto ss = cast(Have_Menu)self)
 			return ss.__getFeatureMenu() !is null;
 		else
 			return false;

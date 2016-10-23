@@ -10,7 +10,6 @@ public import std.experimental.containers.map;
 public import std.experimental.allocator : IAllocator, processAllocator, theAllocator, dispose, make, makeArray, expandArray, shrinkArray;
 public import std.experimental.memory.managed;
 
-
 abstract class EventLoopConsumerImpl : EventLoopConsumer {
 	import cf.spew.events.windowing;
 	import cf.spew.implementation.windowing.window;
@@ -34,31 +33,32 @@ abstract class EventLoopConsumerImpl : EventLoopConsumer {
 		} else if (WindowImpl w = cast(WindowImpl)window) {
 			switch(event.type) {
 				case Windowing_Events_Types.Window_Moved:
-					w.onMoveDel(event.windowing.windowMoved.newX, event.windowing.windowMoved.newY);
+					tryFunc(w.onMoveDel, event.windowing.windowMoved.newX, event.windowing.windowMoved.newY);
 					return true;
 				case Windowing_Events_Types.Window_Resized:
-					w.onSizeChangeDel(event.windowing.windowResized.newWidth, event.windowing.windowResized.newHeight);
-					return true;
-				case Windowing_Events_Types.Window_KeyInput:
-					w.onKeyEntryDel(event.windowing.keyInput.key, event.windowing.keyInput.special, event.windowing.keyInput.modifiers);
+					tryFunc(w.onSizeChangeDel, event.windowing.windowResized.newWidth, event.windowing.windowResized.newHeight);
 					return true;
 				case Windowing_Events_Types.Window_CursorScroll:
-					w.onScrollDel(event.windowing.scroll.amount);
+					tryFunc(w.onScrollDel, event.windowing.scroll.amount);
 					return true;
 				case Windowing_Events_Types.Window_CursorMoved:
-					w.onCursorMoveDel(event.windowing.cursorMoved.newX, event.windowing.cursorMoved.newY);
+					tryFunc(w.onCursorMoveDel, event.windowing.cursorMoved.newX, event.windowing.cursorMoved.newY);
 					return true;
 				case Windowing_Events_Types.Window_CursorAction:
-					w.onCursorActionDel(event.windowing.cursorAction.action);
+					tryFunc(w.onCursorActionDel, event.windowing.cursorAction.action);
 					return true;
 				case Windowing_Events_Types.Window_CursorActionEnd:
-					w.onCursorActionEndDel(event.windowing.cursorAction.action);
+					tryFunc(w.onCursorActionEndDel, event.windowing.cursorAction.action);
 					return true;
-					
+
+				case Windowing_Events_Types.Window_KeyInput:
+				case Windowing_Events_Types.Window_KeyUp:
+					tryFunc(w.onKeyEntryDel, event.windowing.keyInput.key, event.windowing.keyInput.special, event.windowing.keyInput.modifiers);
+					return true;
+
 				case Windowing_Events_Types.Window_CursorActionDo:
 				case Windowing_Events_Types.Window_Focused:
 				case Windowing_Events_Types.Window_KeyDown:
-				case Windowing_Events_Types.Window_KeyUp:
 				default:
 					return false;
 			}
@@ -75,6 +75,14 @@ abstract class EventLoopConsumerImpl : EventLoopConsumer {
 		byte priority() { return byte.max / 2; }
 		
 		string description() { return "Default implementation consumer for Windowing."; }
+	}
+}
+
+private void tryFunc(T, U...)(T func, U args) {
+	if (func !is null) {
+		try {
+			func(args);
+		} catch(Exception e) {}
 	}
 }
 
@@ -101,17 +109,15 @@ version(Windows) {
 				switch(event.type) {
 					case Windowing_Events_Types.Window_Resized:
 						winapi.InvalidateRgn(event.wellData1Ptr, null, 0);
-						w2.onSizeChangeDel(event.windowing.windowResized.newWidth, event.windowing.windowResized.newHeight);
+						tryFunc(w2.onSizeChangeDel, event.windowing.windowResized.newWidth, event.windowing.windowResized.newHeight);
 						return true;
 					case Windowing_Events_Types.Window_Moved:
 						winapi.InvalidateRgn(event.wellData1Ptr, null, 0);
-						w2.onMoveDel(event.windowing.windowMoved.newX, event.windowing.windowMoved.newY);
+						tryFunc(w2.onMoveDel, event.windowing.windowMoved.newX, event.windowing.windowMoved.newY);
 						return true;
 
-					case WinAPI_Events_Types.Window_Create:
-						return false;
 					case WinAPI_Events_Types.Window_Destroy:
-						w2.onCloseDel();
+						tryFunc(w2.onCloseDel);
 						return true;
 					case WinAPI_Events_Types.Window_Quit:
 						return false;
@@ -142,7 +148,7 @@ version(Windows) {
 						return false;
 					case WinAPI_Events_Types.Window_ExitSizeMove:
 						winapi.InvalidateRgn(event.wellData1Ptr, null, 0);
-						w2.onSizeChangeDel(event.windowing.windowResized.newWidth, event.windowing.windowResized.newHeight);
+						tryFunc(w2.onSizeChangeDel, event.windowing.windowResized.newWidth, event.windowing.windowResized.newHeight);
 						return false;
 					case WinAPI_Events_Types.Window_RequestClose:
 						return false;
@@ -169,24 +175,18 @@ version(Windows) {
 		}
 
 		bool handlePaint(ref Event event, WindowImpl_WinAPI w, WindowImpl w2) {
-			if (w2.onDrawDel is null || w2.context_ is null) {
-				// This fixes a bug where when a window is fullscreen Windows
-				//  will not auto draw the background of a window.
-				// If the context is not yet assigned or VRAM, it
-				//  should default to this.
-				
+			if (w2.context_ is null) {
 				winapi.PAINTSTRUCT ps;
 				winapi.HDC hdc = winapi.BeginPaint(event.wellData1Ptr, &ps);
 				winapi.FillRect(hdc, &ps.rcPaint, cast(winapi.HBRUSH) (winapi.COLOR_WINDOW+1));
 				winapi.EndPaint(event.wellData1Ptr, &ps);
+			} else if (w2.onDrawDel is null) {
+				w2.context.swapBuffers;
 			} else {
-				try {
-					w2.onDrawDel();
-				} catch (Exception e) {}
-
-				winapi.ValidateRgn(event.wellData1Ptr, null);
+				tryFunc(w2.onDrawDel);
 			}
 
+			winapi.ValidateRgn(event.wellData1Ptr, null);
 			return true;
 		}
 	}

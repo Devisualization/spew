@@ -82,5 +82,67 @@ int main() {
 	//writeln("\t- User interface");
 	writeln("are all provided and functioning correctly.");
 
+	aWindowTest();
+
 	return 0;
+}
+
+void aWindowTest() {
+	import cf.spew.ui;
+	import cf.spew.events.windowing;
+	import cf.spew.instance;
+	import std.experimental.graphic.image.manipulation.base : fillOn;
+	import std.experimental.allocator;
+	import std.experimental.memory.managed;
+	import std.experimental.graphic.color : RGBA8;
+	import std.stdio : writeln, stdout;
+
+	IWindow window;
+
+	auto creator = Instance.current.ui.createWindow();
+	//creator.style = WindowStyle.Fullscreen;
+	//creator.size = vec2!ushort(cast(short)800, cast(short)600);
+
+	window = creator.createWindow();
+	window.title = "Title!";
+	
+	window.events.onForcedDraw = () {
+		auto buffer = window.context.vramAlphaBuffer;
+
+		writeln("onForcedDraw");
+		stdout.flush;
+		buffer.fillOn(RGBA8(255, 0, 0, 255));
+		window.context.swapBuffers();
+	};
+	
+	window.events.onCursorMove = (int x, int y) {
+		writeln("onCursorMove: x: ", x, " y: ", y);
+		stdout.flush;
+	};
+	
+	window.events.onCursorAction = (CursorEventAction action) {
+		writeln("onCursorAction: ", action);
+		stdout.flush;
+	};
+	
+	window.events.onKeyEntry = (dchar key, SpecialKey specialKey, ushort modifiers) {
+		writeln("onKeyEntry: key: ", key, " specialKey: ", specialKey, " modifiers: ", modifiers);
+		stdout.flush;
+
+		if (specialKey == SpecialKey.Escape)
+			Instance.current.eventLoop.stopAllThreads;
+	};
+	
+	window.events.onScroll = (int amount) {
+		writeln("onScroll: ", amount);
+		stdout.flush;
+	};
+	
+	window.events.onClose = () {
+		writeln("onClose");
+		stdout.flush;
+	};
+	
+	window.show();
+	Instance.current.eventLoop.execute();
 }

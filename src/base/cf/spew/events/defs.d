@@ -53,34 +53,31 @@ struct Event {
 /**
  * 
  */
-struct EventSource {
-	//private char[8] text_;
-
+union EventSource {
 	///
-	ulong value;
+	long value;
+	char[8] text_;
 	alias value this;
 
 	/**
 	 * 
 	 */
-	static EventSource from(string from)
+	static EventSource from(const char[] from...)
 	in {
+		assert(from.length > 0);
 		assert(from.length <= 8);
 	} body {
-		import std.conv : to;
-		char[8] ret = ' ';
+		ubyte[8] rstr = cast(ubyte)' ';
+		rstr[0 .. from.length] = cast(ubyte[])from[];
 		
-		if (from.length > 0)
-			ret[0 .. from.length] = from[];
-
-		ulong reti;
-
-		foreach(i; 0 .. 8) {
-			reti *= 256;
-			reti += ret[7-i];
-		}
-
-		return EventSource(reti);
+		return EventSource(rstr[0]  |
+			(rstr[1] << (1 * 8)) |
+			(rstr[2] << (2 * 8)) |
+			(rstr[3] << (3 * 8)) |
+			(cast(long)rstr[4] << (4 * 8)) |
+			(cast(long)rstr[5] << (5 * 8)) |
+			(cast(long)rstr[6] << (6 * 8)) |
+			(cast(long)rstr[7] << (7 * 8)));
 	}
 
 	///
@@ -108,6 +105,19 @@ struct EventSource {
 			return text.idup;
 		else
 			return text[0 .. i].idup;
+	}
+
+	bool opEquals(EventSource other) nothrow {
+		import std.string : indexOf;
+		
+		ptrdiff_t i = text_.indexOf(' ');
+		ptrdiff_t j = other.text_.indexOf(' ');
+		
+		if ((i < j || j < 0) && i >= 0) {
+			// this == other
+			return text_[0 .. i] == other.text_[0 .. i];
+		} else
+			return value == other.value;
 	}
 }
 

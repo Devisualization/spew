@@ -57,11 +57,12 @@ final class DefaultImplementation : Instance {
 			import cf.spew.event_loop.wells.winapi;
 			import cf.spew.implementation.consumers;
 
+			_userInterface = allocator.make!UIInstance_WinAPI(allocator);
+
 			_mainEventSource_ = allocator.make!WinAPI_EventLoop_Source;
 			_eventLoop.manager.addSources(_mainEventSource_);
 			_mainEventConsumer_ = allocator.make!EventLoopConsumerImpl_WinAPI(this);
 			_eventLoop.manager.addConsumers(_mainEventConsumer_);
-			_userInterface = allocator.make!UIInstance_WinAPI(allocator);
 		}
 	}
 }

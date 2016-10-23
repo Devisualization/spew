@@ -285,7 +285,7 @@ version(Windows) {
 		IDisplay display;
 		
 		void call() {
-			winapi.EnumDisplayMonitors(null, null, &callbackGetDisplays_WinAPI, cast(winapi.LPARAM)cast(void*)&this);
+			winapi.EnumDisplayMonitors(null, null, &callbackGetPrimaryDisplay_WinAPI, cast(winapi.LPARAM)cast(void*)&this);
 		}
 	}
 	
@@ -333,7 +333,6 @@ version(Windows) {
 				ctx.display = ctx.alloc.make!DisplayImpl_WinAPI(hMonitor, ctx.alloc, ctx.uiInstance);
 				return false;
 			} catch (Exception e) {}
-			
 			return true;
 		}
 		

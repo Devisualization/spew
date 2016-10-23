@@ -20,124 +20,92 @@ class VRAMContextImpl : IContext, Have_VRam, Feature_VRam {
 }
 
 version(Windows) {
+	import std.experimental.graphic.image.interfaces : SwappableImage, imageObject;
+	import std.experimental.graphic.color.rgb : BGR8, BGRA8;
+	import std.experimental.graphic.image.storage.flat;
+
 	final class VRAMContextImpl_WinAPI : VRAMContextImpl {
-		import std.experimental.graphic.image.interfaces : SwappableImage, imageObject;
-		import std.experimental.graphic.image.storage.flat;
 		import core.sys.windows.windows : HWND, HDC, GetDC, CreateCompatibleDC, IsWindowVisible,
 			RECT, GetClientRect, HBITMAP, CreateBitmap, HGDIOBJ, SelectObject, GetObjectA, StretchBlt,
 			DeleteObject, InvalidateRgn, SRCCOPY;
 
-		// sets up our internal image buffer
-		void init(bool assignAlpha, size_t width, size_t height, IAllocator alloc) {
-			assignedAlpha = assignAlpha;
-			
-			version(Windows) {
-				if (assignAlpha) {
-					// create the actual storage
-					alphaStorage1 = FlatImageStorage!BGRA8(width, height, alloc);
-					
-					// we need to do a bit of magic to translate the colors
-					storage3 = SwappableImage!RGB8(&alphaStorage1, alloc);
-					storage2 = imageObject(&storage3, alloc);
-					
-					alphaStorage3 = SwappableImage!RGBA8(&alphaStorage1, alloc);
-					alphaStorage2 = imageObject(&alphaStorage3, alloc);
-				} else {
-					// create the actual storage
-					storage1 = FlatImageStorage!BGR8(width, height, alloc);
-					
-					// we need to do a bit of magic to translate the colors
-					storage3 = SwappableImage!RGB8(&storage1, alloc);
-					storage2 = imageObject(&storage3, alloc);
-					
-					alphaStorage3 = SwappableImage!RGBA8(&storage1, alloc);
-					alphaStorage2 = imageObject(&alphaStorage3, alloc);
-				}
-			} else
-				assert(0);
-		}
-
 		this(HWND hwnd, bool assignAlpha, IAllocator alloc) {
-			init(true, 1, 1, alloc);
-			
 			this.hwnd = hwnd;
+			this.alloc = alloc;
 			
 			hdc = GetDC(hwnd);
 			hdcMem = CreateCompatibleDC(hdc);
+
+			stage1Alpha = FlatImageStorage!BGRA8(1, 1, alloc);
+			stage2 = alloc.make!(SwappableImage!RGB8)(&stage1Alpha);
+			stage2Alpha = alloc.make!(SwappableImage!RGBA8)(&stage1Alpha);
+
+			stage3 = imageObject(stage2, alloc);
+			stage3Alpha = imageObject(stage2Alpha, alloc);
+
 			swapBuffers();
 		}
 
+		~this() {
+			alloc.dispose(stage2);
+			alloc.dispose(stage2Alpha);
+			alloc.dispose(stage3);
+			alloc.dispose(stage3Alpha);
+
+			DeleteObject(hdc);
+		}
+
 		private {
-			bool assignedAlpha;
-			
-			// how we exposed the storage
-			ImageStorage!RGB8 storage2;
-			ImageStorage!RGBA8 alphaStorage2;
-			
-			// the intermediary between the exposed (pixel format) and the actual supported one
-			SwappableImage!RGB8 storage3 = void;
-			SwappableImage!RGBA8 alphaStorage3 = void;
-			
-			version(Windows) {
-				import std.experimental.graphic.color.rgb : BGR8, BGRA8;
-				
-				HWND hwnd;
-				HDC hdc, hdcMem;
-				
-				// where the actual pixels are stored
-				FlatImageStorage!BGR8 storage1 = void;
-				FlatImageStorage!BGRA8 alphaStorage1 = void;
-			}
+			IAllocator alloc;
+			HWND hwnd;
+			HDC hdc, hdcMem;
+
+			FlatImageStorage!BGRA8 stage1Alpha = void;
+
+			SwappableImage!RGB8* stage2;
+			SwappableImage!RGBA8* stage2Alpha;
+
+			ImageStorage!RGB8 stage3;
+			ImageStorage!RGBA8 stage3Alpha;
 		}
 
 		override {
 			@property {
-				ImageStorage!RGB8 vramBuffer() { return storage2; }
-				ImageStorage!RGBA8 vramAlphaBuffer() { return alphaStorage2; }
+				ImageStorage!RGB8 vramBuffer() { return stage3; }
+				ImageStorage!RGBA8 vramAlphaBuffer() { return stage3Alpha; }
 			}
 
 			void swapBuffers() {
-				version(Windows) {
-					if (!IsWindowVisible(hwnd))
-						return;
-					
-					ubyte* bufferPtr;
-					uint bitsCount;
-					
-					if (assignedAlpha) {
-						bitsCount = 32;
-						bufferPtr = cast(ubyte*)alphaStorage1.__pixelsRawArray.ptr;
-					} else {
-						bitsCount = 24;
-						bufferPtr = cast(ubyte*)storage1.__pixelsRawArray.ptr;
-					}
-					
-					RECT windowRect;
-					GetClientRect(hwnd, &windowRect);
-					
-					HBITMAP hBitmap = CreateBitmap(cast(uint)storage2.width, cast(uint)storage2.height, 1, bitsCount, bufferPtr);
-					
-					HGDIOBJ oldBitmap = SelectObject(hdcMem, hBitmap);
-					
-					HBITMAP bitmap;
-					GetObjectA(hBitmap, HBITMAP.sizeof, &bitmap);
-					
-					StretchBlt(hdc, 0, 0, cast(uint)storage2.width, cast(uint)storage2.height, hdcMem, 0, 0, cast(uint)windowRect.right, cast(uint)windowRect.bottom, SRCCOPY);
-					
-					SelectObject(hdcMem, oldBitmap);
-					DeleteObject(hBitmap);
-					
-					if (windowRect.right != storage2.width || windowRect.bottom != storage2.height) {
-						if (assignedAlpha) {
-							alphaStorage1.resize(windowRect.right, windowRect.bottom);
-						} else {
-							storage1.resize(windowRect.right, windowRect.bottom);
-						}
-					}
-					
+				RECT windowRect;
+				GetClientRect(hwnd, &windowRect);
+
+				scope(exit) {
+					if (windowRect.right != stage2.width || windowRect.bottom != stage2.height)
+						stage2.resize(windowRect.right, windowRect.bottom);
+
 					InvalidateRgn(hwnd, null, true);
-				} else
-					assert(0);
+				}
+
+				if (!IsWindowVisible(hwnd))
+					return;
+
+				ubyte* bufferPtr;
+				uint bitsCount;
+				
+				bitsCount = 32;
+				bufferPtr = cast(ubyte*)stage1Alpha.__pixelsRawArray.ptr;
+
+				HBITMAP hBitmap = CreateBitmap(stage2.width, stage2.height, 1, bitsCount, bufferPtr);
+				
+				HGDIOBJ oldBitmap = SelectObject(hdcMem, hBitmap);
+				
+				HBITMAP bitmap;
+				GetObjectA(hBitmap, HBITMAP.sizeof, &bitmap);
+				
+				StretchBlt(hdc, 0, 0, stage2.width, stage2.height, hdcMem, 0, 0, cast(uint)windowRect.right, cast(uint)windowRect.bottom, SRCCOPY);
+				
+				SelectObject(hdcMem, oldBitmap);
+				DeleteObject(hBitmap);
 			}
 		}
 	}

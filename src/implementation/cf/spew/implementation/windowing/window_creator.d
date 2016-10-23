@@ -52,143 +52,138 @@ version(Windows) {
 
 		import cf.spew.implementation.windowing.misc;
 		import core.sys.windows.windows;
-		//import cf.spew.implementation.windowing.window;
+		import cf.spew.implementation.windowing.window;
 		import cf.spew.implementation.windowing.contexts.vram;
 
 		import core.sys.windows.windows : DWORD, RECT, HWND, HMENU, WNDCLASSEXW, HINSTANCE,
 			GetClassInfoExW, IDC_ARROW, IMAGE_CURSOR, LR_DEFAULTSIZE, LR_SHARED, RegisterClassExW,
 			GetModuleHandleW, CS_OWNDC, LoadImageW, MONITORINFOEXA, HMONITOR, GetMonitorInfoA,
 			AdjustWindowRectEx, CreateWindowExW, SetWindowLongPtrW, GWLP_USERDATA, InvalidateRgn;
+		import cf.spew.event_loop.wells.winapi;
 
 		this(UIInstance uiInstance, IAllocator alloc) {
 			super(uiInstance, alloc);
 		}
 
 		IWindow createWindow() {
-			import std.stdio;
-			auto primaryDisplay = uiInstance.primaryDisplay;
-
-			RECT rect;
-			DWORD dwStyle, dwExStyle;
-			vec2!short setpos = location_;
+			WindowImpl_WinAPI ret = null;
+			IContext context = null;
 
 			HWND hwnd;
 			HMENU hMenu = null;
 			WNDCLASSEXW wndClass;
 			HINSTANCE hInstance;
 
-			IContext context = null;
-			//WindowImpl_WinAPI ret;
+			RECT rect;
+			DWORD dwStyle, dwExStyle;
+			vec2!short setpos = location_;
 
-			void configure_class() {
-				import cf.spew.event_loop.wells.winapi;
+			auto primaryDisplay = uiInstance.primaryDisplay;
+
+			// window class
+
+			wndClass.cbSize = WNDCLASSEXW.sizeof;
+			hInstance = GetModuleHandleW(null);
+			
+			if (GetClassInfoExW(hInstance, cast(wchar*)ClassNameW.ptr, &wndClass) == 0) {
 				wndClass.cbSize = WNDCLASSEXW.sizeof;
-				hInstance = GetModuleHandleW(null);
-
-				if (GetClassInfoExW(hInstance, cast(wchar*)ClassNameW.ptr, &wndClass) == 0) {
-					wndClass.cbSize = WNDCLASSEXW.sizeof;
-					wndClass.hInstance = hInstance;
-					wndClass.lpszClassName = cast(wchar*)ClassNameW.ptr;
-					wndClass.hCursor = LoadImageW(null, cast(wchar*)IDC_ARROW, IMAGE_CURSOR, 0, 0, LR_DEFAULTSIZE | LR_SHARED);
-					wndClass.style = CS_OWNDC/+ | CS_HREDRAW | CS_VREDRAW+/; // causes flickering
-					wndClass.lpfnWndProc = &callbackWindowHandler;
-					
-					RegisterClassExW(&wndClass);
-				}
+				wndClass.hInstance = hInstance;
+				wndClass.lpszClassName = cast(wchar*)ClassNameW.ptr;
+				wndClass.hCursor = LoadImageW(null, cast(wchar*)IDC_ARROW, IMAGE_CURSOR, 0, 0, LR_DEFAULTSIZE | LR_SHARED);
+				wndClass.style = CS_OWNDC/+ | CS_HREDRAW | CS_VREDRAW+/; // causes flickering
+				wndClass.lpfnWndProc = &callbackWindowHandler;
+				
+				RegisterClassExW(&wndClass);
 			}
 
-			void configure_styles() {
-				rect.right = size_.x;
-				rect.bottom = size_.y;
-				
-				switch(windowStyle) {
-					case WindowStyle.Fullscreen:
-						dwStyle = WindowDWStyles.Fullscreen;
-						dwExStyle = WindowDWStyles.FullscreenEx;
-						break;
-						
-					case WindowStyle.Popup:
-						dwStyle = WindowDWStyles.Popup;
-						dwExStyle = WindowDWStyles.PopupEx;
-						break;
-						
-					case WindowStyle.Borderless:
-						dwStyle = WindowDWStyles.Borderless;
-						dwExStyle = WindowDWStyles.BorderlessEx;
-						break;
-						
-					case WindowStyle.Dialog:
-					default:
-						dwStyle = WindowDWStyles.Dialog;
-						dwExStyle = WindowDWStyles.DialogEx;
-						break;
-				}
+			// window style
+
+			rect.right = size_.x;
+			rect.bottom = size_.y;
+
+			switch(windowStyle) {
+				case WindowStyle.Fullscreen:
+					dwStyle = WindowDWStyles.Fullscreen;
+					dwExStyle = WindowDWStyles.FullscreenEx;
+					break;
+					
+				case WindowStyle.Popup:
+					dwStyle = WindowDWStyles.Popup;
+					dwExStyle = WindowDWStyles.PopupEx;
+					break;
+					
+				case WindowStyle.Borderless:
+					dwStyle = WindowDWStyles.Borderless;
+					dwExStyle = WindowDWStyles.BorderlessEx;
+					break;
+					
+				case WindowStyle.Dialog:
+				default:
+					dwStyle = WindowDWStyles.Dialog;
+					dwExStyle = WindowDWStyles.DialogEx;
+					break;
 			}
 
 			// multiple monitor support
-			void configure_position() {
-				MONITORINFOEXA mi;
-				mi.cbSize = MONITORINFOEXA.sizeof;
+
+			MONITORINFOEXA mi;
+			mi.cbSize = MONITORINFOEXA.sizeof;
+			
+			HMONITOR hMonitor;
+			if (display_ is null)
+				hMonitor = *cast(HMONITOR*)primaryDisplay.__handle;
+			else
+				hMonitor = *cast(HMONITOR*)display_.__handle;
+			GetMonitorInfoA(hMonitor, &mi);
+			
+			if (windowStyle == WindowStyle.Fullscreen) {
+				rect = mi.rcMonitor;
 				
-				HMONITOR hMonitor;
-				if (display_ is null)
-					hMonitor = *cast(HMONITOR*)primaryDisplay.__handle;
-				else
-					hMonitor = *cast(HMONITOR*)display_.__handle;
-				GetMonitorInfoA(hMonitor, &mi);
-				
-				if (windowStyle == WindowStyle.Fullscreen) {
-					rect = mi.rcMonitor;
-					
-					setpos.x = cast(short)rect.left;
-					setpos.y = cast(short)rect.top;
-				}
-				
-				setpos.x -= rect.left;
-				setpos.y -= rect.top;
-				
-				if (windowStyle != WindowStyle.Fullscreen) {
-					AdjustWindowRectEx(&rect, dwStyle, false, dwExStyle);
-				}
+				setpos.x = cast(short)rect.left;
+				setpos.y = cast(short)rect.top;
+			}
+			
+			setpos.x -= rect.left;
+			setpos.y -= rect.top;
+			
+			if (windowStyle != WindowStyle.Fullscreen) {
+				AdjustWindowRectEx(&rect, dwStyle, false, dwExStyle);
 			}
 
-			void create() {
-				hwnd = CreateWindowExW(
-					dwExStyle,
-					cast(wchar*)ClassNameW.ptr,
-					null,
-					dwStyle,
-					setpos.x, setpos.y,
-					rect.right - rect.left, rect.bottom - rect.top,
-					null,
-					null,
-					hInstance,
-					null);
+			// the window creation
 
-				if (useVRAMContext) {
-					context = alloc.make!VRAMContextImpl_WinAPI(hwnd, vramWithAlpha, alloc);
-				}
+			hwnd = CreateWindowExW(
+				dwExStyle,
+				cast(wchar*)ClassNameW.ptr,
+				null,
+				dwStyle,
+				setpos.x, setpos.y,
+				rect.right - rect.left, rect.bottom - rect.top,
+				null,
+				null,
+				hInstance,
+				null);
 
-				/+ret = alloc.make!WindowImpl_WinAPI(hwnd, context, alloc, uiInstance, hMenu, true);
-				ret.impl_callbacks_struct.modifySetCursor = &ret.impl_cursorset;
-				SetWindowLongPtrW(hwnd, GWLP_USERDATA, cast(size_t)&ret.impl_callbacks_struct);
-
-				if (icon !is null)
-					ret.setIcon(icon);
-				
-				if (cursorStyle == WindowCursorStyle.Custom)
-					ret.setCustomCursor(cursorIcon);
-				else
-					ret.setCursor(cursorStyle);+/
+			if (useVRAMContext) {
+				context = alloc.make!VRAMContextImpl_WinAPI(hwnd, vramWithAlpha, alloc);
 			}
+			
+			ret = alloc.make!WindowImpl_WinAPI(hwnd, context, alloc, uiInstance, hMenu, true);
+			ret.impl_callbacks_struct.modifySetCursor = &ret.impl_cursorset;
+			SetWindowLongPtrW(hwnd, GWLP_USERDATA, cast(size_t)&ret.impl_callbacks_struct);
 
-			configure_class();
-			configure_styles();
-			configure_position();
-			create();
+			if (icon !is null)
+				ret.setIcon(icon);
+			
+			if (cursorStyle == WindowCursorStyle.Custom)
+				ret.setCustomCursor(cursorIcon);
+			else
+				ret.setCursor(cursorStyle);
+
+			// done
 
 			InvalidateRgn(hwnd, null, true);
-			return null/+ret+/;
+			return ret;
 		}
 
 		Feature_Icon __getFeatureIcon() {

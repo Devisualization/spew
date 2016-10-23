@@ -22,7 +22,7 @@ import core.time : Duration;
  * 
  */
 struct EventLoopAlterationCallbacks {
-	private immutable ulong MAGIC = 0xBEAF75;
+	private const ulong MAGIC = 0xBEAF7588;
 
 	///
 	bool canTranslate = true;
@@ -82,13 +82,7 @@ final class WinAPI_EventLoop_SourceRetriever : EventLoopSourceRetriever {
 			needToWait = false;
 		}
 
-		event.source = EventSources.WinAPI;
-		event.type = WinAPI_Events_Types.Unknown;
-		event.winapi.raw = msg;
-
 		_event = &event;
-		scope(exit)
-			_event = null;
 
 		for (;;) {
 			if (PeekMessageW(&msg, null, 0, 0, PM_REMOVE) == 0) {
@@ -98,7 +92,7 @@ final class WinAPI_EventLoop_SourceRetriever : EventLoopSourceRetriever {
 				if (msg.hwnd !is null) {
 					_callbacks = cast(EventLoopAlterationCallbacks*)GetWindowLongPtrW(msg.hwnd, GWLP_USERDATA);
 
-					if (*(cast(ulong*)_callbacks) == 0xBEAF7588) {
+					if (_callbacks !is null && _callbacks.MAGIC == 0xBEAF7588) {
 						if (_callbacks.canTranslate && shouldTranslate)
 							TranslateMessage(&msg);
 					}
@@ -106,9 +100,10 @@ final class WinAPI_EventLoop_SourceRetriever : EventLoopSourceRetriever {
 
 				event.winapi.raw = msg;
 				DispatchMessageW(&msg);
-
 				if (event.type == WinAPI_Events_Types.Unknown)
 					continue;
+				else
+					return true;
 			}
 		}
 	}
@@ -188,19 +183,21 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 	import cf.spew.events.windowing;
 	import core.sys.windows.windows;
 
-	if (_event is null || _callbacks is null) // ERROR
+	if (_event is null || _callbacks is null) {// ERROR/just created
+		if (uMsg == WM_PAINT) {
+			UpdateWindow(hwnd);
+			return 0;
+		}
 		return DefWindowProcW(hwnd, uMsg, wParam, lParam);
+	}
+
+	_event.source = EventSources.WinAPI;
+	_event.type = WinAPI_Events_Types.Unknown;
 	_event.wellData1Ptr = hwnd;
 
 	switch(uMsg) {
 		case WM_NULL:
 			// do nothing
-			return 0;
-
-		case WM_CREATE:
-			_event.type = WinAPI_Events_Types.Window_Create;
-			_event.winapi.window_create = *cast(CREATESTRUCT*)lParam;
-			// we do not provide a way to stop creation at this point.
 			return 0;
 
 		case WM_DESTROY:
@@ -327,11 +324,11 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 
 		case WM_ENTERSIZEMOVE:
 			_event.type = WinAPI_Events_Types.Window_EnterSizeMove;
-			return 0;
+			return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 
 		case WM_EXITSIZEMOVE:
 			_event.type = WinAPI_Events_Types.Window_ExitSizeMove;
-			return 0;
+			return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 
 			//case WM_MOUSEFIRST: same as WM_MOUSEMOVE
 		case WM_MOUSEMOVE:
@@ -436,20 +433,16 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 				_event.type = Windowing_Events_Types.Window_KeyDown;
 				_event.wellData2Value = wParam;
 				_event.wellData3Value = lParam;
-
-				return 0;
-			} else
-				return DefWindowProcW(hwnd, uMsg, wParam, lParam);
+			}
+			return 0;
 
 		case WM_KEYUP:
 			if (translateKeyCall(wParam, lParam, _event.windowing.keyUp.key, _event.windowing.keyUp.special, _event.windowing.keyUp.modifiers)) {
 				_event.type = Windowing_Events_Types.Window_KeyUp;
 				_event.wellData2Value = wParam;
 				_event.wellData3Value = lParam;
-
-				return 0;
-			} else
-				return DefWindowProcW(hwnd, uMsg, wParam, lParam);
+			}
+			return 0;
 
 		case WM_CHAR:
 			switch(wParam) {
@@ -460,7 +453,7 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 				case ':': .. case '?':
 				case '\'': case '"':
 					break;
-					
+
 				default:
 					_event.type = Windowing_Events_Types.Window_KeyInput;
 					_event.wellData2Value = wParam;
@@ -724,7 +717,7 @@ bool translateKeyCall(WPARAM code, LPARAM lParam, out dchar key, out SpecialKey 
 	isCapital = isShift || 
 		(modifiers & KeyModifiers.Capslock) == KeyModifiers.Capslock;
 	isCtrl = (modifiers & KeyModifiers.Control) == KeyModifiers.Control;
-	
+
 	switch (code)
 	{
 		case VK_NUMPAD0: .. case VK_NUMPAD9:
@@ -805,10 +798,10 @@ bool translateKeyCall(WPARAM code, LPARAM lParam, out dchar key, out SpecialKey 
 		default:
 			break;
 	}
-	
-	if (key > 0 || specialKey > 0) {
-		return true;
-	} else {
+
+	if (key == 0 && specialKey == SpecialKey.None) {
 		return false;
+	} else {
+		return true;
 	}
 }

@@ -197,10 +197,7 @@ abstract class EventLoopManager_Base : IEventLoopManager {
 	}
 	
 	protected {
-		pragma(inline, true)
 		bool isMainThread(ThreadID id = Thread.getThis().id) { return id == mainThreadID; }
-		
-		pragma(inline, true)
 		bool isThreadAlive(ThreadID id) {
 			import core.thread : thread_findByAddr;
 			return thread_findByAddr(id) !is null;

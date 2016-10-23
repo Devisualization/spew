@@ -48,7 +48,7 @@ interface Feature_ScreenShot {
 	bool capableOfScreenShot(T)(T self) if (is(T : IWindow) || is(T : IDisplay) || is(T : Management_UserInterface)) {
 		if (self is null)
 			return false;
-		else if (Have_ScreenShot ss = cast(Have_ScreenShot)self)
+		else if (auto ss = cast(Have_ScreenShot)self)
 			return ss.__getFeatureScreenShot() !is null;
 		else
 			return false;

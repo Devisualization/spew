@@ -59,7 +59,7 @@ interface Feature_Icon {
 	bool capableOfWindowIcon(T)(T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
 		if (self is null)
 			return false;
-		else if (Have_Icon ss = cast(Have_Icon)self)
+		else if (auto ss = cast(Have_Icon)self)
 			return ss.__getFeatureIcon() !is null;
 		else
 			return false;

@@ -38,7 +38,8 @@ abstract class WindowImpl : IWindow, IWindowEvents {
 	}
 
 	~this() {
-		instance.windowToIdMapper.remove(cast(size_t)__handle);
+		if (ownedByProcess)
+			instance.windowToIdMapper.remove(cast(size_t)__handle);
 	}
 
 	@property {
@@ -96,13 +97,13 @@ version(Windows) {
 		@disable this(UIInstance instance);
 
 		this(HWND hwnd, IContext context, IAllocator alloc, UIInstance instance, HMENU hMenu=null, bool processOwns=false) {
-			super(instance, processOwns);
-
 			this.hwnd = hwnd;
 			this.alloc = alloc;
 			this.context_ = context;
 			this.hMenu = hMenu;
-			
+
+			super(instance, processOwns);
+
 			menuItems = List!MenuItem(alloc);
 			menuCallbacks = Map!(uint, MenuCallback)(alloc);
 			menuItemsCount = 9000;

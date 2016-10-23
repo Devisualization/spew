@@ -301,7 +301,7 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 
 						try {
 							foreach(consumer; instance.consumers) {
-								if (event.type == consumer.pairOnlyWithEvents) {
+								if (consumer.pairOnlyWithEvents == event.type) {
 									handled = true;
 									consumer.processEvent(event);
 								}

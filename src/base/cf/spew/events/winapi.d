@@ -15,8 +15,6 @@ enum WinAPI_Events_Types {
 	///
 	Raw = EventType.from("|wraw"),
 	///
-	Window_Create = EventType.from("|wcreate"),
-	///
 	Window_Destroy = EventType.from("|wdestry"),
 	///
 	Window_Quit = EventType.from("|wquit"),

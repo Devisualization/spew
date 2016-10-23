@@ -65,7 +65,7 @@ interface Feature_Style {
 	WindowStyle style(T)(T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
 		if (self is null)
 			return WindowStyle.Unknown;
-		if (Have_Style ss = cast(Have_Style)self) {
+		if (auto ss = cast(Have_Style)self) {
 			auto fss = ss.__getFeatureStyle();
 			if (fss !is null) {
 				return fss.getStyle();
@@ -85,7 +85,7 @@ interface Feature_Style {
 	void style(T)(T self, WindowStyle to) if (is(T : IWindow) || is(T : IWindowCreator)) {
 		if (self is null)
 			return;
-		if (Have_Style ss = cast(Have_Style)self) {
+		if (auto ss = cast(Have_Style)self) {
 			auto fss = ss.__getFeatureStyle();
 			if (fss !is null) {
 				fss.setStyle(to);
@@ -105,7 +105,7 @@ interface Feature_Style {
 	bool capableOfWindowStyles(T)(T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
 		if (self is null)
 			return false;
-		else if (Have_Style ss = cast(Have_Style)self)
+		else if (auto ss = cast(Have_Style)self)
 			return ss.__getFeatureStyle() !is null;
 		else
 			return false;

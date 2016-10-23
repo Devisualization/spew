@@ -168,7 +168,7 @@ interface Feature_Cursor {
 	bool capableOfCursors(T)(T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
 		if (self is null)
 			return false;
-		else if (Have_Cursor ss = cast(Have_Cursor)self)
+		else if (auto ss = cast(Have_Cursor)self)
 			return ss.__getFeatureCursor() !is null;
 		else
 			return false;
