@@ -1,6 +1,9 @@
 ﻿module cf.spew.implementation.instance;
 import cf.spew.instance;
-import std.experimental.allocator : IAllocator, make, dispose, processAllocator;
+import cf.spew.ui.features;
+import std.experimental.allocator : IAllocator, make, dispose, processAllocator, theAllocator;
+import std.experimental.graphic.image : ImageStorage;
+import std.experimental.graphic.color : RGBA8;
 import std.experimental.memory.managed;
 import cf.spew.ui.rendering : vec2;
 
@@ -14,7 +17,6 @@ final class DefaultImplementation : Instance {
 
 			allocator.dispose(_mainEventSource_);
 			allocator.dispose(_mainEventConsumer_);
-
 		}
 	}
 
@@ -92,7 +94,7 @@ final class EventLoopWrapper : Management_EventLoop {
 	@property IEventLoopManager manager() { return _manager; }
 }
 
-abstract class UIInstance : Management_UserInterface {
+abstract class UIInstance : Management_UserInterface, Have_Notification {
 	import cf.spew.ui : IWindow, IDisplay, IWindowCreator, IRenderPoint, IRenderPointCreator;
 	import std.experimental.allocator : IAllocator, processAllocator;
 	import std.experimental.memory.managed;
@@ -106,6 +108,13 @@ abstract class UIInstance : Management_UserInterface {
 	IAllocator allocator;
 	/// ONLY use this if IWindow has events enabled!
 	Map!(size_t, IWindow) windowToIdMapper = void;
+
+	// notifications
+
+	IAllocator taskbarCustomIconAllocator;
+	ImageStorage!RGBA8 taskbarCustomIcon;
+
+	//
 
 	managed!IWindowCreator createWindow(IAllocator alloc = processAllocator()) { assert(0); }
 
@@ -129,16 +138,32 @@ abstract class UIInstance : Management_UserInterface {
 		managed!(IDisplay[]) displays(IAllocator alloc = processAllocator()) { assert(0); }
 		managed!(IWindow[]) windows(IAllocator alloc = processAllocator()) { assert(0); }
 	}
+
+	// notifications
+
+	Feature_Notification __getFeatureNotification() { return null; }
 }
 
 version(Windows) {
-	final class UIInstance_WinAPI : UIInstance {
+	final class UIInstance_WinAPI : UIInstance, Feature_Notification {
 		import cf.spew.implementation.windowing.window_creator : WindowCreatorImpl_WinAPI;
 		import cf.spew.implementation.windowing.misc;
+		import std.experimental.graphic.image.storage.base : ImageStorageHorizontal;
+		import std.experimental.graphic.image.interfaces : imageObjectFrom;
 		import std.typecons : tuple;
+		import winapi = core.sys.windows.windows;
+		import winapishell = core.sys.windows.shellapi;
+		import core.sys.windows.w32api : _WIN32_IE;
+
+		IWindow taskbarIconWindow;
+		winapi.NOTIFYICONDATAW taskbarIconNID;
 
 		this(IAllocator allocator) {
 			super(allocator);
+		}
+
+		~this() {
+			allocator.dispose(taskbarIconWindow);
 		}
 
 		override {
@@ -168,6 +193,130 @@ version(Windows) {
 					ctx.call;
 					return managed!(IWindow[])(ctx.windows, managers(), Ownership.Secondary, alloc);
 				}
+			}
+
+			// notifications
+			static if (_WIN32_IE >= 0x500) {
+				Feature_Notification __getFeatureNotification() { return this; }
+
+				@property {
+					ImageStorage!RGBA8 getNotificationIcon(IAllocator alloc=theAllocator) {
+						return imageObjectFrom!(ImageStorageHorizontal!RGBA8)(taskbarCustomIcon, alloc);
+					}
+
+					void setNotificationIcon(ImageStorage!RGBA8 icon, IAllocator alloc=theAllocator) {
+						if (icon is null) {
+							winapi.Shell_NotifyIconW(winapi.NIM_DELETE, &taskbarIconNID);
+							taskbarIconNID = winapi.NOTIFYICONDATAW.init;
+						} else {
+							bool toAdd = taskbarIconNID is winapi.NOTIFYICONDATAW.init;
+							
+							if (taskbarIconWindow is null) {
+								taskbarIconWindow = createAWindow(allocator);
+							}
+
+							taskbarIconNID.cbSize = winapi.NOTIFYICONDATAW.sizeof;
+							taskbarIconNID.uVersion = NOTIFYICON_VERSION_4;
+							taskbarIconNID.uFlags = winapi.NIF_ICON | winapi.NIF_STATE;
+							taskbarIconNID.hWnd = *cast(winapi.HWND*)taskbarIconWindow.__handle;
+							
+							winapi.HDC hFrom = winapi.GetDC(null);
+							winapi.HDC hMemoryDC = winapi.CreateCompatibleDC(hFrom);
+							
+							scope(exit) {
+								winapi.DeleteDC(hMemoryDC);
+								winapi.ReleaseDC(null, hFrom);
+							}
+							
+							if (taskbarIconNID.hIcon !is null) {
+								winapi.DeleteObject(taskbarIconNID.hIcon);
+								taskbarCustomIconAllocator.dispose(taskbarCustomIcon);
+							}
+							
+							taskbarCustomIconAllocator = alloc;
+							taskbarCustomIcon = imageObjectFrom!(ImageStorageHorizontal!RGBA8)(icon, alloc);
+							
+							taskbarIconNID.hIcon = imageToIcon_WinAPI(icon, hMemoryDC, alloc);
+							
+							if (toAdd) {
+								winapi.Shell_NotifyIconW(winapi.NIM_ADD, &taskbarIconNID);
+							} else {
+								winapi.Shell_NotifyIconW(winapi.NIM_MODIFY, &taskbarIconNID);
+							}
+							
+							winapi.Shell_NotifyIconW(winapishell.NIM_SETVERSION, &taskbarIconNID);
+						}
+					}
+				}
+				
+				void notify(ImageStorage!RGBA8 icon, dstring title, dstring text, IAllocator alloc=theAllocator) {
+					import std.utf : byUTF;
+					if (taskbarIconWindow is null)
+						taskbarIconWindow = createAWindow(allocator);
+					
+					winapi.NOTIFYICONDATAW nid;
+					nid.cbSize = winapi.NOTIFYICONDATAW.sizeof;
+					nid.uVersion = NOTIFYICON_VERSION_4;
+					nid.uFlags = winapi.NIF_ICON | NIF_SHOWTIP | winapi.NIF_INFO | winapi.NIF_STATE | NIF_REALTIME;
+					nid.uID = 1;
+					nid.hWnd = *cast(winapi.HWND*)taskbarIconWindow.__handle;
+					
+					size_t i;
+					foreach(c; byUTF!wchar(title)) {
+						if (i >= nid.szInfoTitle.length - 1) {
+							nid.szInfoTitle[i] = cast(wchar)0;
+							break;
+						} else
+							nid.szInfoTitle[i] = c;
+						
+						i++;
+						if (i == title.length)
+							nid.szInfoTitle[i] = cast(wchar)0;
+					}
+					
+					i = 0;
+					foreach(c; byUTF!wchar(text)) {
+						if (i >= nid.szInfo.length - 1) {
+							nid.szInfo[i] = cast(wchar)0;
+							break;
+						} else
+							nid.szInfo[i] = c;
+						
+						i++;
+						if (i == text.length)
+							nid.szInfo[i] = cast(wchar)0;
+					}
+					
+					winapi.HDC hFrom = winapi.GetDC(null);
+					winapi.HDC hMemoryDC = winapi.CreateCompatibleDC(hFrom);
+					
+					scope(exit) {
+						winapi.DeleteDC(hMemoryDC);
+						winapi.ReleaseDC(null, hFrom);
+					}
+					
+					nid.hIcon = imageToIcon_WinAPI(icon, hMemoryDC, alloc);
+					
+					winapi.Shell_NotifyIconW(winapi.NIM_ADD, &nid);
+					winapi.Shell_NotifyIconW(winapi.NIM_SETVERSION, &nid);
+					
+					winapi.Shell_NotifyIconW(winapi.NIM_DELETE, &nid);
+					winapi.DeleteObject(nid.hIcon);
+				}
+
+				void clearNotifications() {}
+			} else {
+				// not available.
+
+				pragma(msg, "Notifications are not supported. To enable them pass version IE5 or greater (see core.sys.windows.w32api).");
+
+				@property {
+					ImageStorage!RGBA8 getNotificationIcon(IAllocator alloc=theAllocator) { assert(0); }
+					void setNotificationIcon(ImageStorage!RGBA8, IAllocator alloc=theAllocator) { assert(0); }
+				}
+				
+				void notify(ImageStorage!RGBA8, dstring, dstring, IAllocator alloc=theAllocator) { assert(0); }
+				void clearNotifications() { assert(0); }
 			}
 		}
 	}

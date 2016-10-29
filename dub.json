@@ -29,6 +29,7 @@
 			"name": "implementation",
 			"sourcePaths": ["src/implementation"],
 			"importPaths": ["src/implementation"],
+			"versions": ["IE5"],
 
 			"libs-windows": ["gdi32", "user32", "dxva2"],
 			"dependencies": {
