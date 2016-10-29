@@ -1,6 +1,5 @@
 ﻿module cf.spew.implementation.consumers;
 public import cf.spew.ui;
-public import cf.spew.platform;
 public import cf.spew.event_loop;
 public import cf.spew.events;
 public import std.experimental.graphic.image : ImageStorage;

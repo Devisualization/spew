@@ -1,10 +1,9 @@
 ﻿module cf.spew.implementation.windowing.contexts.vram;
-import cf.spew.implementation.details;
-import cf.spew.implementation.platform;
+import cf.spew.ui.context.defs;
 import cf.spew.ui.context.features.vram;
 import std.experimental.graphic.image : ImageStorage;
 import std.experimental.graphic.color : RGB8, RGBA8;
-import std.experimental.allocator : IAllocator;
+import std.experimental.allocator : IAllocator, make, dispose;
 
 class VRAMContextImpl : IContext, Have_VRam, Feature_VRam {
 	Feature_VRam __getFeatureVRam() {
