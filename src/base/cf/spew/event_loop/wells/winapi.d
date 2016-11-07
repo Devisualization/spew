@@ -84,11 +84,21 @@ final class WinAPI_EventLoop_SourceRetriever : EventLoopSourceRetriever {
 
 		_event = &event;
 
+		scope(exit) {
+			_event = null;
+		}
+
 		for (;;) {
-			if (PeekMessageW(&msg, null, 0, 0, PM_REMOVE) == 0) {
+			if (_overrideEvent != Event.init) {
+				event = _overrideEvent;
+				_overrideEvent = Event.init;
+				return true;
+			} else if (PeekMessageW(&msg, null, 0, 0, PM_REMOVE) == 0) {
 				needToWait = true;
 				return false;
 			} else {
+				*_event = Event.init;
+
 				if (msg.hwnd !is null) {
 					_callbacks = cast(EventLoopAlterationCallbacks*)GetWindowLongPtrW(msg.hwnd, GWLP_USERDATA);
 
@@ -100,7 +110,8 @@ final class WinAPI_EventLoop_SourceRetriever : EventLoopSourceRetriever {
 
 				event.winapi.raw = msg;
 				DispatchMessageW(&msg);
-				if (event.type == WinAPI_Events_Types.Unknown)
+
+				if (event.type == WinAPI_Events_Types.Unknown || event.type.value == 0)
 					continue;
 				else
 					return true;
@@ -165,6 +176,7 @@ private {
 	 * Thread local, non issue since only one event loop ever runs
 	 */
 	Event* _event;
+	Event _overrideEvent;
 	EventLoopAlterationCallbacks* _callbacks;
 
 	enum {
@@ -223,8 +235,8 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 		case WM_ACTIVATE:
 			_event.type = Windowing_Events_Types.Window_Focused;
 			_event.wellData2Value = wParam;
-			_event.wellData3Ptr = SetFocus(hwnd);
-			return 0;
+			_overrideEvent = *_event;
+			return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 
 		case WM_SETFOCUS:
 			_event.type = WinAPI_Events_Types.Window_GainedKeyboardFocus;

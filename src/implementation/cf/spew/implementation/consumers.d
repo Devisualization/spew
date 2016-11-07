@@ -56,7 +56,6 @@ abstract class EventLoopConsumerImpl : EventLoopConsumer {
 					return true;
 
 				case Windowing_Events_Types.Window_CursorActionDo:
-				case Windowing_Events_Types.Window_Focused:
 				case Windowing_Events_Types.Window_KeyDown:
 				default:
 					return false;
@@ -105,6 +104,7 @@ version(Windows) {
 
 			} else if (WindowImpl_WinAPI w = cast(WindowImpl_WinAPI)window) {
 				WindowImpl w2 = cast(WindowImpl)w;
+
 				switch(event.type) {
 					case Windowing_Events_Types.Window_Resized:
 						winapi.InvalidateRgn(event.wellData1Ptr, null, 0);
@@ -113,6 +113,13 @@ version(Windows) {
 					case Windowing_Events_Types.Window_Moved:
 						winapi.InvalidateRgn(event.wellData1Ptr, null, 0);
 						tryFunc(w2.onMoveDel, event.windowing.windowMoved.newX, event.windowing.windowMoved.newY);
+						return true;
+					case Windowing_Events_Types.Window_Focused:
+						if (winapi.LOWORD(event.wellData2Value) == 0) {
+						} else {
+							if (w.oldCursorClipArea != winapi.RECT.init)
+								w.lockCursorToWindow;
+						}
 						return true;
 
 					case WinAPI_Events_Types.Window_Destroy:
@@ -148,7 +155,7 @@ version(Windows) {
 					case WinAPI_Events_Types.Window_ExitSizeMove:
 						winapi.InvalidateRgn(event.wellData1Ptr, null, 0);
 						tryFunc(w2.onSizeChangeDel, event.windowing.windowResized.newWidth, event.windowing.windowResized.newHeight);
-						return false;
+						return true;
 					case WinAPI_Events_Types.Window_RequestClose:
 						return false;
 
