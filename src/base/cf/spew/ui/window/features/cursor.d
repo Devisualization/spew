@@ -80,6 +80,9 @@ interface Feature_Cursor {
     WindowCursorStyle getCursor();
     void setCustomCursor(ImageStorage!RGBA8);
     ImageStorage!RGBA8 getCursorIcon();
+
+	bool lockCursorToWindow();
+	void unlockCursorFromWindow();
 }
 
 @property {
@@ -93,9 +96,7 @@ interface Feature_Cursor {
      * 		to		=	Style of cursor to set
      */
     void cursor(T)(T self, WindowCursorStyle to) if (is(T : IWindow) || is(T : IWindowCreator)) {
-		if (!self.capableOfCursors)
-			return (managed!(ImageStorage!RGBA8)).init;
-		else {
+		if (self.capableOfCursors) {
 			(cast(Have_Cursor)self).__getFeatureCursor().setCursor(to);
 		}
     }
@@ -155,6 +156,39 @@ interface Feature_Cursor {
     managed!(ImageStorage!RGBA8) cursorIcon(T)(T self) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
         static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or IWindowCreator.");
     }
+
+	/**
+     * Locks a cursor to a window[creator] if capable
+     * 
+     * Params:
+     * 		self	=	Window or window creator instance
+     */
+	bool lockCursorToWindow(T)(T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
+		if (self.capableOfCursors) {
+			return (cast(Have_Cursor)self).__getFeatureCursor().lockCursorToWindow();
+		} else
+			return false;
+	}
+
+	bool lockCursorToWindow(T)(T self, WindowCursorStyle to) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
+		static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or IWindowCreator.");
+	}
+
+	/**
+     * Unlocks a cursor from a window[creator] if capable
+     * 
+     * Params:
+     * 		self	=	Window or window creator instance
+     */
+	void unlockCursorFromWindow(T)(T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
+		if (self.capableOfCursors) {
+			(cast(Have_Cursor)self).__getFeatureCursor().unlockCursorFromWindow();
+		}
+	}
+	
+	void unlockCursorFromWindow(T)(T self) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
+		static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or IWindowCreator.");
+	}
 
 	/**
 	 * Does the given window[creator] support cursors?

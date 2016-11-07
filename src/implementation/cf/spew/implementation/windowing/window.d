@@ -79,6 +79,8 @@ version(Windows) {
 			HMENU hMenu;
 			HCURSOR hCursor;
 
+			RECT oldCursorClipArea;
+
 			// this is very high up in field orders, that way this classes data will be in cache when accessed
 			EventLoopAlterationCallbacks impl_callbacks_struct;
 
@@ -289,7 +291,7 @@ version(Windows) {
 		}
 		
 		MenuItem addItem() {
-			auto ret = alloc.make!MenuItemImpl_WinAPI(this, hMenu, null);
+			auto ret = cast(MenuItem)alloc.make!MenuItemImpl_WinAPI(this, hMenu, null);
 			
 			menuItems ~= ret;
 			return ret;
@@ -402,6 +404,24 @@ version(Windows) {
 		
 		ImageStorage!RGBA8 getCursorIcon() {
 			return customCursor;
+		}
+
+		bool lockCursorToWindow() {
+			GetClipCursor(&oldCursorClipArea);
+			RECT myRect;
+			GetClientRect(hwnd, &myRect);
+			MapWindowPoints(hwnd, GetParent(hwnd), cast(POINT*)&myRect, 2);
+
+			if (ClipCursor(&myRect) == 0) {
+				oldCursorClipArea = RECT.init;
+				return false;
+			} else
+				return true;
+		}
+
+		void unlockCursorFromWindow() {
+			if (oldCursorClipArea != RECT.init)
+				ClipCursor(&oldCursorClipArea);
 		}
 		
 		Feature_Style __getFeatureStyle() {

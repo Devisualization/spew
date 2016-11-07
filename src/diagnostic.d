@@ -14,7 +14,7 @@ int main() {
 		writeln("Well that is odd, there is no implementation defined.");
 		writeln("Please compile in spew:implementation or provide your own implementation.");
 		writeln("Check http://code.dlang.org for more compatible implementations");
-		writeln(" or have a look on newsgroup! http://forum.dlang.org/group/announce");
+		writeln(" or have a look on the NewsGroup! http://forum.dlang.org/group/announce");
 
 		return -1;
 	}
@@ -131,6 +131,10 @@ void aWindowTest() {
 
 		if (specialKey == SpecialKey.Escape)
 			Instance.current.eventLoop.stopAllThreads;
+		else if (key == '1')
+			window.lockCursorToWindow;
+		else if (key == '2')
+			window.unlockCursorFromWindow;
 	};
 	
 	window.events.onScroll = (int amount) {

@@ -24,6 +24,7 @@ abstract class WindowCreatorImpl : IWindowCreator {
 		WindowStyle windowStyle = WindowStyle.Dialog;
 		
 		bool useVRAMContext, vramWithAlpha;
+		bool shouldAutoLockCursor;
 	}
 
 	this(UIInstance uiInstance, IAllocator alloc) {
@@ -174,11 +175,14 @@ version(Windows) {
 
 			if (icon !is null)
 				ret.setIcon(icon);
-			
+
 			if (cursorStyle == WindowCursorStyle.Custom)
 				ret.setCustomCursor(cursorIcon);
 			else
 				ret.setCursor(cursorStyle);
+
+			if (shouldAutoLockCursor)
+				ret.lockCursorToWindow;
 
 			// done
 
@@ -208,7 +212,16 @@ version(Windows) {
 		}
 		
 		ImageStorage!RGBA8 getCursorIcon() { return cursorIcon; }
-		
+
+		bool lockCursorToWindow() {
+			shouldAutoLockCursor = true;
+			return true;
+		}
+
+		void unlockCursorFromWindow() {
+			shouldAutoLockCursor = false;
+		}
+
 		Feature_Style __getFeatureStyle() {
 			return this;
 		}
