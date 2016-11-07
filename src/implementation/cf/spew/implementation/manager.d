@@ -223,7 +223,7 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 		}
 
 		void* initializeImpl(ThreadID threadId) {
-			InternalData ret = allocator.make!InternalData;
+			InternalData ret = allocator.make!InternalData(allocator);
 			ret.refCount = 1;
 
 			bool isOnMainThread = isMainThread(threadId);
@@ -324,23 +324,28 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 				allocator.dispose(data);
 		}
 	}
+}
 
-	final class InternalData {
-		shared uint refCount;
-		Instance[] instances;
+private final class InternalData {
+	shared uint refCount;
+	Instance[] instances;
+	IAllocator allocator;
 
-		~this() {
-			foreach(instance; instances) {
-				allocator.dispose(instance.retriever);
-				allocator.dispose(instance.consumers);
-			}
-			allocator.dispose(instances);
+	this(IAllocator allocator) {
+		this.allocator = allocator;
+	}
+
+	~this() {
+		foreach(instance; instances) {
+			allocator.dispose(instance.retriever);
+			allocator.dispose(instance.consumers);
 		}
-
-		struct Instance {
-			EventLoopSourceRetriever retriever;
-			EventLoopSource source;
-			EventLoopConsumer[] consumers;
-		}
+		allocator.dispose(instances);
+	}
+	
+	struct Instance {
+		EventLoopSourceRetriever retriever;
+		EventLoopSource source;
+		EventLoopConsumer[] consumers;
 	}
 }
