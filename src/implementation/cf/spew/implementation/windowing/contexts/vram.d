@@ -94,14 +94,14 @@ version(Windows) {
 				bitsCount = 32;
 				bufferPtr = cast(ubyte*)stage1Alpha.__pixelsRawArray.ptr;
 
-				HBITMAP hBitmap = CreateBitmap(stage2.width, stage2.height, 1, bitsCount, bufferPtr);
+				HBITMAP hBitmap = CreateBitmap(cast(uint)stage2.width, cast(uint)stage2.height, 1, bitsCount, cast(void*)bufferPtr);
 				
 				HGDIOBJ oldBitmap = SelectObject(hdcMem, hBitmap);
 				
 				HBITMAP bitmap;
 				GetObjectA(hBitmap, HBITMAP.sizeof, &bitmap);
 				
-				StretchBlt(hdc, 0, 0, stage2.width, stage2.height, hdcMem, 0, 0, cast(uint)windowRect.right, cast(uint)windowRect.bottom, SRCCOPY);
+				StretchBlt(hdc, 0, 0, cast(uint)stage2.width, cast(uint)stage2.height, hdcMem, 0, 0, cast(uint)windowRect.right, cast(uint)windowRect.bottom, SRCCOPY);
 				
 				SelectObject(hdcMem, oldBitmap);
 				DeleteObject(hBitmap);
