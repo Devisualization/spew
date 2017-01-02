@@ -40,9 +40,6 @@ struct FlatImageStorage(Color) if (isColor!Color) {
         data = allocator.makeArray!(Color)(width * height);
     }
 
-	@disable
-	this(this);
-
 	~this() @trusted {
 		import std.experimental.allocator : dispose;
 
