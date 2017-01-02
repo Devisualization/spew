@@ -173,9 +173,9 @@ version(Windows) {
 		for(size_t i = 0; i < buffer.length; i += 4) {
 			RGB8 c = from[x, y];
 			
-			buffer[i] = c.b;
-			buffer[i+1] = c.g;
-			buffer[i+2] = c.r;
+			buffer[i] = c.b.value;
+			buffer[i+1] = c.g.value;
+			buffer[i+2] = c.r.value;
 			buffer[i+3] = 255;
 			
 			x++;
@@ -203,10 +203,10 @@ version(Windows) {
 		for(size_t i = 0; i < buffer.length; i += 4) {
 			RGBA8 c = from[x, y];
 			
-			buffer[i] = c.b;
-			buffer[i+1] = c.g;
-			buffer[i+2] = c.r;
-			buffer[i+3] = c.a;
+			buffer[i] = c.b.value;
+			buffer[i+1] = c.g.value;
+			buffer[i+2] = c.r.value;
+			buffer[i+3] = c.a.value;
 			
 			x++;
 			if (x == from.width) {
