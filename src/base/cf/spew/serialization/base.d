@@ -31,9 +31,9 @@ struct BaseSerializer {
 		alloc.deallocateAll();
 	}
 
-	void serialize(Variant value, bool withObjectHierarchyLookup=true) {
+	void serialize(Variant value) {
 		uint numJumps;
-		TypeReflector* got = lookup(value.type, withObjectHierarchyLookup, numJumps);
+		TypeReflector* got = lookup(value.type, true, numJumps);
 		
 		if (got is null)
 			throw new TypeNotSerializable("Type is not registered");
@@ -41,9 +41,9 @@ struct BaseSerializer {
 			got.fromType(value, archiver, &serialize);
 	}
 
-	Variant deserialize(TypeInfo typeId, bool withObjectHierarchyLookup=true) {
+	Variant deserialize(TypeInfo typeId) {
 		uint numJumps;
-		TypeReflector* got = lookup(typeId, withObjectHierarchyLookup, numJumps);
+		TypeReflector* got = lookup(typeId, true, numJumps);
 		
 		if (got is null)
 			throw new TypeNotSerializable("Type is not registered");

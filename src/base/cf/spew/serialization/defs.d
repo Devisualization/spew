@@ -85,8 +85,8 @@ interface ISerializer {
 	void setArchiver(IArchiver);
 	IArchiver getArchiver();
 
-	void serialize(Variant, bool withObjectHierarchyLookup=true);
-	Variant deserialize(TypeInfo, bool withObjectHierarchyLookup=true);
+	void serialize(Variant);
+	Variant deserialize(TypeInfo);
 }
 
 bool isSerializer(T)() pure {
@@ -115,12 +115,12 @@ bool isSerializer(T)() pure {
 	}
 }
 
-void serialize(T, Ctx)(ref Ctx ctx, ref T value, bool withObjectHierarchyLookup=true) if (isSerializer!Ctx) {
-	ctx.serialize(Variant(value), withObjectHierarchyLookup);
+void serialize(T, Ctx)(ref Ctx ctx, ref T value) if (isSerializer!Ctx) {
+	ctx.serialize(Variant(value));
 }
 
-T deserialize(T, Ctx)(ref Ctx ctx, bool withObjectHierarchyLookup=true) if (isSerializer!Ctx) {
-	return ctx.deserialize(typeid(T), withObjectHierarchyLookup).get!T;
+T deserialize(T, Ctx)(ref Ctx ctx) if (isSerializer!Ctx) {
+	return ctx.deserialize(typeid(T)).get!T;
 }
 
 interface ISerializable {
@@ -132,8 +132,8 @@ struct TypeReflector {
 	Type type;
 	TypeInfo typeInfo;
 	
-	void function(Variant, IArchiver, void delegate(Variant, bool withObjectHierarchyLookup=true) nextToSerialize) fromType;
-	Variant function(IArchiver, IAllocator, Variant delegate(TypeInfo, bool withObjectHierarchyLookup=true) nextToDeserialize) toType;
+	void function(Variant, IArchiver, void delegate(Variant) nextToSerialize) fromType;
+	Variant function(IArchiver, IAllocator, Variant delegate(TypeInfo) nextToDeserialize) toType;
 }
 
 class TypeNotSerializable : Exception {
