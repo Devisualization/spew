@@ -32,47 +32,34 @@ struct BaseSerializer {
 	}
 
 	void serialize(Variant value) {
-		foreach(ref handler; handlers) {
-			if (handler.typeInfo.toString() == value.type.toString()) {
-				handler.fromType(value, archiver, &serialize);
-			}
-		}
-
-		throw new TypeNotSerializable("Type is not registered");
+		uint numJumps;
+		TypeReflector* got = lookup(value.type, true, numJumps);
+		
+		if (got is null)
+			throw new TypeNotSerializable("Type is not registered");
+		else
+			got.fromType(value, archiver, &serialize);
 	}
 
 	Variant deserialize(TypeInfo typeId) {
-		foreach(ref handler; handlers) {
-			if (handler.typeInfo.toString() == typeId.toString()) {
-				return handler.toType(archiver, alloc, &deserialize);
-			}
-		}
-
-		throw new TypeNotSerializable("Type is not registered");
+		uint numJumps;
+		TypeReflector* got = lookup(typeId, true, numJumps);
+		
+		if (got is null)
+			throw new TypeNotSerializable("Type is not registered");
+		else
+			return got.toType(archiver, alloc, &deserialize);
 	}
 	
 	void addTypeReflector(TypeReflector handlers, bool replace=false) {
-		if (handlers.type == Type.Object || handlers.type == Type.Struct ||
-			handlers.type == Type.Array || handlers.type == Type.Enum) {
+		uint numJumps;
+		TypeReflector* got = lookup(handlers.typeInfo, false, numJumps);
 
-			foreach(ref handler; this.handlers) {
-				if (handler.typeInfo.toString() == handlers.typeInfo.toString()) {
-					if (replace)
-						handler = handlers;
-					return;
-				}
-			}
-		} else {
-			foreach(ref handler; this.handlers) {
-				if (handler.type == handlers.type) {
-					if (replace)
-						handler = handlers;
-					return;
-				}
-			}
-		}
-		
-		this.handlers ~= handlers;
+		if (got is null)
+			this.handlers ~= handlers;
+		else if (replace)
+			*got = handlers;
+
 		needToSort = true;
 	}
 	
