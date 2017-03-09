@@ -31,19 +31,33 @@ struct BaseSerializer {
 		alloc.deallocateAll();
 	}
 
-	void serialize(Variant value) {
+	void serialize(Variant value, bool withObjectHierarchyLookup=true) {
+		if (withObjectHierarchyLookup)
+			serialize!true(value);
+		else
+			serialize!false(value);
+	}
+
+	void serialize(bool withObjectHierarchyLookup)(Variant value) {
 		uint numJumps;
-		TypeReflector* got = lookup(value.type, true, numJumps);
+		TypeReflector* got = lookup(value.type, withObjectHierarchyLookup, numJumps);
 		
 		if (got is null)
 			throw new TypeNotSerializable("Type is not registered");
 		else
-			got.fromType(value, archiver, &serialize);
+			got.fromType(value, archiver, &serialize!withObjectHierarchyLookup);
 	}
 
-	Variant deserialize(TypeInfo typeId) {
+	Variant deserialize(TypeInfo typeId, bool withObjectHierarchyLookup=true) {
+		if (withObjectHierarchyLookup)
+			return deserialize!true(typeId);
+		else
+			return deserialize!false(typeId);
+	}
+
+	Variant deserialize(bool withObjectHierarchyLookup)(TypeInfo typeId) {
 		uint numJumps;
-		TypeReflector* got = lookup(typeId, true, numJumps);
+		TypeReflector* got = lookup(typeId, withObjectHierarchyLookup, numJumps);
 		
 		if (got is null)
 			throw new TypeNotSerializable("Type is not registered");

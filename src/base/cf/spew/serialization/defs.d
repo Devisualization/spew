@@ -85,8 +85,8 @@ interface ISerializer {
 	void setArchiver(IArchiver);
 	IArchiver getArchiver();
 
-	void serialize(Variant);
-	Variant deserialize(TypeInfo);
+	void serialize(Variant, bool withObjectHierarchyLookup=true);
+	Variant deserialize(TypeInfo, bool withObjectHierarchyLookup=true);
 }
 
 bool isSerializer(T)() pure {
@@ -115,12 +115,12 @@ bool isSerializer(T)() pure {
 	}
 }
 
-void serialize(T, Ctx)(ref Ctx ctx, ref T value) if (isSerializer!Ctx) {
-	ctx.serialize(Variant(value));
+void serialize(T, Ctx)(ref Ctx ctx, ref T value, bool withObjectHierarchyLookup=true) if (isSerializer!Ctx) {
+	ctx.serialize(Variant(value), withObjectHierarchyLookup);
 }
 
-T deserialize(T, Ctx)(ref Ctx ctx) if (isSerializer!Ctx) {
-	return ctx.deserialize(typeid(T)).get!T;
+T deserialize(T, Ctx)(ref Ctx ctx, bool withObjectHierarchyLookup) if (isSerializer!Ctx) {
+	return ctx.deserialize(typeid(T), withObjectHierarchyLookup).get!T;
 }
 
 interface ISerializable {
