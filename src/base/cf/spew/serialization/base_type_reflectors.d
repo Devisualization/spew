@@ -21,10 +21,10 @@ void addType(T, Ctx)(ref Ctx ctx, bool replace=false) if (isSerializer!Ctx && is
 
 	TypeReflector reflector = TypeReflector(type, typeid(O));
 	
-	reflector.fromType = (Variant v, IArchiver archiver, void delegate(Variant) nextToSerialize) {
+	reflector.fromType = (Variant v, IArchiver archiver, void delegate(Variant, bool withObjectHierarchyLookup=true) nextToSerialize) {
 		mixin("archiver." ~ Store ~ "(v.get!T);");
 	};
-	reflector.toType = (IArchiver archiver, IAllocator alloc, Variant delegate(TypeInfo) nextToDeserialize) {
+	reflector.toType = (IArchiver archiver, IAllocator alloc, Variant delegate(TypeInfo, bool withObjectHierarchyLookup=true) nextToDeserialize) {
 		mixin("return Variant(archiver." ~ Retrieve ~ "());");
 	};
 
@@ -71,7 +71,7 @@ void addType(T, Ctx)(ref Ctx ctx, bool replace=false) if (isSerializer!Ctx && is
 
 	TypeReflector reflector = TypeReflector(Type.Array, typeid(U[]));
 
-	reflector.fromType = (Variant v, IArchiver archiver, void delegate(Variant) nextToSerialize) {
+	reflector.fromType = (Variant v, IArchiver archiver, void delegate(Variant, bool withObjectHierarchyLookup=true) nextToSerialize) {
 		archiver.beginContainer(type, typeid(U));
 
 		T array = v.get!T;
@@ -81,7 +81,7 @@ void addType(T, Ctx)(ref Ctx ctx, bool replace=false) if (isSerializer!Ctx && is
 
 		archiver.endContainer();
 	};
-	reflector.toType = (IArchiver archiver, IAllocator alloc, Variant delegate(TypeInfo) nextToDeserialize) {
+	reflector.toType = (IArchiver archiver, IAllocator alloc, Variant delegate(TypeInfo, bool withObjectHierarchyLookup=true) nextToDeserialize) {
 		archiver.beginContainer(type, typeid(U));
 
 		size_t len = archiver.containerSize();
@@ -109,10 +109,10 @@ void addType(T, Ctx)(ref Ctx ctx, bool replace=false) if (isSerializer!Ctx && is
 	static if (is(U == char)) {
 		TypeReflector reflector = TypeReflector(Type.StringUTF8, typeid(U[]));
 
-		reflector.fromType = (Variant v, IArchiver archiver, void delegate(Variant) nextToSerialize) {
+		reflector.fromType = (Variant v, IArchiver archiver, void delegate(Variant, bool withObjectHierarchyLookup=true) nextToSerialize) {
 			archiver.storeStringUTF8(cast(T)v.get!(U[]));
 		};
-		reflector.toType = (IArchiver archiver, IAllocator alloc, Variant delegate(TypeInfo) nextToDeserialize) {
+		reflector.toType = (IArchiver archiver, IAllocator alloc, Variant delegate(TypeInfo, bool withObjectHierarchyLookup=true) nextToDeserialize) {
 			return Variant(archiver.retrieveStringUTF8());
 		};
 
@@ -120,10 +120,10 @@ void addType(T, Ctx)(ref Ctx ctx, bool replace=false) if (isSerializer!Ctx && is
 	} else static if (is(U == wchar)) {
 		TypeReflector reflector = TypeReflector(Type.StringUTF16, typeid(U[]));
 
-		reflector.fromType = (Variant v, IArchiver archiver, void delegate(Variant) nextToSerialize) {
+		reflector.fromType = (Variant v, IArchiver archiver, void delegate(Variant, bool withObjectHierarchyLookup=true) nextToSerialize) {
 			archiver.storeStringUTF16(cast(T)v.get!(U[]));
 		};
-		reflector.toType = (IArchiver archiver, IAllocator alloc, Variant delegate(TypeInfo) nextToDeserialize) {
+		reflector.toType = (IArchiver archiver, IAllocator alloc, Variant delegate(TypeInfo, bool withObjectHierarchyLookup=true) nextToDeserialize) {
 			return Variant(archiver.retrieveStringUTF16());
 		};
 
@@ -131,10 +131,10 @@ void addType(T, Ctx)(ref Ctx ctx, bool replace=false) if (isSerializer!Ctx && is
 	} else static if (is(U == dchar)) {
 		TypeReflector reflector = TypeReflector(Type.StringUTF32, typeid(U[]));
 
-		reflector.fromType = (Variant v, IArchiver archiver, void delegate(Variant) nextToSerialize) {
+		reflector.fromType = (Variant v, IArchiver archiver, void delegate(Variant, bool withObjectHierarchyLookup=true) nextToSerialize) {
 			archiver.storeStringUTF32(cast(T)v.get!(U[]));
 		};
-		reflector.toType = (IArchiver archiver, IAllocator alloc, Variant delegate(TypeInfo) nextToDeserialize) {
+		reflector.toType = (IArchiver archiver, IAllocator alloc, Variant delegate(TypeInfo, bool withObjectHierarchyLookup=true) nextToDeserialize) {
 			return Variant(archiver.retrieveStringUTF32());
 		};
 
@@ -149,10 +149,10 @@ void addType(T, Ctx)(ref Ctx ctx, bool replace=false) if (isSerializer!Ctx && is
 	
 	TypeReflector reflector = TypeReflector(Type.Enum, typeid(T));
 	
-	reflector.fromType = (Variant v, IArchiver archiver, void delegate(Variant) nextToSerialize) {
+	reflector.fromType = (Variant v, IArchiver archiver, void delegate(Variant, bool withObjectHierarchyLookup=true) nextToSerialize) {
 		mixin("nextToSerialize(Variant(cast(O)v.get!T));");
 	};
-	reflector.toType = (IArchiver archiver, IAllocator alloc, Variant delegate(TypeInfo) nextToDeserialize) {
+	reflector.toType = (IArchiver archiver, IAllocator alloc, Variant delegate(TypeInfo, bool withObjectHierarchyLookup=true) nextToDeserialize) {
 		return nextToDeserialize(typeid(O));
 	};
 	
