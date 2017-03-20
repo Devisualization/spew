@@ -227,52 +227,48 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 			ret.refCount = 1;
 
 			bool isOnMainThread = isMainThread(threadId);
+			size_t sourceCount;
 
-			EventLoopConsumer[] allConsumers = allocator.makeArray!EventLoopConsumer(consumers.length);
-			EventLoopSource[] allSources = allocator.makeArray!EventLoopSource(sources.length);
-			EventLoopConsumer[] allConsumersSlice;
-			EventLoopSource[] allSourcesSlice;
-
-			size_t i;
-			foreach(consumer; consumers) {
-				if ((isOnMainThread && consumer.onMainThread) || (!isOnMainThread && consumer.onAdditionalThreads)) {
-					allConsumers[i] = consumer;
-					i++;
-				}
-			}
-			allConsumersSlice = allConsumers[0 .. i];
-
-			i = 0;
 			foreach(source; sources) {
 				if ((isOnMainThread && source.onMainThread) || (!isOnMainThread && source.onAdditionalThreads)) {
-					allSources[i] = source;
-					i++;
+					sourceCount++;
 				}
 			}
-			allSourcesSlice = allSources[0 .. i];
-			ret.instances = allocator.makeArray!(InternalData.Instance)(allSourcesSlice.length);
 
-			i = 0;
-			foreach(source; allSourcesSlice) {
+			EventLoopConsumer[] allConsumers = allocator.makeArray!EventLoopConsumer(consumers.length);
+			ret.instances = allocator.makeArray!(InternalData.Instance)(sourceCount);
+
+			size_t i, j;
+			foreach(source; sources) {
+				size_t k;
+
+				foreach(consumer; consumers) {
+					if (((isOnMainThread && consumer.onMainThread) || (!isOnMainThread && consumer.onAdditionalThreads)) &&
+						(consumer.pairOnlyWithSource.isNull || consumer.pairOnlyWithSource.get == source.identifier)) {
+						allConsumers[k] = consumer;
+						k++;
+					}
+
+					j++;
+				}
+
+				EventLoopConsumer[] allConsumersSlice = allConsumers[0 .. k];
 				short lastPriority = byte.min;
-				size_t countAddedSoFar;
-
+				
 				ret.instances[i].source = source;
 				ret.instances[i].retriever = source.nextEventGenerator(allocator);
 				ret.instances[i].retriever.hintTimeout(hintSourceTimeout);
-
 				ret.instances[i].consumers = allocator.makeArray!EventLoopConsumer(allConsumersSlice.length);
 
-				while (countAddedSoFar < allSourcesSlice.length) {
+				size_t countAddedSoFar;
+				while (countAddedSoFar < allConsumersSlice.length) {
 					foreach(consumer; allConsumersSlice) {
-						if (consumer.pairOnlyWithSource.isNull || consumer.pairOnlyWithSource.get == source.identifier) {
-							if (consumer.priority == lastPriority) {
-								ret.instances[i].consumers[countAddedSoFar] = consumer;
-								countAddedSoFar++;
-							}
+						if (consumer.priority == lastPriority) {
+							ret.instances[i].consumers[countAddedSoFar] = consumer;
+							countAddedSoFar++;
 						}
 					}
-
+					
 					lastPriority++;
 				}
 
@@ -280,7 +276,6 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 			}
 
 			allocator.dispose(allConsumers);
-			allocator.dispose(allSources);
 
 			synchronized(mutex_threadData) {
 				threadData[threadId] = ret;

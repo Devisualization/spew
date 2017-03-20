@@ -148,5 +148,27 @@ void aWindowTest() {
 	};
 	
 	window.show();
+	Instance.current.eventLoop.manager.addSources(new ASource);
 	Instance.current.eventLoop.execute();
+}
+
+import cf.spew.event_loop.defs;
+final class ASource : EventLoopSource, EventLoopSourceRetriever {
+	@property {
+		bool onMainThread() { return true; }
+		bool onAdditionalThreads() { return true; }
+		string description() { return "ASource"; }
+		EventSource identifier() { return EventSource.from("asrc"); }
+	}
+
+	EventLoopSourceRetriever nextEventGenerator(IAllocator) { return this; }
+
+	bool nextEvent(ref Event event) {
+		import std.stdio;writeln("====TICK====");
+		return false;
+	}
+	void handledEvent(ref Event event) {}
+	void unhandledEvent(ref Event event) {}
+	void handledErrorEvent(ref Event event) {}
+	void hintTimeout(Duration timeout) {}
 }
