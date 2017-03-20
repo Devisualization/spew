@@ -149,6 +149,9 @@ void aWindowTest() {
 	};
 	
 	window.show();
+
+	import std.datetime : seconds;
+	Instance.current.eventLoop.manager.setSourceTimeout(3.seconds);
 	Instance.current.eventLoop.manager.addSources(new ASource);
 	Instance.current.eventLoop.execute();
 }
