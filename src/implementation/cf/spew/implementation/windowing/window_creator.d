@@ -171,6 +171,7 @@ version(Windows) {
 			
 			ret = alloc.make!WindowImpl_WinAPI(hwnd, context, alloc, uiInstance, hMenu, true);
 			ret.impl_callbacks_struct.modifySetCursor = &ret.impl_cursorset;
+			ret.impl_callbacks_struct.onDestroy = &ret.impl_callOnClose;
 			SetWindowLongPtrW(hwnd, GWLP_USERDATA, cast(size_t)&ret.impl_callbacks_struct);
 
 			if (icon !is null)

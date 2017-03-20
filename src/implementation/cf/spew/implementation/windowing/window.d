@@ -27,6 +27,7 @@ abstract class WindowImpl : IWindow, IWindowEvents {
 
 		EventOnForcedDrawDel onDrawDel;
 		EventOnCloseDel onCloseDel;
+		EventOnRequestCloseDel onRequestCloseDel;
 	}
 	
 	this(UIInstance instance, bool processOwns) {
@@ -59,6 +60,7 @@ abstract class WindowImpl : IWindow, IWindowEvents {
 		void onSizeChange(EventOnSizeChangeDel del) { onSizeChangeDel = del; }
 		
 		void onMove(EventOnMoveDel del) { onMoveDel = del; }
+		void onRequestClose(EventOnRequestCloseDel del) { onRequestCloseDel = del; }
 	}
 }
 
@@ -504,6 +506,12 @@ version(Windows) {
 					return true;
 				} else
 					return false;
+			}
+
+			void impl_callOnClose() nothrow {
+				try {
+					onCloseDel();
+				} catch (Exception e) {}
 			}
 		}
 	}

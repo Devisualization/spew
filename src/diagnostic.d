@@ -145,6 +145,7 @@ void aWindowTest() {
 	window.events.onClose = () {
 		writeln("onClose");
 		stdout.flush;
+		Instance.current.eventLoop.stopAllThreads;
 	};
 	
 	window.show();

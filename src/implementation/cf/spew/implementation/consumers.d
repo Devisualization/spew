@@ -76,11 +76,25 @@ abstract class EventLoopConsumerImpl : EventLoopConsumer {
 	}
 }
 
-private void tryFunc(T, U...)(T func, U args) {
-	if (func !is null) {
-		try {
-			func(args);
-		} catch(Exception e) {}
+private {
+	import std.traits : ReturnType;
+
+	void tryFunc(T, U...)(T func, U args) if (is(ReturnType!T == void)) {
+		if (func !is null) {
+			try {
+				func(args);
+			} catch(Exception e) {}
+		}
+	}
+
+	J tryFunc(T, J=ReturnType!T, U...)(T func, J default_, U args) if (!is(ReturnType!T == void)) {
+		if (func !is null) {
+			try {
+				return func(args);
+			} catch(Exception e) {}
+		}
+		
+		return default_;
 	}
 }
 
@@ -122,9 +136,6 @@ version(Windows) {
 						}
 						return true;
 
-					case WinAPI_Events_Types.Window_Destroy:
-						tryFunc(w2.onCloseDel);
-						return true;
 					case WinAPI_Events_Types.Window_Quit:
 						return false;
 					case WinAPI_Events_Types.Window_GainedKeyboardFocus:
@@ -157,7 +168,10 @@ version(Windows) {
 						tryFunc(w2.onSizeChangeDel, event.windowing.windowResized.newWidth, event.windowing.windowResized.newHeight);
 						return true;
 					case WinAPI_Events_Types.Window_RequestClose:
-						return false;
+						if (tryFunc(w2.onRequestCloseDel, true)) {
+							winapi.DestroyWindow(event.wellData1Ptr);
+						}
+						return true;
 
 					default:
 						if (event.type == WinAPI_Events_Types.Raw) {

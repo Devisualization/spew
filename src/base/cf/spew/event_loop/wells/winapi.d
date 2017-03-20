@@ -34,6 +34,8 @@ struct EventLoopAlterationCallbacks {
 	///
 	bool delegate(LPARAM lParam) nothrow modifySetCursor;
 
+	void delegate() nothrow onDestroy;
+
 	///
 	LRESULT delegate(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam, ref EventLoopAlterationCallbacks callbacks, ref Event event) nothrow unhandledEvent;
 }
@@ -86,6 +88,7 @@ final class WinAPI_EventLoop_SourceRetriever : EventLoopSourceRetriever {
 
 		scope(exit) {
 			_event = null;
+			_callbacks = null;
 		}
 
 		for (;;) {
@@ -100,9 +103,9 @@ final class WinAPI_EventLoop_SourceRetriever : EventLoopSourceRetriever {
 				*_event = Event.init;
 
 				if (msg.hwnd !is null) {
-					_callbacks = cast(EventLoopAlterationCallbacks*)GetWindowLongPtrW(msg.hwnd, GWLP_USERDATA);
+					_callbacks = getCallbacksPointer(msg.hwnd);
 
-					if (_callbacks !is null && _callbacks.MAGIC == 0xBEAF7588) {
+					if (_callbacks !is null) {
 						if (_callbacks.canTranslate && shouldTranslate)
 							TranslateMessage(&msg);
 					}
@@ -185,6 +188,21 @@ private {
 	}
 }
 
+EventLoopAlterationCallbacks* getCallbacksPointer(HWND hwnd) nothrow {
+	import core.sys.windows.windows : GetWindowLongPtrW, GWLP_USERDATA;
+
+	auto ret = cast(EventLoopAlterationCallbacks*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
+	try {
+		if (ret !is null && ret.MAGIC == 0xBEAF7588) {
+			return ret;
+		} else {
+			return null;
+		}
+	} catch (Error e) {
+		return null;
+	}
+}
+
 /**
  * Use this callback when registering a WinAPI window to allow auto hooking into any
  *  WinAPI_EventLoop_SourceRetriever event retriever that may exist.
@@ -199,6 +217,11 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 		if (uMsg == WM_PAINT) {
 			UpdateWindow(hwnd);
 			return 0;
+		} else if (uMsg == WM_DESTROY) {
+			auto callbacks = getCallbacksPointer(hwnd);
+			if (callbacks.onDestroy !is null)
+				callbacks.onDestroy();
+			return 0;
 		}
 		return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 	}
@@ -210,12 +233,6 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 	switch(uMsg) {
 		case WM_NULL:
 			// do nothing
-			return 0;
-
-		case WM_DESTROY:
-			_event.type = WinAPI_Events_Types.Window_Destroy;
-			// if you use SetClipboardViewer don't forget to
-			// call ChangeClipboardChain(hwnd, otherHwnd) here
 			return 0;
 
 		case WM_MOVE:
