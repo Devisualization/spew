@@ -1,4 +1,5 @@
-﻿module cf.spew.ui;
+﻿///
+module cf.spew.ui;
 public import cf.spew.ui.events;
 public import cf.spew.ui.rendering;
 public import cf.spew.ui.display;

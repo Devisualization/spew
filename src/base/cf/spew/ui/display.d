@@ -1,4 +1,5 @@
-﻿module cf.spew.ui.display;
+﻿///
+module cf.spew.ui.display;
 
 /**
  * Represents a display.
@@ -93,6 +94,7 @@ interface IDisplay {
 		/// No touchy, very dangerous!
 		void* __handle();
 	}
-	
+
+	///
 	IDisplay dup(IAllocator alloc);
 }

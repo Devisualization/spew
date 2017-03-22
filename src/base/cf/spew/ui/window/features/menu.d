@@ -15,11 +15,8 @@ interface Have_Menu {
     Feature_Menu __getFeatureMenu();
 }
 
-///
 interface Feature_Menu {
-    ///
     MenuItem addItem();
-    ///
     @property managed!(MenuItem[]) items();
 }
 

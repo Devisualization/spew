@@ -1,4 +1,5 @@
-﻿module cf.spew.ui.context.defs;
+﻿///
+module cf.spew.ui.context.defs;
 
 /**
  * A basic representation of a context to be rendered to.
