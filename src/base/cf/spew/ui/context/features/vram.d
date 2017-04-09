@@ -8,6 +8,7 @@ module cf.spew.ui.context.features.vram;
 import cf.spew.ui.rendering;
 import cf.spew.ui.window.defs;
 import cf.spew.ui.context.defs;
+import cf.spew.ui.window.features.overlay : Have_OverlayWindow;
 import std.experimental.graphic.image : ImageStorage;
 import std.experimental.graphic.color : RGB8, RGBA8;
 
@@ -29,6 +30,16 @@ void assignVRamContext(IRenderPointCreator self, bool withAlpha=false) {
     if (Have_VRamCtx ss = cast(Have_VRamCtx)self) {
         ss.assignVRamContext(withAlpha);
     }
+}
+
+/// Ditto
+void assignVRamContext(Have_OverlayWindow self, bool withAlpha=true) {
+	import cf.spew.ui.window.features.overlay : Feature_OverlayWindow;
+	if (self is null)
+		return;
+	if (Feature_OverlayWindow ss = cast(Feature_OverlayWindow)self) {
+		ss.assignVRamContext(withAlpha);
+	}
 }
 
 interface Have_VRam {
