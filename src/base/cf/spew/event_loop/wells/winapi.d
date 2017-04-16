@@ -284,7 +284,7 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 			return 0;
 
 		case WM_CLOSE:
-			_event.type = WinAPI_Events_Types.Window_RequestClose;
+			_event.type = Windowing_Events_Types.Window_RequestClose;
 			// call DestroyWindow if you do wish to close the window
 			return 0;
 

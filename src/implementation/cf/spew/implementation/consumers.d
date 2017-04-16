@@ -167,7 +167,7 @@ version(Windows) {
 						winapi.InvalidateRgn(event.wellData1Ptr, null, 0);
 						tryFunc(w2.onSizeChangeDel, event.windowing.windowResized.newWidth, event.windowing.windowResized.newHeight);
 						return true;
-					case WinAPI_Events_Types.Window_RequestClose:
+					case Windowing_Events_Types.Window_RequestClose:
 						if (tryFunc(w2.onRequestCloseDel, true)) {
 							winapi.DestroyWindow(event.wellData1Ptr);
 						}

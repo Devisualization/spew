@@ -17,7 +17,13 @@ import cf.spew.ui.window.defs;
 enum WindowStyle {
 	///
 	Unknown,
-	
+
+	/**
+	 * Useful for e.g. context menus, menus, splash screens
+	 * No top bar, non-resiable, non-moveable, no-decorations
+	 */
+	NoDecorations,
+
 	/**
      * The default style of any window.
      * Close/Minimize/Maximize, resizable, moveable

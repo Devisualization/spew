@@ -17,7 +17,10 @@ version(Windows) {
 		PopupEx = winapi.WS_EX_ACCEPTFILES | winapi.WS_EX_APPWINDOW | winapi.WS_EX_TOPMOST,
 		
 		Fullscreen = winapi.WS_POPUP | winapi.WS_CLIPCHILDREN | winapi.WS_CLIPSIBLINGS,
-		FullscreenEx = winapi.WS_EX_APPWINDOW | winapi.WS_EX_TOPMOST
+		FullscreenEx = winapi.WS_EX_APPWINDOW | winapi.WS_EX_TOPMOST,
+
+		NoDecorations = winapi.WS_POPUP,
+		NoDecorationsEx = winapi.WS_EX_TOPMOST | winapi.WS_EX_TRANSPARENT
 	}
 
 	static wstring ClassNameW = __MODULE__ ~ ":Class"w;

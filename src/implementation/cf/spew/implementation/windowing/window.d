@@ -437,6 +437,11 @@ version(Windows) {
 			DWORD dwStyle, dwExStyle;
 			
 			switch(style) {
+				case WindowStyle.NoDecorations:
+					dwStyle = WindowDWStyles.NoDecorations;
+					dwExStyle = WindowDWStyles.NoDecorations;
+					break;
+
 				case WindowStyle.Fullscreen:
 					dwStyle = WindowDWStyles.Fullscreen;
 					dwExStyle = WindowDWStyles.FullscreenEx;

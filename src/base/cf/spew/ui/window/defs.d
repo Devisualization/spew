@@ -34,6 +34,16 @@ interface IWindow : IRenderPoint {
         /// Gets the window location relative to its display
 		vec2!int location();
         
+		/**
+		 * The size of the render area.
+		 * 
+		 * For a window this is the user area.
+		 * 
+		 * Returns:
+		 * 		The size of the render area.
+		 */
+		vec2!uint size();
+
         /// Sets the size of the window (user area)
 		void size(vec2!uint);
 

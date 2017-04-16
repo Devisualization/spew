@@ -28,6 +28,8 @@ enum Windowing_Events_Types {
 	Window_KeyUp = EventType.from("w_k/dw"),
 	///
 	Window_KeyInput = EventType.from("w_ki"),
+	///
+	Window_RequestClose = EventType.from("w_reqclo"),
 }
 
 ///

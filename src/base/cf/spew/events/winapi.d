@@ -1,10 +1,7 @@
 ﻿///
 module cf.spew.events.winapi;
-version(Windows):
-
 import cf.spew.events.defs;
 import std.experimental.memory.managed;
-import core.sys.windows.windows : MSG, CREATESTRUCT, HWND;
 
 ///
 enum WinAPI_Events_Types {
@@ -38,9 +35,11 @@ enum WinAPI_Events_Types {
 	Window_EnterSizeMove = EventType.from("|wszmv"),
 	///
 	Window_ExitSizeMove = EventType.from("|w/szmv"),
-	///
-	Window_RequestClose = EventType.from("|wreqclo"),
 }
+
+// windows specific stuff
+version(Windows):
+import core.sys.windows.windows : MSG, CREATESTRUCT, HWND;
 
 ///
 union WinAPI_Events {
