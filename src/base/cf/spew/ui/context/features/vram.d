@@ -32,16 +32,6 @@ void assignVRamContext(IRenderPointCreator self, bool withAlpha=false) {
     }
 }
 
-/// Ditto
-void assignVRamContext(Have_OverlayWindow self, bool withAlpha=true) {
-	import cf.spew.ui.window.features.overlay : Feature_OverlayWindow;
-	if (self is null)
-		return;
-	if (Feature_OverlayWindow ss = cast(Feature_OverlayWindow)self) {
-		ss.assignVRamContext(withAlpha);
-	}
-}
-
 interface Have_VRam {
     Feature_VRam __getFeatureVRam();
 }
