@@ -55,6 +55,7 @@ interface IArchiver {
 
 	//
 
+	void symbolName(string);
 	void beginContainer(Type t, TypeInfo);
 	void endContainer();
 	size_t containerSize();
@@ -72,7 +73,38 @@ bool isArchiver(T)() pure {
 				t.beginContainer(Type.Int, typeid(int[]));
 				t.endContainer();
 
-				// TODO
+				t.symbolName("abc");
+				size_t vcs = t.containerSize();
+
+				bool v1 = t.retrieveBool();
+				byte v2 = t.retrieveByte();
+				ubyte v3 = t.retrieveUByte();
+				short v4 = t.retrieveShort();
+				ushort v5 = t.retrieveUShort();
+				int v6 = t.retrieveInt();
+				uint v7 = t.retrieveUInt();
+				long v8 = t.retrieveLong();
+				ulong v9 = t.retrieveULong();
+				float v10 = t.retrieveFloat();
+				double v11 = t.retrieveDouble();
+				string v12 = t.retrieveStringUTF8();
+				wstring v13 = t.retrieveStringUTF16();
+				dstring v14 = t.retrieveStringUTF32();
+
+				t.storeBool(true);
+				t.storeByte(byte.min);
+				t.storeUByte(ubyte.max);
+				t.storeShort(short.min);
+				t.storeUShort(ushort.max);
+				t.storeInt(int.min);
+				t.storeUInt(uint.max);
+				t.storeLong(long.min);
+				t.storeULong(ulong.max);
+				t.storeFloat(float.infinity);
+				t.storeDouble(double.infinity);
+				t.storeStringUTF8("abc");
+				t.storeStringUTF16("abc"w);
+				t.storeStringUTF32("abc"d);
 			});
 	}
 }
@@ -102,10 +134,6 @@ bool isSerializer(T)() pure {
 				t.setAllocator(theAllocator());
 				t.reset();
 
-				class AnArchiver : IArchiver {
-					void reset() {}
-					void setEndianess(Endian) {}
-				}
 				t.setArchiver(new AnArchiver);
 				IArchiver archiver = t.getArchiver();
 
@@ -114,6 +142,8 @@ bool isSerializer(T)() pure {
 			});
 	}
 }
+
+
 
 void serialize(T, Ctx)(ref Ctx ctx, ref T value, bool withObjectHierarchyLookup=true) if (isSerializer!Ctx) {
 	ctx.serialize(Variant(value), withObjectHierarchyLookup);
@@ -125,7 +155,23 @@ T deserialize(T, Ctx)(ref Ctx ctx, bool withObjectHierarchyLookup) if (isSeriali
 
 interface ISerializable {
 	void serialize(void delegate(Variant) serializer, IArchiver archiver);
-	void deserialize(Variant delegate(Type) deserializer, IArchiver archiver, out ISerializable ret);
+	static void deserialize(Variant delegate(Type) deserializer, IArchiver archiver, IAllocator alloc, out ISerializable ret);
+}
+
+bool isSerializableCustom(T)() pure {
+	static if (is(T : ISerializable)) {
+		return true;
+	} else {
+		return __traits(compiles, {
+				import std.experimental.allocator : theAllocator;
+
+				T t;
+				t.serialize((Variant) {}, new AnArchiver);
+
+				ISerializable got;
+				T.deserialize((Type) { return Variant(1); }, new AnArchiver, theAllocator(), got);
+			});
+	}
 }
 
 struct TypeReflector {
@@ -139,5 +185,53 @@ struct TypeReflector {
 class TypeNotSerializable : Exception {
 	@nogc @safe pure nothrow this(string msg, string file=__FILE__, size_t line=__LINE__) {
 		super(msg, file, line);
+	}
+}
+
+private {
+	class AnArchiver : IArchiver {
+		void reset() {}
+		void setEndianess(Endian) {}
+		
+		//
+		
+		bool retrieveBool() { assert(0); }
+		byte retrieveByte() { assert(0); }
+		ubyte retrieveUByte() { assert(0); }
+		short retrieveShort() { assert(0); }
+		ushort retrieveUShort() { assert(0); }
+		int retrieveInt() { assert(0); }
+		uint retrieveUInt() { assert(0); }
+		long retrieveLong() { assert(0); }
+		ulong retrieveULong() { assert(0); }
+		float retrieveFloat() { assert(0); }
+		double retrieveDouble() { assert(0); }
+		string retrieveStringUTF8() { assert(0); }
+		wstring retrieveStringUTF16() { assert(0); }
+		dstring retrieveStringUTF32() { assert(0); }
+		
+		//
+		
+		void storeBool(bool) {}
+		void storeByte(byte) {}
+		void storeUByte(ubyte) {}
+		void storeShort(short) {}
+		void storeUShort(ushort) {}
+		void storeInt(int) {}
+		void storeUInt(uint) {}
+		void storeLong(long) {}
+		void storeULong(ulong) {}
+		void storeFloat(float) {}
+		void storeDouble(double) {}
+		void storeStringUTF8(string) {}
+		void storeStringUTF16(wstring) {}
+		void storeStringUTF32(dstring) {}
+		
+		//
+		
+		void beginContainer(Type t, TypeInfo) {}
+		void endContainer() {}
+		size_t containerSize() { assert(0); }
+		void symbolName(string) {}
 	}
 }

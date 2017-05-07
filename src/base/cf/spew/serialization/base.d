@@ -250,7 +250,7 @@ class Lastly : FooBar {}
 
 abstract class Model : ISerializable {
 	void serialize(void delegate(Variant) serializer, IArchiver archiver) {}
-	void deserialize(Variant delegate(Type) deserializer, IArchiver archiver, out ISerializable ret) {}
+	void deserialize(Variant delegate(Type) deserializer, IArchiver archiver, IAllocator alloc, out ISerializable ret) {}
 }
 
 class Sarvy : Model {}
@@ -271,7 +271,7 @@ shared static this() {
 	base.addTypeReflector(TypeReflector(Type.Object, typeid(FooBar)));
 	base.addTypeReflector(TypeReflector(Type.Object, typeid(FooBared)));
 	base.addTypeReflector(TypeReflector(Type.Object, typeid(A)));
-	base.addTypeReflector(TypeReflector(Type.Object, typeid(AB)));
+	//base.addTypeReflector(TypeReflector(Type.Object, typeid(AB)));
 	base.addTypeReflector(TypeReflector(Type.Object, typeid(ABC)));
 	base.addTypeReflector(TypeReflector(Type.Object, typeid(ISerializable)));
 	//base.addTypeReflector(TypeReflector(Type.Bool, typeid(bool)));
@@ -287,6 +287,7 @@ shared static this() {
 	base.addType!(int[]);
 	base.addType!(Object[]);
 	base.addType!MyEnumFoo;
+	base.addType!AB;
 
 	void test(T)() {
 		import std.stdio : writeln;
@@ -349,6 +350,7 @@ shared static this() {
 	test!MyEnumFoo2;
 	test!ISerializable;
 	test!FooBared;
+	test!AB;
 	test!ABC;
 	test!Lastly;
 	test!Sarvy;
