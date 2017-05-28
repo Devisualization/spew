@@ -201,7 +201,8 @@ version(Windows) {
 				winapi.FillRect(hdc, &ps.rcPaint, cast(winapi.HBRUSH) (winapi.COLOR_WINDOW+1));
 				winapi.EndPaint(event.wellData1Ptr, &ps);
 			} else if (w2.onDrawDel is null) {
-				w2.context.swapBuffers;
+				w2.context.activate;
+				w2.context.deactivate;
 			} else {
 				tryFunc(w2.onDrawDel);
 			}

@@ -15,7 +15,8 @@ class VRAMContextImpl : IContext, Have_VRam, Feature_VRam {
 		ImageStorage!RGBA8 vramAlphaBuffer() { assert(0); }
 	}
 
-	void swapBuffers() { assert(0); }
+	void activate() { assert(0); }
+	void deactivate() { assert(0); }
 }
 
 version(Windows) {
@@ -42,7 +43,7 @@ version(Windows) {
 			stage3 = imageObject(stage2, alloc);
 			stage3Alpha = imageObject(stage2Alpha, alloc);
 
-			swapBuffers();
+			deactivate();
 		}
 
 		~this() {
@@ -74,7 +75,9 @@ version(Windows) {
 				ImageStorage!RGBA8 vramAlphaBuffer() { return stage3Alpha; }
 			}
 
-			void swapBuffers() {
+			void activate() {}
+
+			void deactivate() {
 				RECT windowRect;
 				GetClientRect(hwnd, &windowRect);
 
