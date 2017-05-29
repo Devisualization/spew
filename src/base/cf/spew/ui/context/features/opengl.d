@@ -12,7 +12,7 @@ struct OpenGLVersion {
 	///
 	ushort major;
 	///
-	ushort min;
+	ushort minor;
 }
 
 ///
@@ -56,28 +56,24 @@ interface Have_OpenGL {
 	Feature_OpenGL __getFeatureOpenGL();
 }
 
-interface Feature_OpenGL {
-	bool readyToBeUsed();
-}
+interface Feature_OpenGL {}
 
 @property {
 	/**
-     * Gets the VRAM buffer as an RGB8 image.
-     *  
-     * If the context doesn't support VRAM it will return null.
-     *
-     * If the backing buffer supports alpha, it will be set to the max of 255.
-     *
-     * Returns:
-     *      The VRAM buffer or null on failure.
-     */
-	bool readyToBeUsed(IContext self) {
+	 * Does the given context support OpenGL for drawing?
+	 * 
+	 * Params:
+	 * 		self	=	The platform instance
+	 * 
+	 * Returns:
+	 * 		If the context supports drawing via OpenGL
+	 */
+	bool capableOfOpenGL(IContext self) {
 		if (self is null)
 			return false;
-		if (Have_OpenGL ss = cast(Have_OpenGL)self) {
-			return ss.__getFeatureOpenGL().readyToBeUsed;
-		}
-		
-		return false;
+		else if (Have_OpenGL ss = cast(Have_OpenGL)self)
+			return ss.__getFeatureOpenGL() !is null;
+		else
+			return false;
 	}
 }

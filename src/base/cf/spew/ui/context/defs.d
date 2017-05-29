@@ -17,4 +17,9 @@ interface IContext {
 	 * On top of the rendering.
 	 */
 	void deactivate();
+
+	/**
+	 * Is the current context ready to be used?
+	 */
+	bool readyToBeUsed();
 }

@@ -17,6 +17,7 @@ class VRAMContextImpl : IContext, Have_VRam, Feature_VRam {
 
 	void activate() { assert(0); }
 	void deactivate() { assert(0); }
+	bool readyToBeUsed() { assert(0); }
 }
 
 version(Windows) {
@@ -109,6 +110,8 @@ version(Windows) {
 				SelectObject(hdcMem, oldBitmap);
 				DeleteObject(hBitmap);
 			}
+
+			bool readyToBeUsed() { return true; }
 		}
 	}
 }

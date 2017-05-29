@@ -1,12 +1,18 @@
 module diagnostic;
 
+import core.time : Duration;
+import std.experimental.allocator;
+
+import cf.spew.events.defs;
+import cf.spew.event_loop.defs;
+
 import cf.spew.serialization.base;
 import cf.spew.serialization.base_type_reflectors;
 
 int main() {
 	import cf.spew.instance;
 
-	version(none) {
+	version(all) {
 		import std.stdio;
 		writeln("Hello there!");
 		writeln("Now lets do a quick diagnostic on the platform...");
@@ -97,7 +103,6 @@ void aWindowTest() {
 	import cf.spew.events.windowing;
 	import cf.spew.instance;
 	import std.experimental.graphic.image.manipulation.base : fillOn;
-	import std.experimental.allocator;
 	import std.experimental.memory.managed;
 	import std.experimental.graphic.color : RGBA8;
 	import std.stdio : writeln, stdout;
@@ -110,14 +115,17 @@ void aWindowTest() {
 
 	window = creator.createWindow();
 	window.title = "Title!";
-	
-	window.events.onForcedDraw = () {
-		window.context.activate;
-		auto buffer = window.context.vramAlphaBuffer;
 
-		writeln("onForcedDraw");
-		stdout.flush;
-		buffer.fillOn(RGBA8(255, 0, 0, 255));
+	window.events.onForcedDraw = () {
+		writeln("onForcedDraw");stdout.flush;
+		window.context.activate;
+
+		if (window.context.capableOfVRAM) {
+			auto buffer = window.context.vramAlphaBuffer;
+			buffer.fillOn(RGBA8(255, 0, 0, 255));
+		} else if (window.context.capableOfOpenGL) {
+
+		}
 
 		window.context.deactivate;
 	};
@@ -163,7 +171,6 @@ void aWindowTest() {
 	Instance.current.eventLoop.execute();
 }
 
-import cf.spew.event_loop.defs;
 final class ASource : EventLoopSource, EventLoopSourceRetriever {
 	@property {
 		bool onMainThread() { return true; }

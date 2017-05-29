@@ -25,6 +25,10 @@ abstract class WindowCreatorImpl : IWindowCreator {
 		
 		bool useVRAMContext, vramWithAlpha;
 		bool shouldAutoLockCursor;
+
+		bool useOGLContext;
+		OpenGLVersion oglVersion;
+		OpenGL_Context_Callbacks* oglCallbacks;
 	}
 
 	this(UIInstance uiInstance, IAllocator alloc) {
@@ -48,13 +52,15 @@ abstract class WindowCreatorImpl : IWindowCreator {
 
 version(Windows) {
 	class WindowCreatorImpl_WinAPI : WindowCreatorImpl,
-		Have_Icon, Have_Cursor, Have_Style, Have_VRamCtx,
+		Have_Icon, Have_Cursor, Have_Style,
+		Have_VRamCtx, Have_OGLCtx,
 		Feature_Icon, Feature_Cursor, Feature_Style {
 
 		import cf.spew.implementation.windowing.misc;
 		import core.sys.windows.windows;
 		import cf.spew.implementation.windowing.window;
 		import cf.spew.implementation.windowing.contexts.vram;
+		import cf.spew.implementation.windowing.contexts.opengl;
 
 		import core.sys.windows.windows : DWORD, RECT, HWND, HMENU, WNDCLASSEXW, HINSTANCE,
 			GetClassInfoExW, IDC_ARROW, IMAGE_CURSOR, LR_DEFAULTSIZE, LR_SHARED, RegisterClassExW,
@@ -167,6 +173,8 @@ version(Windows) {
 
 			if (useVRAMContext) {
 				context = alloc.make!VRAMContextImpl_WinAPI(hwnd, vramWithAlpha, alloc);
+			} else if (useOGLContext) {
+				context = alloc.make!OpenGLContextImpl_WinAPI(hwnd, oglVersion, oglCallbacks);
 			}
 			
 			ret = alloc.make!WindowImpl_WinAPI(hwnd, context, alloc, uiInstance, hMenu, true);
@@ -237,7 +245,16 @@ version(Windows) {
 		
 		void assignVRamContext(bool withAlpha=false) {
 			useVRAMContext = true;
+			useOGLContext = false;
 			vramWithAlpha = withAlpha;
+		}
+
+		void assignOpenGLContext(OpenGLVersion version_, OpenGL_Context_Callbacks* callbacks) {
+			useOGLContext = true;
+			useVRAMContext = false;
+
+			oglVersion = version_;
+			oglCallbacks = callbacks;
 		}
 	}
 }
