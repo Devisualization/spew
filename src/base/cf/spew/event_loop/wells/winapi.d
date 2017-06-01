@@ -495,6 +495,15 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 			}
 			return 0;
 
+		case WM_COMMAND:
+			if (HIWORD(wParam) == 0) {
+				ushort id = LOWORD(wParam);
+				_event.type = WinAPI_Events_Types.Menu_Click;
+				_event.wellData2Value = id;
+				return 0;
+			}
+			return DefWindowProcW(hwnd, uMsg, wParam, lParam);
+
 		//case WM_SYSTEMERROR:
 		//case WM_CTLCOLOR:
 
@@ -572,7 +581,6 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 		//case WM_IME_KEYLAST: same as WM_IME_COMPOSITION
 			
 		case WM_INITDIALOG:
-		case WM_COMMAND:
 		case WM_SYSCOMMAND:
 		case WM_TIMER:
 		case WM_HSCROLL:

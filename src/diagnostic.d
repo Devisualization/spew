@@ -112,9 +112,23 @@ void aWindowTest() {
 	auto creator = Instance.current.ui.createWindow();
 	//creator.style = WindowStyle.Fullscreen;
 	//creator.size = vec2!ushort(cast(short)800, cast(short)600);
+	creator.assignMenu;
 
 	window = creator.createWindow();
 	window.title = "Title!";
+
+	Feature_Menu theMenu = window.menu;
+	if (theMenu !is null) {
+		MenuItem item = theMenu.addItem();
+		item.text = "Hi!";
+		item.callback = (MenuItem mi) { writeln("Menu Item Click! ", mi.text); };
+
+		MenuItem sub = theMenu.addItem();
+		sub.text = "sub";
+		MenuItem subItem = sub.addItem();
+		subItem.text = "oh yeah!";
+		subItem.callback = (MenuItem mi) { writeln("Boo from: ", mi.text); };
+	}
 
 	window.events.onForcedDraw = () {
 		writeln("onForcedDraw");stdout.flush;

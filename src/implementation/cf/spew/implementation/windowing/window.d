@@ -88,9 +88,9 @@ version(Windows) {
 
 			List!MenuItem menuItems = void;
 			uint menuItemsCount;
+			Map!(uint, MenuItem) menuItemsIds = void;
 			Map!(uint, MenuCallback) menuCallbacks = void;
 			
-			bool redrawMenu;
 			WindowStyle windowStyle;
 			
 			WindowCursorStyle cursorStyle;
@@ -109,6 +109,7 @@ version(Windows) {
 			super(instance, processOwns);
 
 			menuItems = List!MenuItem(alloc);
+			menuItemsIds = Map!(uint, MenuItem)(alloc);
 			menuCallbacks = Map!(uint, MenuCallback)(alloc);
 			menuItemsCount = 9000;
 			

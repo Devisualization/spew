@@ -172,6 +172,9 @@ version(Windows) {
 							winapi.DestroyWindow(event.wellData1Ptr);
 						}
 						return true;
+					case WinAPI_Events_Types.Menu_Click:
+						tryFunc(w.menuCallbacks[event.wellData2Value], w.menuItemsIds[event.wellData2Value]);
+						return true;
 
 					default:
 						if (event.type == WinAPI_Events_Types.Raw) {

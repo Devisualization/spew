@@ -29,6 +29,8 @@ abstract class WindowCreatorImpl : IWindowCreator {
 		bool useOGLContext;
 		OpenGLVersion oglVersion;
 		OpenGL_Context_Callbacks* oglCallbacks;
+
+		bool shouldAssignMenu;
 	}
 
 	this(UIInstance uiInstance, IAllocator alloc) {
@@ -53,7 +55,7 @@ abstract class WindowCreatorImpl : IWindowCreator {
 version(Windows) {
 	class WindowCreatorImpl_WinAPI : WindowCreatorImpl,
 		Have_Icon, Have_Cursor, Have_Style,
-		Have_VRamCtx, Have_OGLCtx,
+		Have_VRamCtx, Have_OGLCtx, Have_MenuCreator,
 		Feature_Icon, Feature_Cursor, Feature_Style {
 
 		import cf.spew.implementation.windowing.misc;
@@ -65,7 +67,8 @@ version(Windows) {
 		import core.sys.windows.windows : DWORD, RECT, HWND, HMENU, WNDCLASSEXW, HINSTANCE,
 			GetClassInfoExW, IDC_ARROW, IMAGE_CURSOR, LR_DEFAULTSIZE, LR_SHARED, RegisterClassExW,
 			GetModuleHandleW, CS_OWNDC, LoadImageW, MONITORINFOEXA, HMONITOR, GetMonitorInfoA,
-			AdjustWindowRectEx, CreateWindowExW, SetWindowLongPtrW, GWLP_USERDATA, InvalidateRgn;
+			AdjustWindowRectEx, CreateWindowExW, SetWindowLongPtrW, GWLP_USERDATA, InvalidateRgn,
+			CreateMenu;
 		import cf.spew.event_loop.wells.winapi;
 
 		this(UIInstance uiInstance, IAllocator alloc) {
@@ -91,6 +94,10 @@ version(Windows) {
 
 			wndClass.cbSize = WNDCLASSEXW.sizeof;
 			hInstance = GetModuleHandleW(null);
+
+			if (shouldAssignMenu) {
+				hMenu = CreateMenu();
+			}
 			
 			if (GetClassInfoExW(hInstance, cast(wchar*)ClassNameW.ptr, &wndClass) == 0) {
 				wndClass.cbSize = WNDCLASSEXW.sizeof;
@@ -99,7 +106,7 @@ version(Windows) {
 				wndClass.hCursor = LoadImageW(null, cast(wchar*)IDC_ARROW, IMAGE_CURSOR, 0, 0, LR_DEFAULTSIZE | LR_SHARED);
 				wndClass.style = CS_OWNDC/+ | CS_HREDRAW | CS_VREDRAW+/; // causes flickering
 				wndClass.lpfnWndProc = &callbackWindowHandler;
-				
+
 				RegisterClassExW(&wndClass);
 			}
 
@@ -167,7 +174,7 @@ version(Windows) {
 				setpos.x, setpos.y,
 				rect.right - rect.left, rect.bottom - rect.top,
 				null,
-				null,
+				hMenu,
 				hInstance,
 				null);
 
@@ -255,6 +262,10 @@ version(Windows) {
 
 			oglVersion = version_;
 			oglCallbacks = callbacks;
+		}
+
+		void assignMenu() {
+			this.shouldAssignMenu = true;
 		}
 	}
 }

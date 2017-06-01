@@ -11,6 +11,10 @@ import std.experimental.graphic.image : ImageStorage;
 import std.experimental.graphic.color : RGB8;
 import std.experimental.memory.managed;
 
+interface Have_MenuCreator {
+	void assignMenu();
+}
+
 interface Have_Menu {
     Feature_Menu __getFeatureMenu();
 }
@@ -26,7 +30,7 @@ alias MenuCallback = void delegate(MenuItem);
 ///
 interface MenuItem {
     ///
-    MenuItem addChildItem();
+	MenuItem addItem();
     ///
     void remove();
 
@@ -64,9 +68,20 @@ interface MenuItem {
         ///
         void disabled(bool);
 
-        ///
+        /// Not valid if there are children
         void callback(MenuCallback);
     }
+}
+
+///
+void assignMenu(T)(T self) if (is(T : IWindowCreator) || is(T : Management_UserInterface)) {
+	if (Have_MenuCreator ss = cast(Have_MenuCreator)self) {
+		ss.assignMenu();
+	}
+}
+
+void assignMenu(T)(T self) if (!(is(T : IWindowCreator) || is(T : Management_UserInterface))) {
+	static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindowCreator or Management_UserInterface.");
 }
 
 @property {
@@ -75,7 +90,7 @@ interface MenuItem {
 		if (!self.capableOfMenu)
 			return null;
 		else {
-			return (cast(Have_Menu)self).__getFeatureMenu().screenshot;
+			return (cast(Have_Menu)self).__getFeatureMenu();
 		}
     }
 
