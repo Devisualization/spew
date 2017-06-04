@@ -9,7 +9,7 @@ struct Union {
 }
 
 struct UnionValueMap {
-	bool isBool;
+	bool isBool, isInitialized;
 
 	union {
 		bool b;
@@ -18,10 +18,12 @@ struct UnionValueMap {
 
 	this(bool v) {
 		isBool = true;
+		isInitialized = true;
 		this.b = v;
 	}
 
 	this(ulong v) {
+		isInitialized = true;
 		this.v = v;
 	}
 }

@@ -203,20 +203,10 @@ void addType(T, Ctx)(ref Ctx ctx, bool replace=false) if (isSerializer!Ctx && (i
 	ctx.addTypeReflector(reflector, replace);
 }
 
-// TODO: union as a type support
 auto DescribeFields(T)() pure {
 	import std.traits : Fields, FieldNameTuple, hasUDA, getUDAs;
-	
-	struct Element {
-		string[] varNames;
-		
-		uint offset;
-		long unionId = -1;
-		long unionIdChooser = -1;
-		uint theUnionChooserIndex, theUnionIndex;
-	}
-	
-	Element[] ret;
+
+	DescribeFieldsElement[] ret;
 	
 	alias AllFields = Fields!T;
 	alias AllFieldNames = FieldNameTuple!T;
@@ -234,7 +224,7 @@ auto DescribeFields(T)() pure {
 					lastUnionId = ret[$-1].unionId;
 				}
 				
-				ret ~= Element([name], lastOffsetV);
+				ret ~= DescribeFieldsElement([name], [], lastOffsetV);
 				lastOffset = Offset;
 				
 				static if (hasUDA!(__traits(getMember, T, name), ChooseUnionValue)) {
@@ -253,12 +243,33 @@ auto DescribeFields(T)() pure {
 						ret[$-1].unionId = UDAS[0].theUnionId;
 					}
 				}
-				
+
+				alias ElementType = typeof(__traits(getMember, T, name));
+				static if (is(ElementType == union)) {
+					auto describer = DescribeFields!ElementType[0];
+
+					ret[$-1].varNames = null;
+					ret[$-1].varMaps = describer.varMaps;
+
+					foreach(vn; describer.varNames) {
+						ret[$-1].varNames ~= name ~ "." ~ vn;
+					}
+				}
+
 				lastOffsetV++;
 			} else {
 				if (ret[$-1].unionId == -1)
 					ret[$-1].unionId = lastUnionId+1;
 				ret[$-1].varNames ~= name;
+			}
+
+			static if (hasUDA!(__traits(getMember, T, name), UnionValueMap)) {
+				alias UDAS = getUDAs!(__traits(getMember, T, name), UnionValueMap);
+				
+				static if (UDAS.length >= 1) {
+					ret[$-1].varMaps.length = ret[$-1].varNames.length;
+					ret[$-1].varMaps[$-1] = UDAS[0];
+				}
 			}
 		}
 	}
@@ -285,7 +296,17 @@ F1: foreach(i, ref chooser; ret) {
 }
 
 private {
-	struct DescribeFildsTest {
+	struct DescribeFieldsElement {
+		string[] varNames;
+		UnionValueMap[] varMaps;
+		
+		uint offset;
+		long unionId = -1,
+			 unionIdChooser = -1;
+		uint theUnionChooserIndex, theUnionIndex;
+	}
+
+	struct DescribeFieldsTest1 {
 		@Ignore
 		int z;
 		@ChooseUnionValue(0)
@@ -294,24 +315,78 @@ private {
 
 		@Union(0)
 		union {
+			@UnionValueMap(true)
 			uint x;
+			@UnionValueMap(false)
 			string t;
 		}
 
 		short s;
 	}
 
+	struct DescribeFieldsTest2 {
+		@Ignore
+		int z;
+		@ChooseUnionValue(0)
+		bool type;
+		Object o;
+		
+		@Union(0)
+		SubU u;
+
+		union SubU {
+			@UnionValueMap(true)
+			uint x;
+			@UnionValueMap(false)
+			string t;
+		}
+		
+		short s;
+	}
+
 	shared static this() {
 		import std.stdio;
-		
-		foreach(ref v; DescribeFields!DescribeFildsTest()) {
+
+		writeln("DescribeFieldsTest1");
+		foreach(ref v; DescribeFields!DescribeFieldsTest1()) {
 			writeln("- ", v.offset);
 			writeln("\t varNames:", v.varNames);
+
+			writeln("\t varMaps:");
+			foreach(ref vm; v.varMaps) {
+				if (!vm.isInitialized)
+					writeln("\t\t- unitialized");
+				else if (vm.isBool)
+					writeln("\t\t- ", vm.b);
+				else if(!vm.isBool)
+					writeln("\t\t- ", vm.v);
+			}
+
 			writeln("\t unionId:", v.unionId);
 			writeln("\t unionIdChooser:", v.unionIdChooser);
 			writeln("\t theUnionChooserIndex:", v.theUnionChooserIndex);
 			writeln("\t theUnionIndex:", v.theUnionIndex);
-			
+		}
+
+		writeln("DescribeFieldsTest2");
+		foreach(ref v; DescribeFields!DescribeFieldsTest2()) {
+			writeln("- ", v.offset);
+			writeln("\t varNames:", v.varNames);
+
+			writeln("\t varMaps:");
+			foreach(ref vm; v.varMaps) {
+				if (!vm.isInitialized)
+					writeln("\t\t- unitialized");
+				else if (vm.isBool)
+					writeln("\t\t- ", vm.b);
+				else if(!vm.isBool)
+					writeln("\t\t- ", vm.v);
+			}
+
+			writeln("\t unionId:", v.unionId);
+			writeln("\t unionIdChooser:", v.unionIdChooser);
+			writeln("\t theUnionChooserIndex:", v.theUnionChooserIndex);
+			writeln("\t theUnionIndex:", v.theUnionIndex);
 		}
 	}
 }
