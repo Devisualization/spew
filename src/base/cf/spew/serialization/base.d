@@ -5,7 +5,7 @@ import cf.spew.serialization.base_type_reflectors;
 import std.variant : Variant;
 import std.experimental.allocator : IAllocator;
 
-// version=ShowSerializerDebugMessages;
+// debug=ShowSerializerDebugMessages;
 
 struct BaseSerializer {
 	@disable
@@ -81,7 +81,7 @@ struct BaseSerializer {
 		TypeReflector* lookup(TypeInfo typeInfo, bool withObjectHierarchyLookup, ref uint numJumps) {
 			import std.algorithm : canFind;
 			
-			version(ShowSerializerDebugMessages) {
+			debug(ShowSerializerDebugMessages) {
 				import std.stdio;
 				writeln("Looking up: ", typeInfo);
 				writeln;
@@ -111,7 +111,7 @@ struct BaseSerializer {
 				uint numJumpsT;
 				
 				foreach_reverse(i, ref handler; handlers[primitives.length .. $]) {
-					version(ShowSerializerDebugMessages) {
+					debug(ShowSerializerDebugMessages) {
 						writeln(" ", i, ": ", handler.typeInfo);
 					}
 					
@@ -123,7 +123,7 @@ struct BaseSerializer {
 				
 				if (withObjectHierarchyLookup) {
 					if (claszTypeInfo.base !is null) {
-						version(ShowSerializerDebugMessages) {
+						debug(ShowSerializerDebugMessages) {
 							writeln("> base ", claszTypeInfo.base);
 						}
 						
@@ -145,13 +145,13 @@ struct BaseSerializer {
 							}
 						}
 						
-						version(ShowSerializerDebugMessages) {
+						debug(ShowSerializerDebugMessages) {
 							writeln("< base ", claszTypeInfo.base);
 						}
 					}
 					
 					foreach(i, ref inter; claszTypeInfo.interfaces) {
-						version(ShowSerializerDebugMessages) {
+						debug(ShowSerializerDebugMessages) {
 							writeln("> interface ", i, ": ", inter.classinfo);
 						}
 						
@@ -173,7 +173,7 @@ struct BaseSerializer {
 							}
 						}
 						
-						version(ShowSerializerDebugMessages) {
+						debug(ShowSerializerDebugMessages) {
 							writeln("< interface ", i, ": ", inter.classinfo);
 						}
 					}
@@ -182,14 +182,14 @@ struct BaseSerializer {
 				if (stepsToFallback < uint.max)
 					numJumps += stepsToFallback;
 				
-				version(ShowSerializerDebugMessages) {
+				debug(ShowSerializerDebugMessages) {
 					writeln(fallback);
 				}
 				
 				return fallback;
 			} else {
 				foreach_reverse(i, ref handler; primitives) {
-					version(ShowSerializerDebugMessages) {
+					debug(ShowSerializerDebugMessages) {
 						writeln(" ", i, ": ", handler.typeInfo);
 					}
 					
@@ -198,7 +198,7 @@ struct BaseSerializer {
 						return &handler;
 					}
 				}
-				
+
 				return null;
 			}
 		}
@@ -250,7 +250,7 @@ class Lastly : FooBar {}
 
 abstract class Model : ISerializable {
 	void serialize(void delegate(Variant) serializer, IArchiver archiver) {}
-	void deserialize(Variant delegate(Type) deserializer, IArchiver archiver, IAllocator alloc, out ISerializable ret) {}
+	void deserialize(Variant delegate(TypeInfo) deserializer, IArchiver archiver, IAllocator alloc, out ISerializable ret) {}
 }
 
 class Sarvy : Model {}
@@ -265,16 +265,6 @@ enum MyEnumFoo2 {
 
 shared static this() {
 	BaseSerializer base;
-
-	//base.addTypeReflector(TypeReflector(Type.Int, typeid(int)));
-	base.addTypeReflector(TypeReflector(Type.Object, typeid(Foo)));
-	base.addTypeReflector(TypeReflector(Type.Object, typeid(FooBar)));
-	base.addTypeReflector(TypeReflector(Type.Object, typeid(FooBared)));
-	base.addTypeReflector(TypeReflector(Type.Object, typeid(A)));
-	//base.addTypeReflector(TypeReflector(Type.Object, typeid(AB)));
-	base.addTypeReflector(TypeReflector(Type.Object, typeid(ABC)));
-	base.addTypeReflector(TypeReflector(Type.Object, typeid(ISerializable)));
-	//base.addTypeReflector(TypeReflector(Type.Bool, typeid(bool)));
 	
 	base.addType!bool;
 	base.addType!ubyte;  base.addType!byte;
@@ -283,11 +273,20 @@ shared static this() {
 	base.addType!ulong;  base.addType!long;
 	base.addType!float;  base.addType!double;
 	base.addType!string; base.addType!wstring; base.addType!dstring;
-	base.addType!(ubyte[]);
-	base.addType!(int[]);
+	base.addType!Object;
+
+	base.addType!(bool[]);
+	base.addType!(ubyte[]);  base.addType!(byte[]);
+	base.addType!(ushort[]); base.addType!(short[]);
+	base.addType!(uint[]);   base.addType!(int[]);
+	base.addType!(ulong[]);  base.addType!(long[]);
+	base.addType!(float[]);  base.addType!(double[]);
+	base.addType!(string[]); base.addType!(wstring[]); base.addType!(dstring[]);
 	base.addType!(Object[]);
+
 	base.addType!MyEnumFoo;
-	base.addType!AB;
+	//base.addType!Foo; base.addType!FooBar; base.addType!FooBared;
+	base.addType!A;   base.addType!AB;     base.addType!ABC;
 
 	void test(T)() {
 		import std.stdio : writeln;
@@ -296,7 +295,7 @@ shared static this() {
 		TypeInfo typeInfoOriginal = typeid(T);
 		TypeInfo typeInfo;
 
-		version(all) {
+		debug(all) {
 			static if (isDynamicArray!T) {
 				typeInfo = typeid(Unqual!(ForeachType!(Unqual!T))[]);
 			} else static if (is(T == enum)) {
@@ -349,7 +348,7 @@ shared static this() {
 	test!MyEnumFoo;
 	test!MyEnumFoo2;
 	test!ISerializable;
-	test!FooBared;
+	test!Foo; test!FooBar; test!FooBared;
 	test!AB;
 	test!ABC;
 	test!Lastly;

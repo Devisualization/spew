@@ -155,7 +155,7 @@ T deserialize(T, Ctx)(ref Ctx ctx, bool withObjectHierarchyLookup) if (isSeriali
 
 interface ISerializable {
 	void serialize(void delegate(Variant) serializer, IArchiver archiver);
-	static void deserialize(Variant delegate(Type) deserializer, IArchiver archiver, IAllocator alloc, out ISerializable ret);
+	static void deserialize(Variant delegate(TypeInfo) deserializer, IArchiver archiver, IAllocator alloc, out ISerializable ret);
 }
 
 bool isSerializableCustom(T)() pure {
