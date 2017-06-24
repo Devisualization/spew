@@ -266,33 +266,44 @@ bool isFieldDescriptionValid(T)() pure {
 	return true;
 }
 
-template DescribeFields(T) {
-	enum DescribeFields = {
-		enum Data = {
-			import std.traits : Fields, FieldNameTuple, hasUDA, getUDAs;
-
-			DescribeFieldsElement[] ret;
-			
-			alias AllFields = Fields!T;
-			alias AllFieldNames = FieldNameTuple!T;
-			
-			uint lastOffset, lastOffsetV;
-			long lastUnionId = -1;
-			foreach(name; AllFieldNames) {
-				static if (name.length > 0) {
-					mixin("enum Offset = T." ~ name ~ ".offsetof;");
-					
-					static if (hasUDA!(__traits(getMember, T, name), Ignore))
-						continue;
-					else {
-						if (ret.length == 0 || lastOffset != Offset) {
-							if (ret.length > 0 && ret[$-1].unionId >= 0) {
-								lastUnionId = ret[$-1].unionId;
-							}
+template DescribeFieldsData(T) {
+	enum DescribeFieldsData = {
+		import std.traits : Fields, FieldNameTuple, hasUDA, getUDAs;
+		
+		DescribeFieldsElement[] ret;
+		
+		alias AllFields = Fields!T;
+		alias AllFieldNames = FieldNameTuple!T;
+		
+		uint lastOffset, lastOffsetV;
+		long lastUnionId = -1;
+		foreach(name; AllFieldNames) {
+			static if (name.length > 0) {
+				mixin("enum Offset = T." ~ name ~ ".offsetof;");
+				
+				static if (hasUDA!(__traits(getMember, T, name), Ignore))
+					continue;
+				else {
+					string preferredVarName = name;
+					{
+						static if (hasUDA!(__traits(getMember, T, name), Name)) {
+							alias UDAS = getUDAs!(__traits(getMember, T, name), Name);
 							
-							ret ~= DescribeFieldsElement([name], [name], [], lastOffsetV);
-							lastOffset = Offset;
+							static if (UDAS.length >= 1) {
+								preferredVarName = UDAS[0].value;
+							}
+						}
+					}
 
+					if (ret.length == 0 || lastOffset != Offset) {
+						if (ret.length > 0 && ret[$-1].unionId >= 0) {
+							lastUnionId = ret[$-1].unionId;
+						}
+						
+						ret ~= DescribeFieldsElement([name], [name], [], lastOffsetV);
+						lastOffset = Offset;
+
+						{
 							static if (hasUDA!(__traits(getMember, T, name), ChooseUnionValue)) {
 								alias UDAS = getUDAs!(__traits(getMember, T, name), ChooseUnionValue);
 								
@@ -300,7 +311,9 @@ template DescribeFields(T) {
 									ret[$-1].unionIdChooser = UDAS[0].theUnionId;
 								}
 							}
-							
+						}
+
+						{
 							static if (hasUDA!(__traits(getMember, T, name), Union)) {
 								alias UDAS = getUDAs!(__traits(getMember, T, name), Union);
 								
@@ -309,67 +322,71 @@ template DescribeFields(T) {
 									ret[$-1].unionId = UDAS[0].theUnionId;
 								}
 							}
+						}
 
-							alias ElementType = typeof(__traits(getMember, T, name));
-							static if (is(ElementType == union)) {
-								auto describer = DescribeFields!ElementType[0];
-
-								ret[$-1].varNames = null;
-								ret[$-1].varMaps = describer.varMaps;
-
-								foreach(vn; describer.varNames) {
-									ret[$-1].varNames ~= name ~ "." ~ vn;
-								}
+						alias ElementType = typeof(__traits(getMember, T, name));
+						static if (is(ElementType == union)) {
+							auto describer = DescribeFields!ElementType[0];
+							
+							ret[$-1].varNames = null;
+							ret[$-1].preferredVarNames = null;
+							ret[$-1].varMaps = describer.varMaps;
+							
+							foreach(vn; describer.varNames) {
+								ret[$-1].varNames ~= name ~ "." ~ vn;
 							}
 
-							lastOffsetV++;
+							foreach(vn; describer.preferredVarNames) {
+								ret[$-1].preferredVarNames ~= preferredVarName ~ "." ~ vn;
+							}
 						} else {
-							if (ret[$-1].unionId == -1)
-								ret[$-1].unionId = lastUnionId+1;
-							ret[$-1].varNames ~= name;
-							ret[$-1].preferredVarNames ~= name;
+							ret[$-1].preferredVarNames[$-1] = preferredVarName;
 						}
-
-						static if (hasUDA!(__traits(getMember, T, name), UnionValueMap)) {
-							alias UDAS = getUDAs!(__traits(getMember, T, name), UnionValueMap);
-							
-							static if (UDAS.length >= 1) {
-								ret[$-1].varMaps.length = ret[$-1].varNames.length;
-								ret[$-1].varMaps[$-1] = UDAS[0];
-							}
-						}
-
-						static if (hasUDA!(__traits(getMember, T, name), Name)) {
-							alias UDAS = getUDAs!(__traits(getMember, T, name), Name);
-							
-							static if (UDAS.length >= 1) {
-								ret[$-1].preferredVarNames[$-1] = UDAS[0].value;
-							}
-						}
+						
+						lastOffsetV++;
+					} else {
+						if (ret[$-1].unionId == -1)
+							ret[$-1].unionId = lastUnionId+1;
+						ret[$-1].varNames ~= name;
+						ret[$-1].preferredVarNames ~= preferredVarName;
 					}
-				}
-			}
-			
-		F1: foreach(i, ref chooser; ret) {
-				if (chooser.unionIdChooser >= 0) {
-					size_t ciU;
 					
-					foreach(j, ref theUnion; ret) {
-						if (theUnion.varNames.length > 1) {
-							if (chooser.unionIdChooser == ciU) {
-								theUnion.theUnionChooserIndex = i;
-								chooser.theUnionIndex = j;
-								continue F1;
-							}
-							
-							ciU++;
+					static if (hasUDA!(__traits(getMember, T, name), UnionValueMap)) {
+						alias UDAS = getUDAs!(__traits(getMember, T, name), UnionValueMap);
+						
+						static if (UDAS.length >= 1) {
+							ret[$-1].varMaps ~= UDAS[0];
 						}
 					}
 				}
 			}
-			
-			return ret;
-		}();
+		}
+		
+	F1: foreach(i, ref chooser; ret) {
+			if (chooser.unionIdChooser >= 0) {
+				size_t ciU;
+				
+				foreach(j, ref theUnion; ret) {
+					if (theUnion.varNames.length > 1) {
+						if (chooser.unionIdChooser == ciU) {
+							theUnion.theUnionChooserIndex = i;
+							chooser.theUnionIndex = j;
+							continue F1;
+						}
+						
+						ciU++;
+					}
+				}
+			}
+		}
+		
+		return ret;
+	}();
+}
+
+template DescribeFields(T) {
+	enum DescribeFields = {
+		enum Data = DescribeFieldsData!T;
 
 		string creator() pure {
 			import std.conv : text;
@@ -414,7 +431,15 @@ private {
 		}
 
 		short s;
+
+		enum DESCRIPTION = [
+			DescribeFieldsElement(["type"], ["type"], null, 0, -1, 0, 0, 2),
+			DescribeFieldsElement(["o"], ["o"], null, 1, -1, -1, 0, 0),
+			DescribeFieldsElement(["x", "t"], ["x", "t"], [UnionValueMap(1), UnionValueMap(0)], 2, 0, -1, 0, 0),
+			DescribeFieldsElement(["s"], ["s"], null, 3, -1, -1, 0, 0)
+		];
 	}
+	static assert(DescribeFieldsTest1.DESCRIPTION == DescribeFieldsData!DescribeFieldsTest1);
 
 	struct DescribeFieldsTest2 {
 		@Ignore
@@ -434,7 +459,15 @@ private {
 		}
 		
 		short s;
+
+		enum DESCRIPTION = [
+			DescribeFieldsElement(["type"], ["type"], null, 0, -1, 0, 0, 2),
+			DescribeFieldsElement(["o"], ["o"], null, 1, -1, -1, 0, 0),
+			DescribeFieldsElement(["u.x", "u.t"], ["u.x", "u.t"], [UnionValueMap(1), UnionValueMap(0)], 2, 0, -1, 0, 0),
+			DescribeFieldsElement(["s"], ["s"], null, 3, -1, -1, 0, 0)
+		];
 	}
+	static assert(DescribeFieldsTest2.DESCRIPTION == DescribeFieldsData!DescribeFieldsTest2);
 
 	struct DescribeFieldsTest3 {
 		@Ignore
@@ -453,41 +486,54 @@ private {
 				@UnionValueMap(1)
 				int y;
 				@UnionValueMap(2)
+				@Name("something")
 				bool w;
 			}
 		}
 		
 		short s;
+
+		enum DESCRIPTION = [
+			DescribeFieldsElement(["type"], ["type"], null, 0, -1, 0, 0, 2),
+			DescribeFieldsElement(["o"], ["o"], null, 1, -1, -1, 0, 0),
+			DescribeFieldsElement(["u.x", "u.y", "u.w"], ["u.x", "u.y", "u.something"], [UnionValueMap(0), UnionValueMap(1), UnionValueMap(2)], 2, 0, -1, 0, 0),
+			DescribeFieldsElement(["s"], ["s"], null, 3, -1, -1, 0, 0)
+		];
 	}
+	static assert(DescribeFieldsTest3.DESCRIPTION == DescribeFieldsData!DescribeFieldsTest3);
 
-	shared static this() {
-		import std.stdio;
+	// if you need this code block, its because you're modifying this file
+	version(none) {
+		shared static this() {
+			import std.stdio;
 
-		void describe(T)() {
-			static assert(isFieldDescriptionValid!T);
-			foreach(v; DescribeFields!T) {
-				writeln("- ", v.offset);
-				writeln("\t varNames:", v.varNames);
-				
-				writeln("\t varMaps:");
-				foreach(ref vm; v.varMaps) {
-					writeln("\t\t- ", vm.value);
+			void describe(T)() {
+				static assert(isFieldDescriptionValid!T);
+				foreach(v; DescribeFields!T) {
+					writeln("- ", v.offset);
+					writeln("\t varNames:", v.varNames);
+					writeln("\t preferredVarNames:", v.preferredVarNames);
+					
+					writeln("\t varMaps:");
+					foreach(ref vm; v.varMaps) {
+						writeln("\t\t- ", vm.value);
+					}
+					
+					writeln("\t unionId:", v.unionId);
+					writeln("\t unionIdChooser:", v.unionIdChooser);
+					writeln("\t theUnionChooserIndex:", v.theUnionChooserIndex);
+					writeln("\t theUnionIndex:", v.theUnionIndex);
 				}
-				
-				writeln("\t unionId:", v.unionId);
-				writeln("\t unionIdChooser:", v.unionIdChooser);
-				writeln("\t theUnionChooserIndex:", v.theUnionChooserIndex);
-				writeln("\t theUnionIndex:", v.theUnionIndex);
 			}
+
+			writeln("DescribeFieldsTest1");
+			describe!DescribeFieldsTest1;
+
+			writeln("DescribeFieldsTest2");
+			describe!DescribeFieldsTest2;
+
+			writeln("DescribeFieldsTest3");
+			describe!DescribeFieldsTest3;
 		}
-
-		writeln("DescribeFieldsTest1");
-		describe!DescribeFieldsTest1;
-
-		writeln("DescribeFieldsTest2");
-		describe!DescribeFieldsTest2;
-
-		writeln("DescribeFieldsTest3");
-		describe!DescribeFieldsTest3;
 	}
 }
