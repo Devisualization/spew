@@ -31,7 +31,9 @@
 			"importPaths": ["src/implementation"],
 			"versions": ["IE5"],
 
-			"libs-windows": ["gdi32", "user32", "dxva2"],
+			"targetType": "library",
+			
+			"libs-windows": ["gdi32", "user32"],
 			"dependencies": {
 				"spew:base": "*",
 				"spew:utils": "*"
@@ -39,6 +41,7 @@
 		},
 		{
 			"name": "utils",
+			"targetType": "library",
 			"sourcePaths": ["src/utils"],
 			"importPaths": ["src/utils"],
 		}

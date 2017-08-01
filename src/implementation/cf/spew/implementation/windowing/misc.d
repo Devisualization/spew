@@ -2,6 +2,7 @@
 import cf.spew.ui.display;
 import cf.spew.ui.context.defs;
 import cf.spew.ui.window.defs;
+import cf.spew.bindings.symbolloader;
 
 version(Windows) {
 	public import winapi = core.sys.windows.windows;
@@ -41,9 +42,27 @@ version(Windows) {
 
 	extern(Windows) {
 		// dxva2
-		winapi.BOOL GetMonitorCapabilities(winapi.HANDLE hMonitor, winapi.LPDWORD pdwMonitorCapabilities, winapi.LPDWORD pdwSupportedColorTemperatures);
-		winapi.BOOL GetMonitorBrightness(winapi.HANDLE hMonitor, winapi.LPDWORD pdwMinimumBrightness, winapi.LPDWORD pdwCurrentBrightness, winapi.LPDWORD pdwMaximumBrightness);
-		winapi.BOOL GetPhysicalMonitorsFromHMONITOR(winapi.HMONITOR hMonitor, winapi.DWORD dwPhysicalMonitorArraySize, PHYSICAL_MONITOR* pPhysicalMonitorArray);
+		winapi.BOOL function(winapi.HANDLE hMonitor, winapi.LPDWORD pdwMonitorCapabilities, winapi.LPDWORD pdwSupportedColorTemperatures) GetMonitorCapabilities;
+		winapi.BOOL function(winapi.HANDLE hMonitor, winapi.LPDWORD pdwMinimumBrightness, winapi.LPDWORD pdwCurrentBrightness, winapi.LPDWORD pdwMaximumBrightness) GetMonitorBrightness;
+		winapi.BOOL function(winapi.HMONITOR hMonitor, winapi.DWORD dwPhysicalMonitorArraySize, PHYSICAL_MONITOR* pPhysicalMonitorArray) GetPhysicalMonitorsFromHMONITOR;
+	}
+
+	SharedLib dxva2;
+	static this() {
+		import cf.spew.implementation.windowing.misc;
+		dxva2.load(["dxva2.dll"]);
+		
+		if (dxva2.isLoaded) {
+			GetMonitorCapabilities = cast(typeof(GetMonitorCapabilities))dxva2.loadSymbol("GetMonitorCapabilities", false);
+			GetMonitorBrightness = cast(typeof(GetMonitorBrightness))dxva2.loadSymbol("GetMonitorCapabilities", false);
+			GetPhysicalMonitorsFromHMONITOR = cast(typeof(GetPhysicalMonitorsFromHMONITOR))dxva2.loadSymbol("GetMonitorCapabilities", false);
+		}
+	}
+
+	static ~this() {
+		if (dxva2.isLoaded) {
+			dxva2.unload();
+		}
 	}
 
 	//
@@ -53,7 +72,7 @@ version(Windows) {
 	import std.experimental.graphic.color : RGB8, RGBA8;
 	import std.experimental.containers.list;
 	import std.experimental.containers.map;
-	import std.experimental.allocator : IAllocator, processAllocator, theAllocator, dispose, make, makeArray, expandArray, shrinkArray;
+	import std.experimental.allocator : IAllocator, ISharedAllocator, processAllocator, theAllocator, dispose, make, makeArray, expandArray, shrinkArray;
 	import std.experimental.memory.managed;
 
 	ImageStorage!RGB8 screenshotImpl_WinAPI(IAllocator alloc, winapi.HDC hFrom, uint width, uint height) {
@@ -224,8 +243,48 @@ version(Windows) {
 		alloc.dispose(buffer);
 		return hBitmap;
 	}
+
+	winapi.HBITMAP imageToAlphaBitmap_WinAPI(shared(ImageStorage!RGBA8) from, winapi.HDC hMemoryDC, shared(ISharedAllocator) alloc) {
+		size_t dwBmpSize = ((from.width * 32 + 31) / 32) * 4 * from.height;
+		ubyte[] buffer = alloc.makeArray!ubyte(dwBmpSize);
+		
+		winapi.HICON ret;
+		
+		size_t x;
+		size_t y = from.height-1;
+		for(size_t i = 0; i < buffer.length; i += 4) {
+			RGBA8 c = from[x, y];
+			
+			buffer[i] = c.b.value;
+			buffer[i+1] = c.g.value;
+			buffer[i+2] = c.r.value;
+			buffer[i+3] = c.a.value;
+			
+			x++;
+			if (x == from.width) {
+				x = 0;
+				if (y == 0)
+					break;
+				y--;
+			}
+		}
+		
+		winapi.HBITMAP hBitmap = winapi.CreateBitmap(cast(uint)from.width, cast(uint)from.height, 1, 32, buffer.ptr);
+		alloc.dispose(buffer);
+		return hBitmap;
+	}
 	
 	winapi.HICON imageToIcon_WinAPI(ImageStorage!RGBA8 from, winapi.HDC hMemoryDC, IAllocator alloc) {
+		winapi.HBITMAP hBitmap = imageToAlphaBitmap_WinAPI(from, hMemoryDC, alloc);
+		winapi.HICON ret = bitmapToIcon_WinAPI(hBitmap, hMemoryDC, vec2!size_t(from.width, from.height));
+		
+		scope(exit)
+			winapi.DeleteObject(hBitmap);
+		
+		return ret;
+	}
+
+	winapi.HICON imageToIcon_WinAPI(shared(ImageStorage!RGBA8) from, winapi.HDC hMemoryDC, shared(ISharedAllocator) alloc) {
 		winapi.HBITMAP hBitmap = imageToAlphaBitmap_WinAPI(from, hMemoryDC, alloc);
 		winapi.HICON ret = bitmapToIcon_WinAPI(hBitmap, hMemoryDC, vec2!size_t(from.width, from.height));
 		
@@ -275,7 +334,7 @@ version(Windows) {
 	struct GetDisplays_WinAPI {
 		import cf.spew.implementation.instance;
 		IAllocator alloc;
-		UIInstance uiInstance;
+		shared(UIInstance) uiInstance;
 		
 		IDisplay[] displays;
 
@@ -287,7 +346,7 @@ version(Windows) {
 	struct GetPrimaryDisplay_WinAPI {
 		import cf.spew.implementation.instance;
 		IAllocator alloc;
-		UIInstance uiInstance;
+		shared(UIInstance) uiInstance;
 		
 		IDisplay display;
 		
@@ -300,7 +359,7 @@ version(Windows) {
 		import cf.spew.implementation.instance;
 		IAllocator alloc;
 		
-		UIInstance uiInstance;
+		shared(UIInstance) uiInstance;
 		IDisplay display;
 		
 		IWindow[] windows;

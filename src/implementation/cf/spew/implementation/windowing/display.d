@@ -11,7 +11,7 @@ import std.experimental.allocator : IAllocator, make, makeArray;
 abstract class DisplayImpl : IDisplay {
 	package(cf.spew) {
 		IAllocator alloc;
-		UIInstance uiInstance;
+		shared(UIInstance) uiInstance;
 
 		managed!string name_;
 		bool primaryDisplay_;
@@ -32,10 +32,10 @@ version(Windows) {
 		DEVMODEA, EnumDisplaySettingsA, ENUM_CURRENT_SETTINGS, CreateDCA, LONG, HMONITOR,
 		DWORD, HDC, DeleteDC;
 
-	final class DisplayImpl_WinAPI : DisplayImpl, Feature_ScreenShot, Have_ScreenShot {
+	final class DisplayImpl_WinAPI : DisplayImpl, Feature_Display_ScreenShot, Have_Display_ScreenShot {
 		HMONITOR hMonitor;
 		
-		this(HMONITOR hMonitor, IAllocator alloc, UIInstance uiInstance) {
+		this(HMONITOR hMonitor, IAllocator alloc, shared(UIInstance) uiInstance) {
 			import std.string : fromStringz;
 			
 			this.alloc = alloc;
@@ -52,7 +52,7 @@ version(Windows) {
 			name_[0 .. $-1] = temp[];
 			name_[$-1] = '\0';
 			
-			this.name_ = managed!string(cast(string)name_[0 .. $-1], managers(), Ownership.Secondary, alloc);
+			this.name_ = managed!string(cast(string)name_[0 .. $-1], managers(), alloc);
 			
 			LONG sizex = info.rcMonitor.right - info.rcMonitor.left;
 			LONG sizey = info.rcMonitor.bottom - info.rcMonitor.top;
@@ -75,26 +75,30 @@ version(Windows) {
 				DWORD pdwMonitorCapabilities, pdwSupportedColorTemperatures;
 				DWORD pdwMinimumBrightness, pdwCurrentBrightness, pdwMaxiumumBrightness;
 				PHYSICAL_MONITOR[1] pPhysicalMonitorArray;
-				
-				bool success = cast(bool)GetPhysicalMonitorsFromHMONITOR(hMonitor, pPhysicalMonitorArray.length, pPhysicalMonitorArray.ptr);
-				if (!success)
+
+				if (GetPhysicalMonitorsFromHMONITOR is null || GetMonitorCapabilities is null || GetMonitorBrightness is null) {
 					return 10;
-				
-				success = cast(bool)GetMonitorCapabilities(pPhysicalMonitorArray[0].hPhysicalMonitor, &pdwMonitorCapabilities, &pdwSupportedColorTemperatures);
-				if (!success || (pdwMonitorCapabilities & MC_CAPS_BRIGHTNESS) == 0)
-					return 10;
-				
-				success = cast(bool)GetMonitorBrightness(pPhysicalMonitorArray[0].hPhysicalMonitor, &pdwMinimumBrightness, &pdwCurrentBrightness, &pdwMaxiumumBrightness);
-				if (!success)
-					return 10;
-				
-				return pdwCurrentBrightness;
+				} else {
+					bool success = cast(bool)GetPhysicalMonitorsFromHMONITOR(hMonitor, pPhysicalMonitorArray.length, pPhysicalMonitorArray.ptr);
+					if (!success)
+						return 10;
+					
+					success = cast(bool)GetMonitorCapabilities(pPhysicalMonitorArray[0].hPhysicalMonitor, &pdwMonitorCapabilities, &pdwSupportedColorTemperatures);
+					if (!success || (pdwMonitorCapabilities & MC_CAPS_BRIGHTNESS) == 0)
+						return 10;
+					
+					success = cast(bool)GetMonitorBrightness(pPhysicalMonitorArray[0].hPhysicalMonitor, &pdwMinimumBrightness, &pdwCurrentBrightness, &pdwMaxiumumBrightness);
+					if (!success)
+						return 10;
+					
+					return pdwCurrentBrightness;
+				}
 			}
 			
 			managed!(IWindow[]) windows() {
-				GetWindows_WinAPI ctx = GetWindows_WinAPI(alloc, cast()uiInstance, cast()this);
+				GetWindows_WinAPI ctx = GetWindows_WinAPI(alloc, uiInstance, this);
 				ctx.call;
-				return managed!(IWindow[])(ctx.windows, managers(), Ownership.Secondary, alloc);
+				return managed!(IWindow[])(ctx.windows, managers(), alloc);
 			}
 			
 			void* __handle() {
@@ -102,7 +106,7 @@ version(Windows) {
 			}
 		}
 		
-		Feature_ScreenShot __getFeatureScreenShot() {
+		Feature_Display_ScreenShot __getFeatureScreenShot() {
 			return this;
 		}
 		

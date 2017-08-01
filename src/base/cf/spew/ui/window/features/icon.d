@@ -23,18 +23,18 @@ interface Feature_Icon {
 
 @property {
     /// Sets the icon on a window[creator] if capable
-    void icon(T)(T self, ImageStorage!RGBA8 to) if (is(T : IWindow) || is(T : IWindowCreator)) {
+	void icon(T)(scope T self, ImageStorage!RGBA8 to) if (is(T : IWindow) || is(T : IWindowCreator)) {
 		if (self.capableOfWindowIcon) {
 			(cast(Have_Icon)self).__getFeatureIcon().setIcon(to);
 		}
     }
 
-    void icon(T)(T self, ImageStorage!RGBA8 to) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
+	void icon(T)(scope T self, ImageStorage!RGBA8 to) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
         static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or IWindowCreator.");
     }
 
     /// Retrives the window icon if capable or null if not
-    managed!(ImageStorage!RGBA8) icon(T)(T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
+	managed!(ImageStorage!RGBA8) icon(T)(scope T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
 		if (!self.capableOfWindowIcon)
 			return (managed!(ImageStorage!RGBA8)).init;
 		else {
@@ -43,7 +43,7 @@ interface Feature_Icon {
 		}
     }
 
-    managed!(ImageStorage!RGBA8) icon(T)(T self) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
+	managed!(ImageStorage!RGBA8) icon(T)(scope T self) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
         static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or IWindowCreator.");
     }
 
@@ -56,7 +56,7 @@ interface Feature_Icon {
 	 * Returns:
 	 * 		If the window[creator] supports having an icon
 	 */
-	bool capableOfWindowIcon(T)(T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
+	bool capableOfWindowIcon(T)(scope T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
 		if (self is null)
 			return false;
 		else if (auto ss = cast(Have_Icon)self)
@@ -65,7 +65,7 @@ interface Feature_Icon {
 			return false;
 	}
 
-	bool capableOfWindowIcon(T)(T self) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
+	bool capableOfWindowIcon(T)(scope T self) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
 		static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow, IWindowCreator types.");
 	}
 }

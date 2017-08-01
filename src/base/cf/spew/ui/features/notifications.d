@@ -10,21 +10,21 @@ import cf.spew.instance;
 import std.experimental.graphic.image : ImageStorage;
 import std.experimental.graphic.color : RGBA8;
 import std.experimental.memory.managed;
-import std.experimental.allocator : IAllocator, theAllocator;
+import std.experimental.allocator : ISharedAllocator, processAllocator;
 import std.traits : isSomeString;
 
 interface Have_Notification {
-    Feature_Notification __getFeatureNotification();
+    shared(Feature_Notification) __getFeatureNotification() shared;
 }
 
 interface Feature_Notification {
     @property {
-        ImageStorage!RGBA8 getNotificationIcon(IAllocator alloc=theAllocator);
-        void setNotificationIcon(ImageStorage!RGBA8, IAllocator alloc=theAllocator);
+		shared(ImageStorage!RGBA8) getNotificationIcon(shared(ISharedAllocator) alloc) shared;
+		void setNotificationIcon(shared(ImageStorage!RGBA8), shared(ISharedAllocator) alloc) shared;
     }
 
-    void notify(ImageStorage!RGBA8, dstring, dstring, IAllocator alloc=theAllocator);
-    void clearNotifications();
+	void notify(shared(ImageStorage!RGBA8), shared(dstring), shared(dstring), shared(ISharedAllocator) alloc) shared;
+    void clearNotifications() shared;
 }
 
 /**
@@ -35,10 +35,10 @@ interface Feature_Notification {
  * 		to		=	The image to assign as
  * 		alloc	=	The allocator to use during assignment
  */
-void notificationIcon(Management_UserInterface self, ImageStorage!RGBA8 to, IAllocator alloc=theAllocator) {
+void notificationIcon(shared(Management_UserInterface) self, shared(ImageStorage!RGBA8) to, shared(ISharedAllocator) alloc=processAllocator) {
     if (self is null)
         return;
-    if (Have_Notification ss = cast(Have_Notification)self) {
+	if (shared(Have_Notification) ss = cast(shared(Have_Notification))self) {
         auto fss = ss.__getFeatureNotification();
         if (fss !is null) {
             fss.setNotificationIcon(to, alloc);
@@ -56,16 +56,16 @@ void notificationIcon(Management_UserInterface self, ImageStorage!RGBA8 to, IAll
  * Returns:
  * 		The notification icon for the current process (will auto deallocate)
  */
-managed!(ImageStorage!RGBA8) notificationIcon(Management_UserInterface self, IAllocator alloc=theAllocator) {
+managed!(shared(ImageStorage!RGBA8)) notificationIcon(shared(Management_UserInterface) self, shared(ISharedAllocator) alloc=processAllocator) {
     if (self is null)
-        return (managed!(ImageStorage!RGBA8)).init;
-    if (Have_Notification ss = cast(Have_Notification)self) {
+        return (managed!(shared(ImageStorage!RGBA8))).init;
+	if (shared(Have_Notification) ss = cast(shared(Have_Notification))self) {
         auto fss = ss.__getFeatureNotification();
         if (fss !is null) {
-            return managed!(ImageStorage!RGBA8)(fss.getNotificationIcon(alloc), managers(), Ownership.Secondary, alloc);
+            return managed!(shared(ImageStorage!RGBA8))(fss.getNotificationIcon(alloc), managers(ReferenceCountedManager()), alloc);
         }
     }
-    return (managed!(ImageStorage!RGBA8)).init;
+    return (managed!(shared(ImageStorage!RGBA8))).init;
 }
 
 /**
@@ -81,10 +81,10 @@ managed!(ImageStorage!RGBA8) notificationIcon(Management_UserInterface self, IAl
  * 		text	=	The message text to tell the user
  * 		alloc	=	Allocator to allocate and copy resources for while notification is active
  */
-void notify(S1, S2)(Management_UserInterface self, ImageStorage!RGBA8 image=null, S1 title=null, S2 text=null, IAllocator alloc=theAllocator) if (isSomeString!S1 && isSomeString!S2) {
+void notify(S1, S2)(shared(Management_UserInterface) self, shared(ImageStorage!RGBA8) image=null, shared(S1) title=null, shared(S2) text=null, shared(ISharedAllocator) alloc=processAllocator) if (isSomeString!S1 && isSomeString!S2) {
     if (self is null)
         return;
-    if (Have_Notification ss = cast(Have_Notification)self) {
+	if (shared(Have_Notification) ss = cast(shared(Have_Notification))self) {
 		import std.utf : byDchar, codeLength;
 		import std.experimental.allocator : makeArray, dispose;
 
@@ -129,10 +129,10 @@ void notify(S1, S2)(Management_UserInterface self, ImageStorage!RGBA8 image=null
  * Params:
  * 		self	=	The platform instance
  */
-void clearNotifications(Management_UserInterface self) {
+void clearNotifications(shared(Management_UserInterface) self) {
     if (self is null)
         return;
-    if (Have_Notification ss = cast(Have_Notification)self) {
+	if (shared(Have_Notification) ss = cast(shared(Have_Notification))self) {
         auto fss = ss.__getFeatureNotification();
         if (fss !is null) {
             fss.clearNotifications();
@@ -149,10 +149,10 @@ void clearNotifications(Management_UserInterface self) {
  * Returns:
  * 		If the platform supports notifications
  */
-@property bool capableOfNotifications(Management_UserInterface self) {
+@property bool capableOfNotifications(shared(Management_UserInterface) self) {
 	if (self is null)
 		return false;
-	else if (Have_Notification ss = cast(Have_Notification)self)
+	else if (shared(Have_Notification) ss = cast(shared(Have_Notification))self)
 		return ss.__getFeatureNotification() !is null;
 	else
 		return false;

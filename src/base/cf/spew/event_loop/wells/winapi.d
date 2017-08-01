@@ -10,7 +10,7 @@ import cf.spew.event_loop.known_implementations;
 import cf.spew.events.defs;
 import cf.spew.events.winapi;
 import cf.spew.events.windowing;
-import std.experimental.allocator : IAllocator, make;
+import std.experimental.allocator : ISharedAllocator, make;
 import core.sys.windows.windows : LRESULT, WPARAM, LPARAM, HWND;
 import core.time : Duration;
 
@@ -42,16 +42,16 @@ struct EventLoopAlterationCallbacks {
 
 final class WinAPI_EventLoop_Source : EventLoopSource {
 	@property {
-		bool onMainThread() { return true; }
-		bool onAdditionalThreads() { return true; }
+		bool onMainThread() shared { return true; }
+		bool onAdditionalThreads() shared { return true; }
 
-		EventSource identifier() { return EventSources.WinAPI; }
+		EventSource identifier() shared { return EventSources.WinAPI; }
 
-		string description() { return "Windows API event source implementation with multi-events(timeout) support."; }
+		string description() shared { return "Windows API event source implementation with multi-events(timeout) support."; }
 	}
 
-	EventLoopSourceRetriever nextEventGenerator(IAllocator alloc) {
-		return alloc.make!WinAPI_EventLoop_SourceRetriever;
+	shared(EventLoopSourceRetriever) nextEventGenerator(shared(ISharedAllocator) alloc) shared {
+		return alloc.make!(shared(WinAPI_EventLoop_SourceRetriever));
 	}
 }
 
@@ -65,7 +65,7 @@ final class WinAPI_EventLoop_SourceRetriever : EventLoopSourceRetriever {
 		bool needToWait;
 	}
 
-	bool nextEvent(ref Event event) {
+	bool nextEvent(ref Event event) shared {
 		import core.sys.windows.windows :
 			MsgWaitForMultipleObjectsEx, GetWindowLongPtrW,
 			QS_ALLINPUT, WAIT_TIMEOUT,
@@ -96,23 +96,23 @@ final class WinAPI_EventLoop_SourceRetriever : EventLoopSourceRetriever {
 				event = _overrideEvent;
 				_overrideEvent = Event.init;
 				return true;
-			} else if (PeekMessageW(&msg, null, 0, 0, PM_REMOVE) == 0) {
+			} else if (PeekMessageW(cast(MSG*)&msg, null, 0, 0, PM_REMOVE) == 0) {
 				needToWait = true;
 				return false;
 			} else {
 				*_event = Event.init;
 
 				if (msg.hwnd !is null) {
-					_callbacks = getCallbacksPointer(msg.hwnd);
+					_callbacks = getCallbacksPointer(cast(HWND)msg.hwnd);
 
 					if (_callbacks !is null) {
 						if (_callbacks.canTranslate && shouldTranslate)
-							TranslateMessage(&msg);
+							TranslateMessage(cast(MSG*)&msg);
 					}
 				}
 
-				event.winapi.raw = msg;
-				DispatchMessageW(&msg);
+				event.winapi.raw = cast(MSG)msg;
+				DispatchMessageW(cast(MSG*)&msg);
 
 				if (event.type == WinAPI_Events_Types.Unknown || event.type.value == 0)
 					continue;
@@ -122,24 +122,24 @@ final class WinAPI_EventLoop_SourceRetriever : EventLoopSourceRetriever {
 		}
 	}
 
-	void handledEvent(ref Event event) {}
-	void handledErrorEvent(ref Event event) { unhandledEvent(event); }
-	void unhandledEvent(ref Event event) {
+	void handledEvent(ref Event event) shared {}
+	void handledErrorEvent(ref Event event) shared { unhandledEvent(event); }
+	void unhandledEvent(ref Event event) shared {
 		import core.sys.windows.windows : DefWindowProc;
 
 		// we purposely desired to use raw so here we go
 		if (event.type == WinAPI_Events_Types.Raw)
-			DefWindowProc(msg.hwnd, msg.message, msg.wParam, msg.lParam);
+			DefWindowProc(cast(HWND)msg.hwnd, cast(uint)msg.message, cast(WPARAM)msg.wParam, cast(LPARAM)msg.lParam);
 	}
 
-	void hintTimeout(Duration timeout) {
+	void hintTimeout(Duration timeout) shared {
 		msTimeout = cast(DWORD)timeout.total!"msecs";
 
 		if (msTimeout == 0)
 			msTimeout = INFINITE;
 	}
 
-	bool shouldTranslate() {
+	bool shouldTranslate() shared {
 		import core.sys.windows.windows : LOWORD, HIWORD,
 			WM_SYSKEYDOWN, WM_SYSKEYUP, WM_KEYDOWN, WM_KEYUP, WM_CHAR,
 			VK_NUMPAD0, VK_NUMPAD9, VK_ADD, VK_SUBTRACT, VK_MULTIPLY,
@@ -222,7 +222,11 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 			if (callbacks.onDestroy !is null)
 				callbacks.onDestroy();
 			return 0;
+		} else if (uMsg == WM_MOUSEWHEEL) {
+			PostMessageA(hwnd, uMsg, wParam, lParam);
+			return 0;
 		}
+
 		return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 	}
 

@@ -6,9 +6,6 @@ import std.experimental.allocator;
 import cf.spew.events.defs;
 import cf.spew.event_loop.defs;
 
-import cf.spew.serialization.base;
-import cf.spew.serialization.base_type_reflectors;
-
 int main() {
 	import cf.spew.instance;
 
@@ -98,51 +95,74 @@ int main() {
 	return 0;
 }
 
+
+import cf.spew.bindings.opengl;
+import cf.spew.ui;
+GL* gl;
+bool openglContextCreated, openglObjectsCreated;
+GLuint vertexShaderGL, fragmentShaderGL, programGL, vertexbufferGL, vertexArrayGL;
+GLint resultGL, infoLogLengthGL;
+IWindow window;
+
+float[] opengl_example_vertex_bufferdata = [
+	-1.0f, -1.0f, 0.0f,
+	1.0f, -1.0f, 0.0f,
+	0.0f,  1.0f, 0.0f
+];
+
+string VertexShaderGL_Source = "
+#version 330 core
+layout(location = 0) in vec3 pos;
+
+void main() {
+	gl_Position.xyz = pos;
+	gl_Position.w = 1.0;
+}
+\0";
+
+string FragmentShaderGL_Source = "
+#version 330 core
+out vec3 color;
+
+void main() {
+  color = vec3(1,0,0);
+}
+\0";
+
 void aWindowTest() {
-	import cf.spew.ui;
 	import cf.spew.events.windowing;
 	import cf.spew.instance;
-	import std.experimental.graphic.image.manipulation.base : fillOn;
 	import std.experimental.memory.managed;
-	import std.experimental.graphic.color : RGBA8;
 	import std.stdio : writeln, stdout;
-
-	IWindow window;
 
 	auto creator = Instance.current.ui.createWindow();
 	//creator.style = WindowStyle.Fullscreen;
 	//creator.size = vec2!ushort(cast(short)800, cast(short)600);
 	creator.assignMenu;
 
+	version(all) {
+		gl = new GL;
+		auto openglLoader = OpenGL_Loader!OpenGL_Context_Callbacks(gl);
+		creator.assignOpenGLContext(OpenGLVersion(3, 2), &openglLoader.callbacks);
+	}
+
 	window = creator.createWindow();
 	window.title = "Title!";
 
-	Feature_Menu theMenu = window.menu;
+	Feature_Window_Menu theMenu = window.menu;
 	if (theMenu !is null) {
-		MenuItem item = theMenu.addItem();
+		Window_MenuItem item = theMenu.addItem();
 		item.text = "Hi!";
-		item.callback = (MenuItem mi) { writeln("Menu Item Click! ", mi.text); };
+		item.callback = (Window_MenuItem mi) { writeln("Menu Item Click! ", mi.text); };
 
-		MenuItem sub = theMenu.addItem();
+		Window_MenuItem sub = theMenu.addItem();
 		sub.text = "sub";
-		MenuItem subItem = sub.addItem();
+		Window_MenuItem subItem = sub.addItem();
 		subItem.text = "oh yeah!";
-		subItem.callback = (MenuItem mi) { writeln("Boo from: ", mi.text); };
+		subItem.callback = (Window_MenuItem mi) { writeln("Boo from: ", mi.text); };
 	}
 
-	window.events.onForcedDraw = () {
-		writeln("onForcedDraw");stdout.flush;
-		window.context.activate;
-
-		if (window.context.capableOfVRAM) {
-			auto buffer = window.context.vramAlphaBuffer;
-			buffer.fillOn(RGBA8(255, 0, 0, 255));
-		} else if (window.context.capableOfOpenGL) {
-
-		}
-
-		window.context.deactivate;
-	};
+	window.events.onForcedDraw = &onForcedDraw;
 	
 	window.events.onCursorMove = (int x, int y) {
 		writeln("onCursorMove: x: ", x, " y: ", y);
@@ -164,8 +184,13 @@ void aWindowTest() {
 			window.lockCursorToWindow;
 		else if (key == '2')
 			window.unlockCursorFromWindow;
+
+		foreach(e; __traits(allMembers, KeyModifiers)) {
+			if (modifiers.isBitwiseMask(__traits(getMember, KeyModifiers, e)))
+				writeln("\t ", e.stringof);
+		}
 	};
-	
+
 	window.events.onScroll = (int amount) {
 		writeln("onScroll: ", amount);
 		stdout.flush;
@@ -187,20 +212,120 @@ void aWindowTest() {
 
 final class ASource : EventLoopSource, EventLoopSourceRetriever {
 	@property {
-		bool onMainThread() { return true; }
-		bool onAdditionalThreads() { return true; }
-		string description() { return "ASource"; }
-		EventSource identifier() { return EventSource.from("asrc"); }
+		bool onMainThread() shared { return true; }
+		bool onAdditionalThreads() shared { return true; }
+		string description() shared { return "ASource"; }
+		EventSource identifier() shared { return EventSource.from("asrc"); }
 	}
 
-	EventLoopSourceRetriever nextEventGenerator(IAllocator) { return this; }
+	shared(EventLoopSourceRetriever) nextEventGenerator(shared(ISharedAllocator)) shared { return this; }
 
-	bool nextEvent(ref Event event) {
+	bool nextEvent(ref Event event) shared {
 		import std.stdio;writeln("====TICK====");
+		onForcedDraw();
 		return false;
 	}
-	void handledEvent(ref Event event) {}
-	void unhandledEvent(ref Event event) {}
-	void handledErrorEvent(ref Event event) {}
-	void hintTimeout(Duration timeout) {}
+	void handledEvent(ref Event event) shared {}
+	void unhandledEvent(ref Event event) shared {}
+	void handledErrorEvent(ref Event event) shared {}
+	void hintTimeout(Duration timeout) shared {}
 }
+
+void onForcedDraw() {
+	import std.stdio : writeln, stdout;
+	import std.experimental.graphic.image.manipulation.base : fillOn;
+	import std.experimental.graphic.color : RGBA8;
+
+	writeln("onForcedDraw");stdout.flush;
+	window.context.activate;
+
+	if (!window.context.readyToBeUsed)
+		return;
+	
+	if (window.context.capableOfVRAM) {
+		auto buffer = window.context.vramAlphaBuffer;
+		buffer.fillOn(RGBA8(255, 0, 0, 255));
+	} else if (window.context.capableOfOpenGL) {
+		if (!openglContextCreated) {
+			gl.glGenVertexArrays(1, &vertexArrayGL);
+			gl.glBindVertexArray(vertexArrayGL);
+			
+			gl.glGenBuffers(1, &vertexbufferGL);
+			gl.glBindBuffer(GL_ARRAY_BUFFER, vertexbufferGL);
+			gl.glBufferData(GL_ARRAY_BUFFER, opengl_example_vertex_bufferdata.length*float.sizeof, opengl_example_vertex_bufferdata.ptr, GL_STATIC_DRAW);
+
+			openglContextCreated = true;
+		} else if (!openglObjectsCreated) {
+			char* source = cast(char*)VertexShaderGL_Source.ptr;
+			
+			vertexShaderGL = gl.glCreateShader(GL_VERTEX_SHADER);
+			gl.glShaderSource(vertexShaderGL, 1, &source, null);
+			gl.glCompileShader(vertexShaderGL);
+			
+			gl.glGetShaderiv(vertexShaderGL, GL_COMPILE_STATUS, &resultGL);
+			gl.glGetShaderiv(vertexShaderGL, GL_INFO_LOG_LENGTH, &infoLogLengthGL);
+			
+			if (resultGL == GL_FALSE) {
+				char[] log;
+				log.length = infoLogLengthGL+1;
+				gl.glGetShaderInfoLog(vertexShaderGL, infoLogLengthGL, null, log.ptr);
+				writeln("onForcedDraw OGL vertex fail: ", log[0 .. $-1]);
+				return;
+			}
+
+			source = cast(char*)FragmentShaderGL_Source.ptr;
+			
+			fragmentShaderGL = gl.glCreateShader(GL_FRAGMENT_SHADER);
+			gl.glShaderSource(fragmentShaderGL, 1, &source, null);
+			gl.glCompileShader(fragmentShaderGL);
+			
+			gl.glGetShaderiv(fragmentShaderGL, GL_COMPILE_STATUS, &resultGL);
+			gl.glGetShaderiv(fragmentShaderGL, GL_INFO_LOG_LENGTH, &infoLogLengthGL);
+			
+			if (resultGL == GL_FALSE) {
+				char[] log;
+				log.length = infoLogLengthGL+1;
+				gl.glGetShaderInfoLog(fragmentShaderGL, infoLogLengthGL, null, log.ptr);
+				writeln("onForcedDraw OGL fragment fail: ", log[0 .. $-1]);
+				return;
+			}
+
+			programGL = gl.glCreateProgram();
+			gl.glAttachShader(programGL, vertexShaderGL);
+			gl.glAttachShader(programGL, fragmentShaderGL);
+			gl.glLinkProgram(programGL);
+			
+			gl.glGetProgramiv(programGL, GL_LINK_STATUS, &resultGL);
+			gl.glGetProgramiv(programGL, GL_INFO_LOG_LENGTH, &infoLogLengthGL);
+			if (resultGL == GL_FALSE) {
+				char[] log;
+				log.length = infoLogLengthGL+1;
+				gl.glGetProgramInfoLog(programGL, infoLogLengthGL, null, log.ptr);
+				writeln("onForcedDraw OGL link fail: ", log[0 .. $-1]);
+				return;
+			}
+			
+			openglObjectsCreated = true;
+		} else {
+			gl.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			gl.glUseProgram(programGL);
+			gl.glBindVertexArray(vertexArrayGL);
+			
+			gl.glEnableVertexAttribArray(0);
+			gl.glBindBuffer(GL_ARRAY_BUFFER, vertexbufferGL);
+			gl.glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, null);
+			gl.glDrawArrays(GL_TRIANGLES, 0, 3);
+			gl.glDisableVertexAttribArray(0);
+			
+			/+
+			gl.glDetachShader(programGL, vertexShaderGL);
+			gl.glDetachShader(programGL, fragmentShaderGL);
+			gl.glDeleteProgram(programGL);
+			gl.glDeleteShader(vertexShaderGL);
+			gl.glDeleteShader(fragmentShaderGL);+/
+		}
+	}
+
+	window.context.deactivate;
+}
+

@@ -1,5 +1,5 @@
 ﻿///
-module cf.spew.ui.display;
+module cf.spew.ui.display.defs;
 
 /**
  * Represents a display.
@@ -28,7 +28,7 @@ interface IDisplay {
          *      The dimensions (width/height) of the display.
          */
 		vec2!ushort size();
-		
+
 		/**
          * The rate the monitor/display can refresh its contents.
          * 

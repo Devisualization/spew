@@ -8,24 +8,24 @@ import std.experimental.allocator : IAllocator, make, makeArray, expandArray, di
 import std.experimental.graphic.image : ImageStorage;
 import std.experimental.graphic.color : RGB8, RGBA8;
 
-class MenuItemImpl : MenuItem {
+class MenuItemImpl : Window_MenuItem {
 	import std.experimental.containers.list;
 	
 	private {
-		List!MenuItem menuItems = void;
+		List!Window_MenuItem menuItems = void;
 		
 		uint menuItemId;
 		MenuItemImpl parentMenuItem;
 	}
 	
 	abstract {
-		MenuItem addItem();
+		Window_MenuItem addItem();
 		void remove();
 		
 		@property {
-			managed!(MenuItem[]) childItems();
+			managed!(Window_MenuItem[]) childItems();
 			managed!(ImageStorage!RGB8) image();
-			void image(ImageStorage!RGB8 input);
+			void image(scope ImageStorage!RGB8 input);
 			
 			managed!dstring text();
 			void text(string text);
@@ -66,7 +66,7 @@ version(Windows) {
 			this.parent = parent;
 			this.parentMenuItem = parentMenuItem;
 			
-			menuItems = List!MenuItem(window.alloc);
+			menuItems = List!Window_MenuItem(window.alloc);
 			
 			menuItemId = window.menuItemsCount;
 			window.menuItemsCount++;
@@ -77,13 +77,13 @@ version(Windows) {
 		}
 
 		override {
-			MenuItem addItem() {
+			Window_MenuItem addItem() {
 				if (myChildren is null) {
 					myChildren = CreateMenu();
 				}
 
 				ModifyMenuW(parent, menuItemId, MF_BYCOMMAND | MF_POPUP, cast(UINT_PTR) myChildren, textBuffer.ptr);
-				return cast(MenuItem)window.alloc.make!MenuItemImpl_WinAPI(window, myChildren, this);
+				return cast(Window_MenuItem)window.alloc.make!MenuItemImpl_WinAPI(window, myChildren, this);
 			}
 			
 			void remove() {
@@ -97,7 +97,7 @@ version(Windows) {
 				DeleteMenu(parent, menuItemId, MF_BYCOMMAND);
 				
 				if (parentMenuItem is null)
-					window.menuItems.remove(cast(MenuItem)this);
+					window.menuItems.remove(cast(Window_MenuItem)this);
 				else
 					parentMenuItem.menuItems.remove(this);
 				
@@ -114,8 +114,8 @@ version(Windows) {
 			}
 			
 			@property {
-				managed!(MenuItem[]) childItems() {
-					return cast(managed!(MenuItem[]))menuItems[];
+				managed!(Window_MenuItem[]) childItems() {
+					return cast(managed!(Window_MenuItem[]))menuItems[];
 				}
 				
 				managed!(ImageStorage!RGB8) image() {
@@ -134,10 +134,10 @@ version(Windows) {
 					BITMAP bm;
 					GetObjectA(mmi.hbmpItem, BITMAP.sizeof, &bm);
 					
-					return managed!(ImageStorage!RGB8)(bitmapToImage_WinAPI(mmi.hbmpItem, hMemoryDC, vec2!size_t(bm.bmWidth, bm.bmHeight), window.alloc), managers(), Ownership.Secondary, window.alloc);
+					return managed!(ImageStorage!RGB8)(bitmapToImage_WinAPI(mmi.hbmpItem, hMemoryDC, vec2!size_t(bm.bmWidth, bm.bmHeight), window.alloc), managers(), window.alloc);
 				}
 				
-				void image(ImageStorage!RGB8 input) {
+				void image(scope ImageStorage!RGB8 input) {
 					HDC hFrom = GetDC(null);
 					HDC hMemoryDC = CreateCompatibleDC(hFrom);
 					
@@ -171,7 +171,7 @@ version(Windows) {
 						i++;
 					}
 					
-					return managed!dstring(cast(dstring)buffer2, managers(), Ownership.Secondary, window.alloc);
+					return managed!dstring(cast(dstring)buffer2, managers(), window.alloc);
 				}
 				
 				void text(dstring input) { setText(input); }

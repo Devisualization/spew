@@ -12,7 +12,7 @@ import std.experimental.graphic.color : RGBA8, RGB8;
 
 abstract class WindowImpl : IWindow, IWindowEvents {
 	package(cf.spew.implementation) {
-		UIInstance instance;
+		shared(UIInstance) instance;
 		IAllocator alloc;
 		IContext context_;
 
@@ -30,12 +30,12 @@ abstract class WindowImpl : IWindow, IWindowEvents {
 		EventOnRequestCloseDel onRequestCloseDel;
 	}
 	
-	this(UIInstance instance, bool processOwns) {
+	this(shared(UIInstance) instance, bool processOwns) {
 		this.instance = instance;
 		this.ownedByProcess = processOwns;
 
 		if (processOwns)
-			instance.windowToIdMapper[cast(size_t)__handle] = this;
+			instance.windowToIdMapper[cast(size_t)__handle] = cast(shared)this;
 	}
 
 	~this() {
@@ -66,8 +66,8 @@ abstract class WindowImpl : IWindow, IWindowEvents {
 
 version(Windows) {
 	final class WindowImpl_WinAPI : WindowImpl,
-	Feature_ScreenShot, Feature_Icon, Feature_Menu, Feature_Cursor, Feature_Style,
-	Have_ScreenShot, Have_Icon, Have_Menu, Have_Cursor, Have_Style {
+		Feature_Window_ScreenShot, Feature_Icon, Feature_Window_Menu, Feature_Cursor, Feature_Style,
+		Have_Window_ScreenShot, Have_Icon, Have_Window_Menu, Have_Cursor, Have_Style {
 
 		import cf.spew.event_loop.wells.winapi;
 		import std.traits : isSomeString;
@@ -86,10 +86,10 @@ version(Windows) {
 			// this is very high up in field orders, that way this classes data will be in cache when accessed
 			EventLoopAlterationCallbacks impl_callbacks_struct;
 
-			List!MenuItem menuItems = void;
+			List!Window_MenuItem menuItems = void;
 			uint menuItemsCount;
-			Map!(uint, MenuItem) menuItemsIds = void;
-			Map!(uint, MenuCallback) menuCallbacks = void;
+			Map!(size_t, Window_MenuItem) menuItemsIds = void;
+			Map!(size_t, MenuCallback) menuCallbacks = void;
 			
 			WindowStyle windowStyle;
 			
@@ -98,9 +98,9 @@ version(Windows) {
 		}
 
 
-		@disable this(UIInstance instance);
+		@disable this(shared(UIInstance) instance);
 
-		this(HWND hwnd, IContext context, IAllocator alloc, UIInstance instance, HMENU hMenu=null, bool processOwns=false) {
+		this(HWND hwnd, IContext context, IAllocator alloc, shared(UIInstance) instance, HMENU hMenu=null, bool processOwns=false) {
 			this.hwnd = hwnd;
 			this.alloc = alloc;
 			this.context_ = context;
@@ -108,9 +108,9 @@ version(Windows) {
 
 			super(instance, processOwns);
 
-			menuItems = List!MenuItem(alloc);
-			menuItemsIds = Map!(uint, MenuItem)(alloc);
-			menuCallbacks = Map!(uint, MenuCallback)(alloc);
+			menuItems = List!Window_MenuItem(alloc);
+			menuItemsIds = Map!(size_t, Window_MenuItem)(alloc);
+			menuCallbacks = Map!(size_t, MenuCallback)(alloc);
 			menuItemsCount = 9000;
 			
 			if (processOwns)
@@ -174,7 +174,7 @@ version(Windows) {
 				}
 				
 				alloc.dispose(buffer);
-				return managed!dstring(cast(dstring)buffer2, managers(), Ownership.Secondary, alloc);
+				return managed!dstring(cast(dstring)buffer2, managers(), alloc);
 			}
 			
 			void title(string text) { setTitle(text); }
@@ -224,7 +224,7 @@ version(Windows) {
 			UpdateWindow(hwnd);
 		}
 
-		Feature_ScreenShot __getFeatureScreenShot() {
+		Feature_Window_ScreenShot __getFeatureScreenShot() {
 			return this;
 		}
 		
@@ -286,23 +286,23 @@ version(Windows) {
 			ReleaseDC(null, hFrom);
 		}
 		
-		Feature_Menu __getFeatureMenu() {
+		Feature_Window_Menu __getFeatureMenu() {
 			if (hMenu is null)
 				return null;
 			else
 				return this;
 		}
 		
-		MenuItem addItem() {
-			auto ret = cast(MenuItem)alloc.make!MenuItemImpl_WinAPI(this, hMenu, null);
+		Window_MenuItem addItem() {
+			auto ret = cast(Window_MenuItem)alloc.make!MenuItemImpl_WinAPI(this, hMenu, null);
 			
 			menuItems ~= ret;
 			return ret;
 		}
 		
-		@property managed!(MenuItem[]) items() {
+		@property managed!(Window_MenuItem[]) items() {
 			auto ret = menuItems.opSlice();
-			return cast(managed!(MenuItem[]))ret;
+			return cast(managed!(Window_MenuItem[]))ret;
 		}
 		
 		Feature_Cursor __getFeatureCursor() {

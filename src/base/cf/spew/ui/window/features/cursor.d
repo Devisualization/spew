@@ -95,18 +95,18 @@ interface Feature_Cursor {
      * 		self	=	Window or window creator instance
      * 		to		=	Style of cursor to set
      */
-    void cursor(T)(T self, WindowCursorStyle to) if (is(T : IWindow) || is(T : IWindowCreator)) {
+    void cursor(T)(scope T self, WindowCursorStyle to) if (is(T : IWindow) || is(T : IWindowCreator)) {
 		if (self.capableOfCursors) {
 			(cast(Have_Cursor)self).__getFeatureCursor().setCursor(to);
 		}
     }
     
-    void cursor(T)(T self, WindowCursorStyle to) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
+	void cursor(T)(scope T self, WindowCursorStyle to) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
         static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or IWindowCreator.");
     }
 
     /// Retrives the cursor style or Invalid if not capable
-    WindowCursorStyle cursor(T)(T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
+	WindowCursorStyle cursor(T)(scope T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
 		if (!self.capableOfCursors)
 			return WindowCursorStyle.Invalid;
 		else {
@@ -114,7 +114,7 @@ interface Feature_Cursor {
 		}
     }
     
-    WindowCursorStyle cursor(T)(T self) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
+	WindowCursorStyle cursor(T)(scope T self) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
         static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or IWindowCreator.");
     }
 
@@ -127,20 +127,20 @@ interface Feature_Cursor {
      * 		self	=	The window or window creator to assign to
      * 		to		=	Image to use as cursor icon
      */
-    void cursorIcon(T)(T self, ImageStorage!RGBA8 to) if (is(T : IWindow) || is(T : IWindowCreator)) {
+	void cursorIcon(T)(scope T self, ImageStorage!RGBA8 to) if (is(T : IWindow) || is(T : IWindowCreator)) {
 		if (self.capableOfCursors) {
 			(cast(Have_Cursor)self).__getFeatureCursor().setCustomCursor(to);
 		}
     }
 
-    void cursorIcon(T)(T self, ImageStorage!RGBA8 to)  if (!(is(T : IWindow) || is(T : IWindowCreator))) {
+	void cursorIcon(T)(scope T self, ImageStorage!RGBA8 to)  if (!(is(T : IWindow) || is(T : IWindowCreator))) {
         static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or IWindowCreator.");
     }
     
     /**
      * Gets a copy of the cursor if it is assigned as custom or null if not possible or not currently set as custom
      */
-    managed!(ImageStorage!RGBA8) cursorIcon(T)(T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
+	managed!(ImageStorage!RGBA8) cursorIcon(T)(scope T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
 		if (!self.capableOfCursors)
 			return (managed!(ImageStorage!RGBA8)).init;
 		else {
@@ -153,7 +153,7 @@ interface Feature_Cursor {
 		}
     }
     
-    managed!(ImageStorage!RGBA8) cursorIcon(T)(T self) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
+	managed!(ImageStorage!RGBA8) cursorIcon(T)(scope T self) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
         static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or IWindowCreator.");
     }
 
@@ -163,14 +163,14 @@ interface Feature_Cursor {
      * Params:
      * 		self	=	Window or window creator instance
      */
-	bool lockCursorToWindow(T)(T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
+	bool lockCursorToWindow(T)(scope T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
 		if (self.capableOfCursors) {
 			return (cast(Have_Cursor)self).__getFeatureCursor().lockCursorToWindow();
 		} else
 			return false;
 	}
 
-	bool lockCursorToWindow(T)(T self, WindowCursorStyle to) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
+	bool lockCursorToWindow(T)(scope T self, WindowCursorStyle to) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
 		static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or IWindowCreator.");
 	}
 
@@ -180,13 +180,13 @@ interface Feature_Cursor {
      * Params:
      * 		self	=	Window or window creator instance
      */
-	void unlockCursorFromWindow(T)(T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
+	void unlockCursorFromWindow(T)(scope T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
 		if (self.capableOfCursors) {
 			(cast(Have_Cursor)self).__getFeatureCursor().unlockCursorFromWindow();
 		}
 	}
 	
-	void unlockCursorFromWindow(T)(T self) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
+	void unlockCursorFromWindow(T)(scope T self) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
 		static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or IWindowCreator.");
 	}
 
@@ -199,7 +199,7 @@ interface Feature_Cursor {
 	 * Returns:
 	 * 		If the window[creator] supports having a cursors
 	 */
-	bool capableOfCursors(T)(T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
+	bool capableOfCursors(T)(scope T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
 		if (self is null)
 			return false;
 		else if (auto ss = cast(Have_Cursor)self)
@@ -208,7 +208,7 @@ interface Feature_Cursor {
 			return false;
 	}
 
-	bool capableOfCursors(T)(T self) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
+	bool capableOfCursors(T)(scope T self) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
 		static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow, IWindowCreator types.");
 	}
 }

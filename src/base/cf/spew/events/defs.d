@@ -123,3 +123,10 @@ union EventSource {
 
 ///
 alias EventType = EventSource;
+
+/// Simple bitwise mask comparison utility function
+bool isBitwiseMask(uint value, uint mask) {
+	if (mask == 0)
+		return false;
+	return (value & mask) == mask;
+}

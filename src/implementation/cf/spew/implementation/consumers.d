@@ -15,20 +15,19 @@ abstract class EventLoopConsumerImpl : EventLoopConsumer {
 	import cf.spew.implementation.instance;
 	import std.typecons : Nullable;
 
-	DefaultImplementation instance;
-	UIInstance uiInstance;
+	shared(DefaultImplementation) instance;
+	shared(UIInstance) uiInstance;
 	
-	this(DefaultImplementation instance) {
+	this(shared(DefaultImplementation) instance) shared {
 		this.instance = instance;
-		this.uiInstance = cast(UIInstance)instance.ui;
+		this.uiInstance = cast(shared(UIInstance))instance.ui;
 	}
 	
-	bool processEvent(ref Event event) {
+	bool processEvent(ref Event event) shared {
 		// umm shouldn't we check that you know this is a windowing event?
-		IWindow window = uiInstance.windowToIdMapper[event.wellData1Value];
+		IWindow window = cast()uiInstance.windowToIdMapper[event.wellData1Value];
 		
 		if (window is null) {
-			
 		} else if (WindowImpl w = cast(WindowImpl)window) {
 			switch(event.type) {
 				case Windowing_Events_Types.Window_Moved:
@@ -38,7 +37,7 @@ abstract class EventLoopConsumerImpl : EventLoopConsumer {
 					tryFunc(w.onSizeChangeDel, event.windowing.windowResized.newWidth, event.windowing.windowResized.newHeight);
 					return true;
 				case Windowing_Events_Types.Window_CursorScroll:
-					tryFunc(w.onScrollDel, event.windowing.scroll.amount);
+					tryFunc(w.onScrollDel, event.windowing.scroll.amount / 120);
 					return true;
 				case Windowing_Events_Types.Window_CursorMoved:
 					tryFunc(w.onCursorMoveDel, event.windowing.cursorMoved.newX, event.windowing.cursorMoved.newY);
@@ -66,13 +65,13 @@ abstract class EventLoopConsumerImpl : EventLoopConsumer {
 	}
 	
 	@property {
-		Nullable!EventSource pairOnlyWithSource() { return Nullable!EventSource(); }
+		Nullable!EventSource pairOnlyWithSource() shared { return Nullable!EventSource(); }
 		
-		EventType pairOnlyWithEvents() { return EventType.all; }
+		EventType pairOnlyWithEvents() shared { return EventType.all; }
 		
-		byte priority() { return byte.max / 2; }
+		byte priority() shared { return byte.max / 2; }
 		
-		string description() { return "Default implementation consumer for Windowing."; }
+		string description() shared { return "Default implementation consumer for Windowing."; }
 	}
 }
 
@@ -83,7 +82,8 @@ private {
 		if (func !is null) {
 			try {
 				func(args);
-			} catch(Exception e) {}
+			} catch(Exception e) {
+			}
 		}
 	}
 
@@ -107,12 +107,12 @@ version(Windows) {
 		import cf.spew.events.windowing;
 		import cf.spew.events.winapi;
 		
-		this(DefaultImplementation instance) {
+		this(shared(DefaultImplementation) instance) shared {
 			super(instance);
 		}
 		
-		override bool processEvent(ref Event event) {
-			IWindow window = uiInstance.windowToIdMapper[event.wellData1Value];
+		override bool processEvent(ref Event event) shared {
+			IWindow window = cast()uiInstance.windowToIdMapper[event.wellData1Value];
 
 			if (window is null) {
 
@@ -193,11 +193,13 @@ version(Windows) {
 		}
 
 		@property {
-			bool onMainThread() { return true; }
-			bool onAdditionalThreads() { return true; }
+			bool onMainThread() shared { return true; }
+			bool onAdditionalThreads() shared { return true; }
 		}
 
-		bool handlePaint(ref Event event, WindowImpl_WinAPI w, WindowImpl w2) {
+		bool handlePaint(ref Event event, WindowImpl_WinAPI w, WindowImpl w2) shared {
+			winapi.ValidateRgn(event.wellData1Ptr, null);
+
 			if (w2.context_ is null) {
 				winapi.PAINTSTRUCT ps;
 				winapi.HDC hdc = winapi.BeginPaint(event.wellData1Ptr, &ps);
@@ -210,7 +212,6 @@ version(Windows) {
 				tryFunc(w2.onDrawDel);
 			}
 
-			winapi.ValidateRgn(event.wellData1Ptr, null);
 			return true;
 		}
 	}

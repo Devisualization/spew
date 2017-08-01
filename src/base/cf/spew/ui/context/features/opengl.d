@@ -23,7 +23,9 @@ struct OpenGL_Context_Callbacks {
 	void delegate() onDeactivate;
 
 	/// On creation of the context
-	void delegate() onLoad;
+	void delegate(string platformPrefferedLoadFunction) onLoad;
+	/// On preffered context e.g. non-legacy creation
+	void delegate() onReload;
 	///  On destruction of the context
 	void delegate() onUnload;
 

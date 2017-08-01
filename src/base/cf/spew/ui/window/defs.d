@@ -71,6 +71,9 @@ interface IWindowCreator : IRenderPointCreator {
 		void location(vec2!short);
     }
     
+	/// The parent window to act as a child of, pretty much always supported, if not is ignored.
+	void parentWindow(IWindow);
+
 	/// Creates the window
     IWindow createWindow();
 }

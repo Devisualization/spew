@@ -15,31 +15,31 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 	protected {
 		Duration hintSourceTimeout;
 
-		Mutex mutex_sourcesAlter, mutex_consumersAlter;
-		List!EventLoopSource sources = void;
-		List!EventLoopConsumer consumers = void;
+		shared(Mutex) mutex_sourcesAlter, mutex_consumersAlter;
+		shared(SharedList!(shared(EventLoopSource))) sources;
+		shared(SharedList!(shared(EventLoopConsumer))) consumers;
 
 		Mutex mutex_threadData;
-		Map!(ThreadID, InternalData) threadData = void;
+		shared(SharedMap!(ThreadID, InternalData)) threadData;
 	}
 
-	this(IAllocator allocator = processAllocator(), ThreadID mainThreadID = Thread.getThis().id) {
+	this(shared(ISharedAllocator) allocator = processAllocator(), ThreadID mainThreadID = Thread.getThis().id) shared {
 		super(allocator, mainThreadID);
 
 		this.hintSourceTimeout = 0.seconds;
 		this.onErrorDelegate = &onErrorDelegateDefaultImpl;
 
-		this.sources = List!EventLoopSource(allocator);
-		this.consumers = List!EventLoopConsumer(allocator);
+		this.sources = SharedList!(shared(EventLoopSource))(allocator);
+		this.consumers = SharedList!(shared(EventLoopConsumer))(allocator);
 
-		this.mutex_sourcesAlter = allocator.make!Mutex;
-		this.mutex_consumersAlter = allocator.make!Mutex;
-		this.mutex_threadData = allocator.make!Mutex;
+		this.mutex_sourcesAlter = allocator.make!(shared(Mutex));
+		this.mutex_consumersAlter = allocator.make!(shared(Mutex));
+		this.mutex_threadData = allocator.make!(shared(Mutex));
 
-		this.threadData = Map!(ThreadID, InternalData)(allocator);
+		this.threadData = SharedMap!(ThreadID, InternalData)(allocator);
 	}
 
-	void addConsumers(EventLoopConsumer[] toAdd...) {
+	void addConsumers(shared(EventLoopConsumer)[] toAdd...) shared {
 		synchronized(mutex_consumersAlter) {
 			foreach(v; toAdd) {
 				bool dontAdd;
@@ -55,7 +55,7 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 		}
 	}
 
-	void addSources(EventLoopSource[] toAdd...) {
+	void addSources(shared(EventLoopSource)[] toAdd...) shared {
 		synchronized(mutex_sourcesAlter) {
 			foreach(v; toAdd) {
 				bool dontAdd;
@@ -73,23 +73,23 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 		}
 	}
 
-	void clearConsumers() {
+	void clearConsumers() shared {
 		synchronized(mutex_consumersAlter) {
 			consumers.length = 0;
 		}
 	}
 
-	void clearSources() {
+	void clearSources() shared {
 		synchronized(mutex_sourcesAlter) {
 			sources.length = 0;
 		}
 	}
 
-	void setSourceTimeout(Duration duration = 0.seconds) {
+	void setSourceTimeout(Duration duration = 0.seconds) shared {
 		this.hintSourceTimeout = duration;
 	}
 
-	string describeRules() { 
+	string describeRules() shared { 
 		import std.array : appender;
 		import std.conv : text;
 
@@ -118,7 +118,7 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 		return result.data;
 	}
 
-	string describeRulesFor(ThreadID id = Thread.getThis().id) {
+	string describeRulesFor(ThreadID id = Thread.getThis().id) shared {
 		import std.array : appender;
 		import std.conv : text;
 		import std.string : lineSplitter, KeepTerminator;
@@ -139,7 +139,7 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 		result ~= threadsState[id].text;
 		result ~= "\n";
 
-		InternalData data = threadData[id];
+		shared InternalData data = threadData[id];
 		atomicOp!"+="(data.refCount, 1);
 
 		if (data !is null) {
@@ -209,11 +209,11 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 	}
 
 	protected {
-		void onErrorDelegateDefaultImpl(ThreadID, Exception) {}
+		void onErrorDelegateDefaultImpl(ThreadID, Exception) shared {}
 	}
 
 	protected override {
-		void cleanupRemovingImpl(ThreadID id) {
+		void cleanupRemovingImpl(ThreadID id) shared {
 			synchronized(mutex_threadData) {
 				atomicOp!"-="(threadData[id].refCount, 1);
 				if (atomicLoad(threadData[id].refCount) == 0)
@@ -222,8 +222,8 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 			}
 		}
 
-		void* initializeImpl(ThreadID threadId) {
-			InternalData ret = allocator.make!InternalData(allocator);
+		void* initializeImpl(ThreadID threadId) shared {
+			shared(InternalData) ret = allocator.make!(shared(InternalData))(allocator);
 			ret.refCount = 1;
 
 			bool isOnMainThread = isMainThread(threadId);
@@ -235,8 +235,8 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 				}
 			}
 
-			EventLoopConsumer[] allConsumers = allocator.makeArray!EventLoopConsumer(consumers.length);
-			ret.instances = allocator.makeArray!(InternalData.Instance)(sourceCount);
+			shared(EventLoopConsumer)[] allConsumers = allocator.makeArray!(shared(EventLoopConsumer))(consumers.length);
+			ret.instances = allocator.makeArray!(shared(InternalData.Instance))(sourceCount);
 
 			size_t i, j;
 			foreach(source; sources) {
@@ -252,13 +252,13 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 					j++;
 				}
 
-				EventLoopConsumer[] allConsumersSlice = allConsumers[0 .. k];
+				shared(EventLoopConsumer)[] allConsumersSlice = allConsumers[0 .. k];
 				short lastPriority = byte.min;
 				
 				ret.instances[i].source = source;
 				ret.instances[i].retriever = source.nextEventGenerator(allocator);
 				ret.instances[i].retriever.hintTimeout(hintSourceTimeout);
-				ret.instances[i].consumers = allocator.makeArray!EventLoopConsumer(allConsumersSlice.length);
+				ret.instances[i].consumers = allocator.makeArray!(shared(EventLoopConsumer))(allConsumersSlice.length);
 
 				size_t countAddedSoFar;
 				while (countAddedSoFar < allConsumersSlice.length) {
@@ -275,7 +275,7 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 				i++;
 			}
 
-			allocator.dispose(allConsumers);
+			allocator.dispose(cast(EventLoopConsumer[])allConsumers);
 
 			synchronized(mutex_threadData) {
 				threadData[threadId] = ret;
@@ -284,7 +284,7 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 			}
 		}
 
-		void executeImpl(ThreadID threadId, void* ctx) {
+		void executeImpl(ThreadID threadId, void* ctx) shared {
 			InternalData data = cast(InternalData)ctx;
 			atomicOp!"+="(data.refCount, 1);
 
@@ -324,23 +324,23 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 private final class InternalData {
 	shared uint refCount;
 	Instance[] instances;
-	IAllocator allocator;
+	shared(ISharedAllocator) allocator;
 
-	this(IAllocator allocator) {
+	this(shared(ISharedAllocator) allocator) shared {
 		this.allocator = allocator;
 	}
 
 	~this() {
 		foreach(instance; instances) {
 			allocator.dispose(instance.retriever);
-			allocator.dispose(instance.consumers);
+			allocator.dispose(cast(EventLoopConsumer[])instance.consumers);
 		}
 		allocator.dispose(instances);
 	}
 	
 	struct Instance {
-		EventLoopSourceRetriever retriever;
-		EventLoopSource source;
-		EventLoopConsumer[] consumers;
+		shared(EventLoopSourceRetriever) retriever;
+		shared(EventLoopSource) source;
+		shared(EventLoopConsumer)[] consumers;
 	}
 }

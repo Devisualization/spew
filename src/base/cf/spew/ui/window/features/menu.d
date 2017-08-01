@@ -1,48 +1,47 @@
 /**
- * Window and platform menu support.
+ * Window menu support.
  *
  * Copyright: <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
  * Authors: $(LINK2 http://cattermole.co.nz, Richard Andrew Cattermole)
  */
 module cf.spew.ui.window.features.menu;
 import cf.spew.ui.window.defs;
-import cf.spew.instance;
 import std.experimental.graphic.image : ImageStorage;
 import std.experimental.graphic.color : RGB8;
 import std.experimental.memory.managed;
 
-interface Have_MenuCreator {
+interface Have_Window_MenuCreator {
 	void assignMenu();
 }
 
-interface Have_Menu {
-    Feature_Menu __getFeatureMenu();
+interface Have_Window_Menu {
+	Feature_Window_Menu __getFeatureMenu();
 }
 
-interface Feature_Menu {
-    MenuItem addItem();
-    @property managed!(MenuItem[]) items();
+interface Feature_Window_Menu {
+	Window_MenuItem addItem();
+	@property managed!(Window_MenuItem[]) items();
 }
 
 ///
-alias MenuCallback = void delegate(MenuItem);
+alias MenuCallback = void delegate(Window_MenuItem);
 
 ///
-interface MenuItem {
+interface Window_MenuItem {
     ///
-	MenuItem addItem();
+	Window_MenuItem addItem();
     ///
     void remove();
 
     @property {
         ///
-        managed!(MenuItem[]) childItems();
+		managed!(Window_MenuItem[]) childItems();
         
         ///
         managed!(ImageStorage!RGB8) image();
         
         ///
-        void image(ImageStorage!RGB8);
+        void image(scope ImageStorage!RGB8);
         
         ///
         managed!dstring text();
@@ -74,49 +73,37 @@ interface MenuItem {
 }
 
 ///
-void assignMenu(T)(T self) if (is(T : IWindowCreator) || is(T : Management_UserInterface)) {
-	if (Have_MenuCreator ss = cast(Have_MenuCreator)self) {
+void assignMenu(scope IWindowCreator self) {
+	if (Have_Window_MenuCreator ss = cast(Have_Window_MenuCreator)self) {
 		ss.assignMenu();
 	}
 }
 
-void assignMenu(T)(T self) if (!(is(T : IWindowCreator) || is(T : Management_UserInterface))) {
-	static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindowCreator or Management_UserInterface.");
-}
-
 @property {
     /// Retrives the menu instance or null if non existant
-	Feature_Menu menu(T)(T self) if (is(T : IWindow) || is(T : Management_UserInterface)) {
+	Feature_Window_Menu menu(scope IWindow self) {
 		if (!self.capableOfMenu)
 			return null;
 		else {
-			return (cast(Have_Menu)self).__getFeatureMenu();
+			return (cast(Have_Window_Menu)self).__getFeatureMenu();
 		}
     }
 
-	Feature_Menu menu(T)(T self) if (!(is(T : IWindow) || is(T : Management_UserInterface))) {
-		static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or Management_UserInterface.");
-    }
-
 	/**
-	 * Does the given window/platform have a menu?
+	 * Does the given window have a menu?
 	 * 
 	 * Params:
-	 * 		self	=	The window/platform instance
+	 * 		self	=	The window instance
 	 * 
 	 * Returns:
 	 * 		If the window/platform supports having an icon
 	 */
-	bool capableOfMenu(T)(T self) if (is(T : IWindow) || is(T : Management_UserInterface)) {
+	bool capableOfMenu(scope IWindow self) {
 		if (self is null)
 			return false;
-		else if (auto ss = cast(Have_Menu)self)
+		else if (auto ss = cast(Have_Window_Menu)self)
 			return ss.__getFeatureMenu() !is null;
 		else
 			return false;
-	}
-
-	bool capableOfMenu(T)(T self) if (!(is(T : IWindow) || is(T : Management_UserInterface))) {
-		static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or Management_UserInterface types.");
 	}
 }

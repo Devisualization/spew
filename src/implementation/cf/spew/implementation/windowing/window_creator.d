@@ -9,18 +9,19 @@ import std.experimental.allocator : IAllocator, make;
 
 abstract class WindowCreatorImpl : IWindowCreator { 
 	package(cf.spew) {
-		UIInstance uiInstance;
+		shared(UIInstance) uiInstance;
 		
 		vec2!ushort size_ = vec2!ushort(cast(short)800, cast(short)600);
 		vec2!short location_;
 		IDisplay display_;
+		IWindow parentWindow_;
 		IAllocator alloc;
 		
 		ImageStorage!RGBA8 icon;
 		
 		WindowCursorStyle cursorStyle = WindowCursorStyle.Standard;
 		ImageStorage!RGBA8 cursorIcon;
-		
+
 		WindowStyle windowStyle = WindowStyle.Dialog;
 		
 		bool useVRAMContext, vramWithAlpha;
@@ -33,7 +34,7 @@ abstract class WindowCreatorImpl : IWindowCreator {
 		bool shouldAssignMenu;
 	}
 
-	this(UIInstance uiInstance, IAllocator alloc) {
+	this(shared(UIInstance) uiInstance, IAllocator alloc) {
 		this.alloc = alloc;
 		this.uiInstance = uiInstance;
 		
@@ -47,6 +48,10 @@ abstract class WindowCreatorImpl : IWindowCreator {
 		void allocator(IAllocator v) { alloc = v; }
 	}
 
+	void parentWindow(IWindow window) {
+		this.parentWindow_ = window;
+	}
+
 	IRenderPoint create() {
 		return cast(IRenderPoint)createWindow;
 	}
@@ -55,7 +60,7 @@ abstract class WindowCreatorImpl : IWindowCreator {
 version(Windows) {
 	class WindowCreatorImpl_WinAPI : WindowCreatorImpl,
 		Have_Icon, Have_Cursor, Have_Style,
-		Have_VRamCtx, Have_OGLCtx, Have_MenuCreator,
+		Have_VRamCtx, Have_OGLCtx, Have_Window_MenuCreator,
 		Feature_Icon, Feature_Cursor, Feature_Style {
 
 		import cf.spew.implementation.windowing.misc;
@@ -71,7 +76,7 @@ version(Windows) {
 			CreateMenu;
 		import cf.spew.event_loop.wells.winapi;
 
-		this(UIInstance uiInstance, IAllocator alloc) {
+		this(shared(UIInstance) uiInstance, IAllocator alloc) {
 			super(uiInstance, alloc);
 		}
 
@@ -166,17 +171,35 @@ version(Windows) {
 
 			// the window creation
 
-			hwnd = CreateWindowExW(
-				dwExStyle,
-				cast(wchar*)ClassNameW.ptr,
-				null,
-				dwStyle,
-				setpos.x, setpos.y,
-				rect.right - rect.left, rect.bottom - rect.top,
-				null,
-				hMenu,
-				hInstance,
-				null);
+			if (this.parentWindow_ !is null) {
+				hwnd = CreateWindowExW(
+					dwExStyle,
+					cast(wchar*)ClassNameW.ptr,
+					null,
+					dwStyle,
+					setpos.x, setpos.y,
+					rect.right - rect.left, rect.bottom - rect.top,
+					this.parentWindow_.__handle,
+					hMenu,
+					hInstance,
+					null);
+			}
+
+			if (hwnd is null) {
+				hwnd = CreateWindowExW(
+					dwExStyle,
+					cast(wchar*)ClassNameW.ptr,
+					null,
+					dwStyle,
+					setpos.x, setpos.y,
+					rect.right - rect.left, rect.bottom - rect.top,
+					null,
+					hMenu,
+					hInstance,
+					null);
+			}
+
+			assert(hwnd !is null, "Failed to create Window");
 
 			if (useVRAMContext) {
 				context = alloc.make!VRAMContextImpl_WinAPI(hwnd, vramWithAlpha, alloc);

@@ -6,41 +6,41 @@ abstract class Instance {
 	///
 	@property {
 		/// The event loop for this application
-		Management_EventLoop eventLoop();
+		shared(Management_EventLoop) eventLoop() shared;
 		/// The user interfacing implementation for this application
-		Management_UserInterface userInterface();
+		shared(Management_UserInterface) userInterface() shared;
 		///
 		pragma(inline, true)
-		final Management_UserInterface ui() { return userInterface; }
+		final shared(Management_UserInterface) ui() shared { return userInterface; }
 	}
 
 	///
 	final nothrow @nogc @trusted {
 		///
-		void setAsTheImplementation() { theInstance_ = this; }
+		void setAsTheImplementation() shared { theInstance_ = this; }
 
 		///
 		static {
 			/// Default instance implementation, can be null
-			Instance theDefault() { return defaultInstance_; }
+			shared(Instance) theDefault() { return defaultInstance_; }
 
 			/// If null, no implementation has been configured
 			/// Are you compiling in spew:implementation?
-			Instance current() { return theInstance_; }
+			shared(Instance) current() { return theInstance_; }
 		}
 	}
 }
 
 private __gshared {
-	Instance defaultInstance_;
-	Instance theInstance_;
+	shared(Instance) defaultInstance_;
+	shared(Instance) theInstance_;
 
 	shared static this() {
 		version(Have_spew_implementation) {
 			import cf.spew.implementation.instance;
 			pragma(msg, "spew:implementation is being used with a default implementation for S.P.E.W.");
 
-			defaultInstance_ = new DefaultImplementation;
+			defaultInstance_ = new shared DefaultImplementation;
 			theInstance_ = defaultInstance_;
 		}
 	}
@@ -51,50 +51,50 @@ interface Management_EventLoop {
 	import cf.spew.event_loop.defs : IEventLoopManager;
 
 	/// Does the main thread have an event loop executing?
-	bool isRunningOnMainThread();
+	bool isRunningOnMainThread() shared;
 	
 	/// Does any of the threads have an event loop executing?
-	bool isRunning();
+	bool isRunning() shared;
 
 	/// Stop the event loop for the current thread
-	void stopCurrentThread();
+	void stopCurrentThread() shared;
 
 	/// Stop the event loop on all threads
-	void stopAllThreads();
+	void stopAllThreads() shared;
 
 	/// Starts the execution of the event loop for the current thread
-	void execute();
+	void execute() shared;
 
 	/// If you really want to get dirty, here it is!
-	@property IEventLoopManager manager();
+	@property shared(IEventLoopManager) manager() shared;
 }
 
 ///
 interface Management_UserInterface {
 	import cf.spew.ui : IWindow, IDisplay, IWindowCreator, IRenderPoint, IRenderPointCreator;
-	import std.experimental.allocator : IAllocator, processAllocator;
+	import std.experimental.allocator : IAllocator, theAllocator;
 	import std.experimental.memory.managed;
 
 	///
-	managed!IRenderPointCreator createRenderPoint(IAllocator alloc = processAllocator());
+	managed!IRenderPointCreator createRenderPoint(IAllocator alloc = cast(IAllocator)theAllocator()) shared;
 	
 	/// completely up to platform implementation to what the defaults are
-	IRenderPoint createARenderPoint(IAllocator alloc = processAllocator());
+	IRenderPoint createARenderPoint(IAllocator alloc = cast(IAllocator)theAllocator()) shared;
 	
 	///
-	managed!IWindowCreator createWindow(IAllocator alloc = processAllocator());
+	managed!IWindowCreator createWindow(IAllocator alloc = cast(IAllocator)theAllocator()) shared;
 	
 	/// completely up to platform implementation to what the defaults are
-	IWindow createAWindow(IAllocator alloc = processAllocator());
+	IWindow createAWindow(IAllocator alloc = cast(IAllocator)theAllocator()) shared;
 	
 	@property {
 		///
-		managed!IDisplay primaryDisplay(IAllocator alloc = processAllocator());
+		managed!IDisplay primaryDisplay(IAllocator alloc = cast(IAllocator)theAllocator()) shared;
 		
 		///
-		managed!(IDisplay[]) displays(IAllocator alloc = processAllocator());
+		managed!(IDisplay[]) displays(IAllocator alloc = cast(IAllocator)theAllocator()) shared;
 		
 		///
-		managed!(IWindow[]) windows(IAllocator alloc = processAllocator());
+		managed!(IWindow[]) windows(IAllocator alloc = cast(IAllocator)theAllocator()) shared;
 	}
 }

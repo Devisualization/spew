@@ -12,43 +12,43 @@ abstract class EventLoopManager_Base : IEventLoopManager {
 	import core.sync.mutex;
 	
 	protected {
-		IAllocator allocator;
+		shared(ISharedAllocator) allocator;
 		ThreadID mainThreadID;
-		void delegate(ThreadID, Exception) onErrorDelegate;
+		void delegate(ThreadID, Exception) shared onErrorDelegate;
 		
-		Map!(ThreadID, ThreadState) threadsState = void;
+		shared(SharedMap!(ThreadID, ThreadState)) threadsState;
 		
-		Mutex mutex_threadsStateAlter, mutex_threadsStateModify;
+		shared(Mutex) mutex_threadsStateAlter, mutex_threadsStateModify;
 	}
 	
 	///
-	this(IAllocator allocator = processAllocator(), ThreadID mainThreadID = Thread.getThis().id) {
+	this(shared(ISharedAllocator) allocator = processAllocator(), ThreadID mainThreadID = Thread.getThis().id) shared {
 		this.allocator = allocator;
 		this.mainThreadID = mainThreadID;
-		this.threadsState = Map!(ThreadID, ThreadState)(allocator);
+		this.threadsState = SharedMap!(ThreadID, ThreadState)(allocator);
 		
-		this.mutex_threadsStateAlter = allocator.make!Mutex;
-		this.mutex_threadsStateModify = allocator.make!Mutex;
+		this.mutex_threadsStateAlter = allocator.make!(shared(Mutex));
+		this.mutex_threadsStateModify = allocator.make!(shared(Mutex));
 
 		this.threadsState[mainThreadID] = ThreadState.Uninitialized;
 	}
 	
 	///
-	bool runningOnThreadFor(ThreadID id = Thread.getThis().id) {
+	bool runningOnThreadFor(ThreadID id = Thread.getThis().id) shared {
 		synchronized(mutex_threadsStateModify) {
 			return threadsState[id] == ThreadState.Started;
 		}
 	}
 	
 	///
-	void stopMainThread() {
+	void stopMainThread() shared {
 		synchronized(mutex_threadsStateModify) {
 			threadsState[mainThreadID] = ThreadState.Stop;
 		}
 	}
 	
 	///
-	void stopAuxillaryThreads() {
+	void stopAuxillaryThreads() shared {
 		synchronized(mutex_threadsStateModify) {
 			foreach(id, ref state; threadsState) {
 				if (id != mainThreadID && threadsState[id] == ThreadState.Started)
@@ -58,7 +58,7 @@ abstract class EventLoopManager_Base : IEventLoopManager {
 	}
 	
 	///
-	void stopAllThreads() {
+	void stopAllThreads() shared {
 		synchronized(mutex_threadsStateModify) {
 			foreach(id, ref state; threadsState) {
 				if (threadsState[id] == ThreadState.Started)
@@ -68,7 +68,7 @@ abstract class EventLoopManager_Base : IEventLoopManager {
 	}
 	
 	///
-	void stopThreadFor(ThreadID id = Thread.getThis().id) {
+	void stopThreadFor(ThreadID id = Thread.getThis().id) shared {
 		synchronized(mutex_threadsStateModify) {
 			if (threadsState[id] == ThreadState.Started)
 				threadsState[id] = ThreadState.Stop;
@@ -76,19 +76,19 @@ abstract class EventLoopManager_Base : IEventLoopManager {
 	}
 	
 	///
-	bool runningOnMainThread() {
+	bool runningOnMainThread() shared {
 		synchronized(mutex_threadsStateModify) {
 			return threadsState[mainThreadID] == ThreadState.Started;
 		}
 	}
 	
 	///
-	bool runningOnAuxillaryThreads() {
+	bool runningOnAuxillaryThreads() shared {
 		return countRunningOnAuxillaryThread > 0;
 	}
 	
 	///
-	uint countRunningOnAuxillaryThread() {
+	uint countRunningOnAuxillaryThread() shared {
 		synchronized(mutex_threadsStateModify) {
 			uint ret;
 			foreach(id, ref state; threadsState) {
@@ -100,7 +100,7 @@ abstract class EventLoopManager_Base : IEventLoopManager {
 	}
 	
 	///
-	void notifyOfThread(ThreadID id = Thread.getThis().id) {
+	void notifyOfThread(ThreadID id = Thread.getThis().id) shared {
 		// this code block must execute for this thread
 		//  otherwise we won't have a proper state
 		synchronized(mutex_threadsStateAlter) {
@@ -120,7 +120,7 @@ abstract class EventLoopManager_Base : IEventLoopManager {
 	}
 	
 	///
-	void registerOnErrorDelegate(void delegate(ThreadID, Exception) del) {
+	void registerOnErrorDelegate(void delegate(ThreadID, Exception) shared del) shared {
 		onErrorDelegate = del;
 	}
 	
@@ -139,7 +139,7 @@ abstract class EventLoopManager_Base : IEventLoopManager {
 	 *				- Initialize the internal workings for current thread
 	 *		4. Use the internals for the current thread to execute the current event loop
 	 */
-	void execute() {
+	void execute() shared {
 		if (runningOnCurrentThread) {
 			// UMM WHAT! /error/ /error/ /error/
 			return;
@@ -187,23 +187,23 @@ abstract class EventLoopManager_Base : IEventLoopManager {
 	
 	abstract protected {
 		///
-		void* initializeImpl(ThreadID threadId);
+		void* initializeImpl(ThreadID threadId) shared;
 		
 		/// params are the current thread id and the context returned by initializeImpl
-		void executeImpl(ThreadID threadId, void* ctx);
+		void executeImpl(ThreadID threadId, void* ctx) shared;
 		
 		///
-		void cleanupRemovingImpl(ThreadID);
+		void cleanupRemovingImpl(ThreadID) shared;
 	}
 	
 	protected {
-		bool isMainThread(ThreadID id = Thread.getThis().id) { return id == mainThreadID; }
-		bool isThreadAlive(ThreadID id) {
+		bool isMainThread(ThreadID id = Thread.getThis().id) shared { return id == mainThreadID; }
+		bool isThreadAlive(ThreadID id) shared {
 			import core.thread : thread_findByAddr;
 			return thread_findByAddr(id) !is null;
 		}
 		
-		void cleanup() {
+		void cleanup() shared {
 			// not urgent that we clean up, so don't worry about it
 			// prevents somebody else from adding/removing entries
 			if (mutex_threadsStateAlter.tryLock) {

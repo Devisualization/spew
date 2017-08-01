@@ -26,7 +26,7 @@ class OpenGLContextImpl : IContext, Have_OpenGL, Feature_OpenGL {
 version(Windows) {
 	import core.sys.windows.windows : HWND, HDC, HGLRC,
 		PIXELFORMATDESCRIPTOR, PFD_DRAW_TO_WINDOW, PFD_SUPPORT_OPENGL, PFD_DOUBLEBUFFER, PFD_TYPE_RGBA, PFD_MAIN_PLANE,
-		ChoosePixelFormat, SetPixelFormat, GetDC;
+		ChoosePixelFormat, SetPixelFormat, GetDC, SwapBuffers;
 
 	ubyte 
 		WinAPI_ColorBits = 32,
@@ -43,11 +43,12 @@ version(Windows) {
 		private {
 			HDC _hdc;
 			HGLRC _context;
+			HWND hwnd;
 
-			extern(C) HGLRC function(HDC) wglCreateContext;
-			extern(C) bool function(HDC, HGLRC) wglMakeCurrent;
-			extern(C) bool function(HGLRC) wglDeleteContext;
-			extern(C) HGLRC function(HDC, HGLRC, int*) wglCreateContextAttribsARB;
+			extern(Windows) HGLRC function(HDC) wglCreateContext;
+			extern(Windows) bool function(HDC, HGLRC) wglMakeCurrent;
+			extern(Windows) bool function(HGLRC) wglDeleteContext;
+			extern(Windows) HGLRC function(HDC, HGLRC, int*) wglCreateContextAttribsARB;
 
 			PIXELFORMATDESCRIPTOR pixelAttribs;
 			int[] arbAttribs = [WGL_CONTEXT_MAJOR_VERSION_ARB, 1, WGL_CONTEXT_MINOR_VERSION_ARB, 0, 0];
@@ -55,10 +56,11 @@ version(Windows) {
 
 		this(HWND hwnd, OpenGLVersion version_, OpenGL_Context_Callbacks* callbacks) {
 			super(version_, callbacks);
-			_hdc = GetDC(hwnd);
 
+			this.hwnd = hwnd;
 			arbAttribs[1] = version_.major;
 			arbAttribs[3] = version_.minor;
+			_hdc = GetDC(hwnd);
 		}
 
 		~this() {
@@ -87,8 +89,10 @@ version(Windows) {
 			void deactivate() {
 				if (callbacks.onDeactivate !is null)
 					callbacks.onDeactivate();
-				if (wglMakeCurrent !is null)
-					wglMakeCurrent(_hdc, null);
+				if (wglMakeCurrent !is null) {
+					SwapBuffers(_hdc);
+					wglMakeCurrent(null, null);
+				}
 			}
 		}
 
@@ -121,7 +125,6 @@ version(Windows) {
 				wglCreateContext = cast(typeof(wglCreateContext))callbacks.loadSymbol("wglCreateContext");
 				wglMakeCurrent = cast(typeof(wglMakeCurrent))callbacks.loadSymbol("wglMakeCurrent");
 				wglDeleteContext = cast(typeof(wglDeleteContext))callbacks.loadSymbol("wglDeleteContext");
-				wglCreateContextAttribsARB = cast(typeof(wglCreateContextAttribsARB))callbacks.loadSymbol("wglCreateContextAttribsARB");
 			}
 
 			if (wglCreateContext !is null &&
@@ -134,22 +137,27 @@ version(Windows) {
 				HGLRC fallbackRC = wglCreateContext(_hdc);
 				HGLRC preferredRC;
 
+				wglMakeCurrent(_hdc, fallbackRC);
+				if (callbacks.onLoad !is null)
+					callbacks.onLoad("wglGetProcAddress");
+
+				wglCreateContextAttribsARB = cast(typeof(wglCreateContextAttribsARB))callbacks.loadSymbol("wglCreateContextAttribsARB");
 				if (wglCreateContextAttribsARB !is null) {
 					preferredRC = wglCreateContextAttribsARB(_hdc, null, arbAttribs.ptr);
+					if (preferredRC !is null) {
+						wglMakeCurrent(_hdc, preferredRC);
+						if (callbacks.onReload !is null)
+							callbacks.onReload();
+					}
 				}
 
 				if (preferredRC !is null) {
 					_context = preferredRC;
-					if (fallbackRC !is null)
+					if (fallbackRC !is null) {
 						wglDeleteContext(fallbackRC);
+					}
 				} else
 					_context = fallbackRC;
-
-				if (_context !is null) {
-					wglMakeCurrent(_hdc, _context);
-					if (callbacks.onLoad !is null)
-						callbacks.onLoad();
-				}
 			}
 		}
 	}

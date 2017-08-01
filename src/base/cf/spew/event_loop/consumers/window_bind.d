@@ -31,20 +31,20 @@ class WindowBind : EventLoopConsumer {
 
 	@property {
 		///
-		IWindow owner() { return owner_; }
+		IWindow owner() shared { return cast(IWindow)owner_; }
 		///
-		IWindow child() { return child_; }
+		IWindow child() shared { return cast(IWindow)child_; }
 
-		bool onMainThread() { return true; }
-		bool onAdditionalThreads() { return true; }
-		string description() { return "Binds two windows location + size together with an offset."; }
+		bool onMainThread() shared { return true; }
+		bool onAdditionalThreads() shared { return true; }
+		string description() shared { return "Binds two windows location + size together with an offset."; }
 
-		Nullable!EventSource pairOnlyWithSource() { return Nullable!EventSource.init; }
-		EventType pairOnlyWithEvents() { return Windowing_Events_Types.Prefix; }
-		byte priority() { return 0; }
+		Nullable!EventSource pairOnlyWithSource() shared { return Nullable!EventSource.init; }
+		EventType pairOnlyWithEvents() shared { return Windowing_Events_Types.Prefix; }
+		byte priority() shared { return 0; }
 	}
 
-	bool processEvent(ref Event event) {
+	bool processEvent(ref Event event) shared {
 		if (enabled && event.wellData1Ptr is owner.__handle) {
 			// ok so it is the owner, yay!
 
