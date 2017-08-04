@@ -84,7 +84,7 @@ struct OpenGL_Loader(T_Callbacks, T_Bindings=defaultgl.GL, T_Bindings_ExtensionU
 			static if (__traits(compiles, mixin("typeof(bindings." ~ m ~ ")")) && isFunctionPointer!(mixin("typeof(bindings." ~ m ~ ")"))) {
 
 				// disable/enable extensions+versions
-				static if (checkExtensions!(m)(LoadExtensions) && checkVersion!(m)(LoadExtensions)) {
+				static if (checkVersionExtension!(m)(LoadExtensions)) {
 					void* got = getSymbol(m);
 					if (got !is null)
 						mixin("bindings." ~ m ~ " = cast(typeof(bindings." ~ m ~ "))got;");
@@ -119,21 +119,19 @@ struct OpenGL_Loader(T_Callbacks, T_Bindings=defaultgl.GL, T_Bindings_ExtensionU
 	}
 
 	private static pure {
-		bool checkVersion(string member)(bool enable) {
+		bool checkVersionExtension(string member)(bool enable) {
 			import std.traits : hasUDA, getUDAs;
-			
-			static if (!is(T_Bindings_VersionUDA == void) && hasUDA!(mixin("T_Bindings." ~ member), T_Bindings_VersionUDA)) {
-				enum UDAS = getUDAs!(mixin("T_Bindings." ~ member), T_Bindings_VersionUDA);
-				
-				return enable || (cast(int)UDAS[0] < 30 && !enable);
+
+			if (is(T_Bindings_ExtensionUDA == void) || enable || 
+				(!is(T_Bindings_ExtensionUDA == void) && hasUDA!(mixin("T_Bindings." ~ member), T_Bindings_ExtensionUDA) == enable)) {
+				static if (!is(T_Bindings_VersionUDA == void) && hasUDA!(mixin("T_Bindings." ~ member), T_Bindings_VersionUDA)) {
+					enum UDAS = getUDAs!(mixin("T_Bindings." ~ member), T_Bindings_VersionUDA);
+					
+					return enable || (cast(int)UDAS[0] < 30 && !enable);
+				} else
+					return true;
 			} else
-				return true;
-		}
-		
-		bool checkExtensions(string member)(bool enable) {
-			import std.traits : hasUDA;
-			return is(T_Bindings_ExtensionUDA == void) || enable || 
-				(!is(T_Bindings_ExtensionUDA == void) && hasUDA!(mixin("T_Bindings." ~ member), T_Bindings_ExtensionUDA) == enable);
+				return false;
 		}
 	}
 }
