@@ -11,7 +11,7 @@ import cf.spew.events.defs;
 import cf.spew.events.winapi;
 import cf.spew.events.windowing;
 import std.experimental.allocator : ISharedAllocator, make;
-import core.sys.windows.windows : LRESULT, WPARAM, LPARAM, HWND;
+import core.sys.windows.windows : LRESULT, WPARAM, LPARAM, HWND, WM_USER, MSG;
 import core.time : Duration;
 
 /**
@@ -92,33 +92,44 @@ final class WinAPI_EventLoop_SourceRetriever : EventLoopSourceRetriever {
 		}
 
 		for (;;) {
+			bool forceCallProc;
+
 			if (_overrideEvent != Event.init) {
 				event = _overrideEvent;
 				_overrideEvent = Event.init;
 				return true;
+			} else if (backLogCount > 0) {
+				msg = cast(shared(MSG))backLogMessages[backLogOffset];
+				backLogOffset++;
+				backLogCount--;
+				forceCallProc = true;
 			} else if (PeekMessageW(cast(MSG*)&msg, null, 0, 0, PM_REMOVE) == 0) {
 				needToWait = true;
 				return false;
-			} else {
-				*_event = Event.init;
-
-				if (msg.hwnd !is null) {
-					_callbacks = getCallbacksPointer(cast(HWND)msg.hwnd);
-
-					if (_callbacks !is null) {
-						if (_callbacks.canTranslate && shouldTranslate)
-							TranslateMessage(cast(MSG*)&msg);
-					}
-				}
-
-				event.winapi.raw = cast(MSG)msg;
-				DispatchMessageW(cast(MSG*)&msg);
-
-				if (event.type == WinAPI_Events_Types.Unknown || event.type.value == 0)
-					continue;
-				else
-					return true;
 			}
+
+			if (msg.hwnd !is null) {
+				_callbacks = getCallbacksPointer(cast(HWND)msg.hwnd);
+				
+				if (_callbacks !is null) {
+					if (_callbacks.canTranslate && shouldTranslate)
+						TranslateMessage(cast(MSG*)&msg);
+				}
+			}
+
+			*_event = Event.init;
+
+			depthOfCallbackCalls = 0;
+			if (forceCallProc) {
+				callbackWindowHandler(cast(HWND)msg.hwnd, cast(uint)msg.message, cast(uint)msg.wParam, cast(uint)msg.lParam);
+			} else {
+				DispatchMessageW(cast(MSG*)&msg);
+			}
+
+			if (event.type == WinAPI_Events_Types.Unknown || event.type.value == 0)
+				continue;
+			else
+				return true;
 		}
 	}
 
@@ -182,6 +193,49 @@ private {
 	Event _overrideEvent;
 	EventLoopAlterationCallbacks* _callbacks;
 
+	int depthOfCallbackCalls;
+	MSG[] backLogMessages;
+	size_t backLogCount, backLogOffset;
+
+	void addToBacklog(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam) nothrow {
+		import core.stdc.stdlib;
+
+		if (backLogMessages.ptr is null) {
+			backLogMessages = (cast(MSG*)malloc(MSG.sizeof*1024))[0 .. 1024];
+		} else if(backLogOffset+backLogCount+1 >= backLogMessages.length) {
+			if (backLogOffset > 0) {
+				MSG[] ret = (cast(MSG*)malloc(MSG.sizeof*backLogMessages.length))[0 .. backLogMessages.length];
+
+				ret[0 .. backLogCount] = backLogMessages[backLogOffset .. backLogOffset+backLogCount];
+				free(backLogMessages.ptr);
+
+				backLogMessages = ret;
+				backLogOffset = 0;
+			} else {
+				MSG[] ret = (cast(MSG*)malloc(MSG.sizeof*(backLogMessages.length+2048)))[0 .. backLogMessages.length+2048];
+				
+				ret[0 .. backLogCount] = backLogMessages[backLogOffset .. backLogOffset+backLogCount];
+				free(backLogMessages.ptr);
+				
+				backLogMessages = ret;
+			}
+		}
+
+		if (backLogCount > 0 && backLogMessages[backLogOffset+(backLogCount-1)].hwnd is hwnd && backLogMessages[backLogOffset+(backLogCount-1)].message == uMsg) {
+			backLogMessages[backLogOffset+(backLogCount-1)].wParam = wParam;
+			backLogMessages[backLogOffset+(backLogCount-1)].lParam = lParam;
+		} else {
+			MSG msg;
+			msg.hwnd = hwnd;
+			msg.message = uMsg;
+			msg.wParam = wParam;
+			msg.lParam = lParam;
+
+			backLogMessages[backLogCount+backLogOffset] = msg;
+			backLogCount++;
+		}
+	}
+
 	enum {
 		ENDSESSION_CRITICAL = 0x40000000,
 		ENDSESSION_CLOSEAPP = 0x00000001
@@ -213,6 +267,10 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 	import cf.spew.events.windowing;
 	import core.sys.windows.windows;
 
+	depthOfCallbackCalls++;
+	scope(exit)
+		depthOfCallbackCalls--;
+
 	if (_event is null || _callbacks is null) {// ERROR/just created
 		if (uMsg == WM_PAINT) {
 			UpdateWindow(hwnd);
@@ -240,24 +298,31 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 			return 0;
 
 		case WM_MOVE:
-			_event.type = Windowing_Events_Types.Window_Moved;
-			_event.windowing.windowMoved.newX = LOWORD(lParam);
-			_event.windowing.windowMoved.newY = HIWORD(lParam);
+			if (depthOfCallbackCalls == 1) {
+				_event.type = Windowing_Events_Types.Window_Moved;
+				_event.windowing.windowMoved.newX = LOWORD(lParam);
+				_event.windowing.windowMoved.newY = HIWORD(lParam);
+			} else {
+				addToBacklog(hwnd, WM_MOVE, wParam, lParam);
+			}
 			return 0;
-
+		
 		case WM_SIZE:
-			_event.type = Windowing_Events_Types.Window_Moved;
-			_event.wellData2Value = wParam;
-
-			_event.windowing.windowResized.newWidth = LOWORD(lParam);
-			_event.windowing.windowResized.newHeight = HIWORD(lParam);
+			if (depthOfCallbackCalls == 1) {
+				_event.type = Windowing_Events_Types.Window_Resized;
+				_event.wellData2Value = wParam;
+				_event.windowing.windowResized.newWidth = LOWORD(lParam);
+				_event.windowing.windowResized.newHeight = HIWORD(lParam);
+			} else {
+				addToBacklog(hwnd, WM_SIZE, wParam, lParam);
+			}
 			return 0;
 
 		case WM_ACTIVATE:
 			_event.type = Windowing_Events_Types.Window_Focused;
 			_event.wellData2Value = wParam;
 			_overrideEvent = *_event;
-			return DefWindowProcW(hwnd, uMsg, wParam, lParam);
+			return 0;//DefWindowProcW(hwnd, uMsg, wParam, lParam);
 
 		case WM_SETFOCUS:
 			_event.type = WinAPI_Events_Types.Window_GainedKeyboardFocus;
