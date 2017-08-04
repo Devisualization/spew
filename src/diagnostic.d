@@ -201,6 +201,18 @@ void aWindowTest() {
 		stdout.flush;
 		Instance.current.eventLoop.stopAllThreads;
 	};
+
+	window.events.onSizeChange = (uint width, uint height) {
+		writeln("onSizeChange: ", width, "x", height);
+
+		if (window.context.capableOfOpenGL && window.context.readyToBeUsed) {
+			window.context.activate;
+
+			gl.glViewport(0, 0, width, height);
+
+			window.context.deactivate;
+		}
+	};
 	
 	window.show();
 
