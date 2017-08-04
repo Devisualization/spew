@@ -206,11 +206,15 @@ void aWindowTest() {
 
 	import std.datetime : seconds;
 	Instance.current.eventLoop.manager.setSourceTimeout(3.seconds);
-	Instance.current.eventLoop.manager.addSources(new ASource);
+	Instance.current.eventLoop.manager.addSources(new shared ASource);
 	Instance.current.eventLoop.execute();
 }
 
 final class ASource : EventLoopSource, EventLoopSourceRetriever {
+	import std.datetime : StopWatch, Duration;
+
+	StopWatch stopWatch;
+
 	@property {
 		bool onMainThread() shared { return true; }
 		bool onAdditionalThreads() shared { return true; }
@@ -222,7 +226,15 @@ final class ASource : EventLoopSource, EventLoopSourceRetriever {
 
 	bool nextEvent(ref Event event) shared {
 		import std.stdio;writeln("====TICK====");
-		onForcedDraw();
+
+		StopWatch* sw = cast(StopWatch*)&stopWatch;
+		if (!sw.running)
+			sw.start;
+
+		if ((cast(Duration)sw.peek()).total!"msecs" >= 16) {
+			onForcedDraw();
+			sw.reset;
+		}
 		return false;
 	}
 	void handledEvent(ref Event event) shared {}
