@@ -24,7 +24,7 @@ interface Feature_Window_Menu {
 }
 
 ///
-alias MenuCallback = void delegate(Window_MenuItem);
+alias Window_MenuCallback = void delegate(Window_MenuItem);
 
 ///
 interface Window_MenuItem {
@@ -68,7 +68,7 @@ interface Window_MenuItem {
         void disabled(bool);
 
         /// Not valid if there are children
-        void callback(MenuCallback);
+        void callback(Window_MenuCallback);
     }
 }
 

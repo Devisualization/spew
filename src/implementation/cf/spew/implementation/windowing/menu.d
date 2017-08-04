@@ -36,7 +36,7 @@ class MenuItemImpl : Window_MenuItem {
 			void divider(bool v);
 			bool disabled();
 			void disabled(bool v);
-			void callback(MenuCallback callback);
+			void callback(Window_MenuCallback callback);
 		}
 	}
 }
@@ -204,7 +204,7 @@ version(Windows) {
 					DrawMenuBar(window.hwnd);
 				}
 				
-				void callback(MenuCallback callback) {
+				void callback(Window_MenuCallback callback) {
 					window.menuCallbacks[menuItemId] = callback;
 				}
 			}

@@ -89,7 +89,7 @@ version(Windows) {
 			List!Window_MenuItem menuItems = void;
 			uint menuItemsCount;
 			Map!(size_t, Window_MenuItem) menuItemsIds = void;
-			Map!(size_t, MenuCallback) menuCallbacks = void;
+			Map!(size_t, Window_MenuCallback) menuCallbacks = void;
 			
 			WindowStyle windowStyle;
 			
@@ -110,7 +110,7 @@ version(Windows) {
 
 			menuItems = List!Window_MenuItem(alloc);
 			menuItemsIds = Map!(size_t, Window_MenuItem)(alloc);
-			menuCallbacks = Map!(size_t, MenuCallback)(alloc);
+			menuCallbacks = Map!(size_t, Window_MenuCallback)(alloc);
 			menuItemsCount = 9000;
 			
 			if (processOwns)
