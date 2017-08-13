@@ -28,8 +28,9 @@ struct OpenGL_Loader(T_Callbacks, T_Bindings=defaultgl.GL, T_Bindings_ExtensionU
 		bool loaded;
 		SharedLib sharedLib;
 		T_Bindings* bindings;
+		char[256] openglFunctionNameBuffer;
 
-		alias PlatformSpecificLoaderFunc = extern(System) void* function(char*);
+		alias PlatformSpecificLoaderFunc = extern(System) void* function(char*) @nogc;
 		PlatformSpecificLoaderFunc platformSpecificLoaderFunc;
 	}
 
@@ -79,7 +80,6 @@ struct OpenGL_Loader(T_Callbacks, T_Bindings=defaultgl.GL, T_Bindings_ExtensionU
 		import std.traits : isFunctionPointer, hasUDA, getUDAs;
 		if (!loaded) init;
 
-		import std.stdio;writeln("reloadSymbols!", LoadExtensions);
 		foreach(m; __traits(allMembers, T_Bindings)) {
 			static if (__traits(compiles, mixin("typeof(bindings." ~ m ~ ")")) && isFunctionPointer!(mixin("typeof(bindings." ~ m ~ ")"))) {
 			
@@ -116,18 +116,18 @@ struct OpenGL_Loader(T_Callbacks, T_Bindings=defaultgl.GL, T_Bindings_ExtensionU
 	}
 	
 	void* getSymbol(string name) {
-		import std.string : toStringz;
 		if (!loaded) init;
 
 		void* ret;
 
-		//import std.stdio;writeln("getSymbol: ", name);
-		if (platformSpecificLoaderFunc !is null)
-			ret = platformSpecificLoaderFunc(cast(char*)name.toStringz);
+		if (platformSpecificLoaderFunc !is null) {
+			openglFunctionNameBuffer[0 .. name.length] = name[];
+			openglFunctionNameBuffer[name.length] = 0;
+			ret = platformSpecificLoaderFunc(openglFunctionNameBuffer.ptr);
+		}
+
 		if (ret is null)
 			ret = sharedLib.loadSymbol(name, false);
-
-		//import std.stdio;writeln("\t", ret);
 
 		return ret;
 	}
