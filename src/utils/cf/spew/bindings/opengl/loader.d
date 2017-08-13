@@ -76,15 +76,29 @@ struct OpenGL_Loader(T_Callbacks, T_Bindings=defaultgl.GL, T_Bindings_ExtensionU
 	}
 	
 	void reloadSymbols(bool LoadExtensions)() {
-		import std.traits : isFunctionPointer, hasUDA;
+		import std.traits : isFunctionPointer, hasUDA, getUDAs;
 		if (!loaded) init;
 
 		import std.stdio;writeln("reloadSymbols!", LoadExtensions);
 		foreach(m; __traits(allMembers, T_Bindings)) {
 			static if (__traits(compiles, mixin("typeof(bindings." ~ m ~ ")")) && isFunctionPointer!(mixin("typeof(bindings." ~ m ~ ")"))) {
+			
+				enum No_ExtensionUDA = !is(T_Bindings_ExtensionUDA == void);
+				enum Have_Extension_UDA = !No_ExtensionUDA && hasUDA!(mixin("T_Bindings." ~ m), T_Bindings_ExtensionUDA);
+
+				static if (!LoadExtensions && (No_ExtensionUDA || Have_Extension_UDA)) {
+					enum Checked = true;
+				} else static if (Have_Extension_UDA &&
+					!is(T_Bindings_VersionUDA == void) && hasUDA!(mixin("T_Bindings." ~ m), T_Bindings_VersionUDA)) {
+
+					enum UDAS = getUDAs!(mixin("T_Bindings." ~ m), T_Bindings_VersionUDA);
+					enum Checked = LoadExtensions || cast(int)UDAS[0] < 30;
+				} else {
+					enum Checked = false;
+				}
 
 				// disable/enable extensions+versions
-				static if (checkVersionExtension!(m)(LoadExtensions)) {
+				static if (Checked) {
 					void* got = getSymbol(m);
 					if (got !is null)
 						mixin("bindings." ~ m ~ " = cast(typeof(bindings." ~ m ~ "))got;");
@@ -116,22 +130,5 @@ struct OpenGL_Loader(T_Callbacks, T_Bindings=defaultgl.GL, T_Bindings_ExtensionU
 		//import std.stdio;writeln("\t", ret);
 
 		return ret;
-	}
-
-	private static pure {
-		bool checkVersionExtension(string member)(bool enable) {
-			import std.traits : hasUDA, getUDAs;
-
-			if (is(T_Bindings_ExtensionUDA == void) || enable || 
-				(!is(T_Bindings_ExtensionUDA == void) && hasUDA!(mixin("T_Bindings." ~ member), T_Bindings_ExtensionUDA) == enable)) {
-				static if (!is(T_Bindings_VersionUDA == void) && hasUDA!(mixin("T_Bindings." ~ member), T_Bindings_VersionUDA)) {
-					enum UDAS = getUDAs!(mixin("T_Bindings." ~ member), T_Bindings_VersionUDA);
-					
-					return enable || (cast(int)UDAS[0] < 30 && !enable);
-				} else
-					return true;
-			} else
-				return false;
-		}
 	}
 }
