@@ -163,7 +163,18 @@ void aWindowTest() {
 	}
 
 	window.events.onForcedDraw = &onForcedDraw;
-	
+
+	window.windowEvents.onMove = (int x, int y) {
+		writeln("onMove: x: ", x, " y: ", y);
+		stdout.flush;
+	};
+
+	window.windowEvents.onRequestClose = () {
+		writeln("onRequestClose");
+		stdout.flush;
+		return true;
+	};
+
 	window.events.onCursorMove = (int x, int y) {
 		writeln("onCursorMove: x: ", x, " y: ", y);
 		stdout.flush;
