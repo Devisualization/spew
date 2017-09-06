@@ -1,7 +1,4 @@
-﻿/**
- * TODO:
- * 	-	Remove usage of HIWORD and LOWORD and replace with GET_X_LPARAM and GET_Y_LPARAM.
- */
+﻿///
 module cf.spew.event_loop.wells.winapi;
 version(Windows):
 
@@ -300,8 +297,8 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 		case WM_MOVE:
 			if (depthOfCallbackCalls == 1) {
 				_event.type = Windowing_Events_Types.Window_Moved;
-				_event.windowing.windowMoved.newX = LOWORD(lParam);
-				_event.windowing.windowMoved.newY = HIWORD(lParam);
+				_event.windowing.windowMoved.newX = cast(short)LOWORD(lParam);
+				_event.windowing.windowMoved.newY = cast(short)HIWORD(lParam);
 			} else {
 				addToBacklog(hwnd, WM_MOVE, wParam, lParam);
 			}
@@ -433,8 +430,8 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 			_event.type = Windowing_Events_Types.Window_CursorMoved;
 			_event.wellData2Value = wParam;
 			_event.wellData3Value = lParam;
-			_event.windowing.cursorMoved.newX = LOWORD(lParam);
-			_event.windowing.cursorMoved.newY = HIWORD(lParam);
+			_event.windowing.cursorMoved.newX = cast(short)LOWORD(lParam);
+			_event.windowing.cursorMoved.newY = cast(short)HIWORD(lParam);
 			return 0;
 
 		case WM_LBUTTONDOWN:
@@ -442,8 +439,8 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 			_event.wellData2Value = wParam;
 			_event.windowing.cursorAction.action = CursorEventAction.Select;
 			_event.windowing.cursorAction.isDoubleClick = false;
-			_event.windowing.cursorAction.x = LOWORD(lParam);
-			_event.windowing.cursorAction.y = HIWORD(lParam);
+			_event.windowing.cursorAction.x = cast(short)LOWORD(lParam);
+			_event.windowing.cursorAction.y = cast(short)HIWORD(lParam);
 			return 0;
 
 		case WM_LBUTTONUP:
@@ -451,8 +448,8 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 			_event.wellData2Value = wParam;
 			_event.windowing.cursorAction.action = CursorEventAction.Select;
 			_event.windowing.cursorAction.isDoubleClick = false;
-			_event.windowing.cursorAction.x = LOWORD(lParam);
-			_event.windowing.cursorAction.y = HIWORD(lParam);
+			_event.windowing.cursorAction.x = cast(short)LOWORD(lParam);
+			_event.windowing.cursorAction.y = cast(short)HIWORD(lParam);
 			return 0;
 
 		case WM_LBUTTONDBLCLK:
@@ -460,8 +457,8 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 			_event.wellData2Value = wParam;
 			_event.windowing.cursorAction.action = CursorEventAction.Select;
 			_event.windowing.cursorAction.isDoubleClick = true;
-			_event.windowing.cursorAction.x = LOWORD(lParam);
-			_event.windowing.cursorAction.y = HIWORD(lParam);
+			_event.windowing.cursorAction.x = cast(short)LOWORD(lParam);
+			_event.windowing.cursorAction.y = cast(short)HIWORD(lParam);
 			return 0;
 
 		case WM_RBUTTONDOWN:
@@ -469,8 +466,8 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 			_event.wellData2Value = wParam;
 			_event.windowing.cursorAction.action = CursorEventAction.Alter;
 			_event.windowing.cursorAction.isDoubleClick = false;
-			_event.windowing.cursorAction.x = LOWORD(lParam);
-			_event.windowing.cursorAction.y = HIWORD(lParam);
+			_event.windowing.cursorAction.x = cast(short)LOWORD(lParam);
+			_event.windowing.cursorAction.y = cast(short)HIWORD(lParam);
 			return 0;
 
 		case WM_RBUTTONUP:
@@ -478,8 +475,8 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 			_event.wellData2Value = wParam;
 			_event.windowing.cursorAction.action = CursorEventAction.Alter;
 			_event.windowing.cursorAction.isDoubleClick = false;
-			_event.windowing.cursorAction.x = LOWORD(lParam);
-			_event.windowing.cursorAction.y = HIWORD(lParam);
+			_event.windowing.cursorAction.x = cast(short)LOWORD(lParam);
+			_event.windowing.cursorAction.y = cast(short)HIWORD(lParam);
 			return 0;
 
 		case WM_RBUTTONDBLCLK:
@@ -487,8 +484,8 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 			_event.wellData2Value = wParam;
 			_event.windowing.cursorAction.action = CursorEventAction.Alter;
 			_event.windowing.cursorAction.isDoubleClick = true;
-			_event.windowing.cursorAction.x = LOWORD(lParam);
-			_event.windowing.cursorAction.y = HIWORD(lParam);
+			_event.windowing.cursorAction.x = cast(short)LOWORD(lParam);
+			_event.windowing.cursorAction.y = cast(short)HIWORD(lParam);
 			return 0;
 
 		case WM_MBUTTONDOWN:
@@ -496,8 +493,8 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 			_event.wellData2Value = wParam;
 			_event.windowing.cursorAction.action = CursorEventAction.ViewChange;
 			_event.windowing.cursorAction.isDoubleClick = false;
-			_event.windowing.cursorAction.x = LOWORD(lParam);
-			_event.windowing.cursorAction.y = HIWORD(lParam);
+			_event.windowing.cursorAction.x = cast(short)LOWORD(lParam);
+			_event.windowing.cursorAction.y = cast(short)HIWORD(lParam);
 			return 0;
 
 		case WM_MBUTTONUP:
@@ -505,8 +502,8 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 			_event.wellData2Value = wParam;
 			_event.windowing.cursorAction.action = CursorEventAction.ViewChange;
 			_event.windowing.cursorAction.isDoubleClick = false;
-			_event.windowing.cursorAction.x = LOWORD(lParam);
-			_event.windowing.cursorAction.y = HIWORD(lParam);
+			_event.windowing.cursorAction.x = cast(short)LOWORD(lParam);
+			_event.windowing.cursorAction.y = cast(short)HIWORD(lParam);
 			return 0;
 
 		case WM_MBUTTONDBLCLK:
@@ -514,15 +511,15 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 			_event.wellData2Value = wParam;
 			_event.windowing.cursorAction.action = CursorEventAction.ViewChange;
 			_event.windowing.cursorAction.isDoubleClick = true;
-			_event.windowing.cursorAction.x = LOWORD(lParam);
-			_event.windowing.cursorAction.y = HIWORD(lParam);
+			_event.windowing.cursorAction.x = cast(short)LOWORD(lParam);
+			_event.windowing.cursorAction.y = cast(short)HIWORD(lParam);
 			return 0;
 
 		case WM_MOUSEWHEEL:
 			_event.type = Windowing_Events_Types.Window_CursorScroll;
 			_event.windowing.scroll.amount = GET_WHEEL_DELTA_WPARAM(wParam);
-			_event.windowing.scroll.x = LOWORD(lParam);
-			_event.windowing.scroll.y = HIWORD(lParam);
+			_event.windowing.scroll.x = cast(short)LOWORD(lParam);
+			_event.windowing.scroll.y = cast(short)HIWORD(lParam);
 			return 0;
 
 		//case WM_KEYFIRST: same as WM_KEYDOWN
