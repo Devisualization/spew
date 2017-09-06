@@ -175,6 +175,14 @@ version(Windows) {
 						tryFunc(w.menuCallbacks[event.wellData2Value], w.menuItemsIds[event.wellData2Value]);
 						return true;
 
+					case Windowing_Events_Types.Window_KeyUp:
+						tryFunc(w2.onKeyEntryDel, event.windowing.keyInput.key, event.windowing.keyInput.special, event.windowing.keyInput.modifiers);
+						tryFunc(w2.onKeyReleaseDel, event.windowing.keyUp.key, event.windowing.keyUp.special, event.windowing.keyUp.modifiers);
+						return true;
+					case Windowing_Events_Types.Window_KeyDown:
+						tryFunc(w2.onKeyPressDel, event.windowing.keyDown.key, event.windowing.keyDown.special, event.windowing.keyDown.modifiers);
+						return true;
+
 					default:
 						if (event.type == WinAPI_Events_Types.Raw) {
 							if (event.winapi.raw.message == winapi.WM_ERASEBKGND) {

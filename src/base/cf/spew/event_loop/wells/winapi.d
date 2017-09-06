@@ -830,8 +830,7 @@ bool translateKeyCall(WPARAM code, LPARAM lParam, out dchar key, out SpecialKey 
 			key = cast(dchar)('0' + (code - VK_NUMPAD0));
 			modifiers |= KeyModifiers.Numlock; break;
 		case 'A': .. case 'Z':
-			if (isCtrl)
-				key = cast(dchar)(isCapital ? code : (code + Atoa));
+			key = cast(dchar)(isCapital ? code : (code + Atoa));
 			break;
 		case VK_LEFT:
 			specialKey = SpecialKey.LeftArrow; break;

@@ -46,8 +46,26 @@ interface IWindowEvents : IRenderEvents {
 		/// Ditto
 		final void onRequestClose(EventOnRequestCloseFunc func) { onRequestClose(func.toDelegate); }
 
-		// TODO: on key down + up
+		/**
+         * When the key is pressed, the callback is called.
+         *
+         * Params:
+         *      del     =   The callback to call
+         */
+		void onKeyPress(EventOnKeyDel del);
 
+		/// Ditto
+		final void onKeyPress(EventOnKeyFunc func) { onKeyPress(func.toDelegate); }
 
+		/**
+         * When the key is released, the callback is called.
+         *
+         * Params:
+         *      del     =   The callback to call
+         */
+		void onKeyRelease(EventOnKeyDel del);
+		
+		/// Ditto
+		final void onKeyRelease(EventOnKeyFunc func) { onKeyRelease(func.toDelegate); }
 	}
 }

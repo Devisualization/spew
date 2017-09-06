@@ -191,6 +191,33 @@ void aWindowTest() {
 		}
 	};
 
+	window.windowEvents.onKeyPress = (dchar key, SpecialKey specialKey, ushort modifiers) {
+		writeln("onKeyPress: key: ", key, " specialKey: ", specialKey, " modifiers: ", modifiers);
+		stdout.flush;
+		
+		if (specialKey == SpecialKey.Escape)
+			Instance.current.eventLoop.stopAllThreads;
+		else if (key == '1')
+			window.lockCursorToWindow;
+		else if (key == '2')
+			window.unlockCursorFromWindow;
+		
+		foreach(e; __traits(allMembers, KeyModifiers)) {
+			if (modifiers.isBitwiseMask(__traits(getMember, KeyModifiers, e)))
+				writeln("\t ", e.stringof);
+		}
+	};
+	
+	window.windowEvents.onKeyRelease = (dchar key, SpecialKey specialKey, ushort modifiers) {
+		writeln("onKeyRelease: key: ", key, " specialKey: ", specialKey, " modifiers: ", modifiers);
+		stdout.flush;
+		
+		foreach(e; __traits(allMembers, KeyModifiers)) {
+			if (modifiers.isBitwiseMask(__traits(getMember, KeyModifiers, e)))
+				writeln("\t ", e.stringof);
+		}
+	};
+
 	window.events.onScroll = (int amount) {
 		writeln("onScroll: ", amount);
 		stdout.flush;

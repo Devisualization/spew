@@ -21,7 +21,7 @@ abstract class WindowImpl : IWindow, IWindowEvents {
 		EventOnCursorMoveDel onCursorMoveDel;
 		EventOnCursorActionDel onCursorActionDel, onCursorActionEndDel;
 		EventOnScrollDel onScrollDel;
-		EventOnKeyDel onKeyEntryDel;
+		EventOnKeyDel onKeyEntryDel, onKeyPressDel, onKeyReleaseDel;
 		EventOnSizeChangeDel onSizeChangeDel;
 		EventOnMoveDel onMoveDel;
 
@@ -58,9 +58,11 @@ abstract class WindowImpl : IWindow, IWindowEvents {
 		void onClose(EventOnCloseDel del) { onCloseDel = del; }
 		void onKeyEntry(EventOnKeyDel del) { onKeyEntryDel = del; }
 		void onSizeChange(EventOnSizeChangeDel del) { onSizeChangeDel = del; }
-		
+
 		void onMove(EventOnMoveDel del) { onMoveDel = del; }
 		void onRequestClose(EventOnRequestCloseDel del) { onRequestCloseDel = del; }
+		void onKeyPress(EventOnKeyDel del) { onKeyPressDel = del; }
+		void onKeyRelease(EventOnKeyDel del) { onKeyReleaseDel = del; }
 	}
 }
 
