@@ -20,6 +20,7 @@
 			"sourcePaths": ["src/base"],
 			"importPaths": ["src/base"],
 
+			"excludedSourceFiles": ["src/diagnostic.d"],
 			"targetType": "sourceLibrary",
 			"dependencies": {
 				"spew:utils": "*"
