@@ -14,5 +14,7 @@ enum EventSources {
 	///
 	X11 = EventSource.from("s_x11"),
 	///
-	Cocoa = EventSource.from("s_cocoa")
+	Cocoa = EventSource.from("s_cocoa"),
+
+	LibUV = EventSource.from("s_libuv"),
 }
