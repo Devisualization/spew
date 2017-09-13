@@ -13,6 +13,9 @@ So why should we take you seriously? After all glib exists. Well, you're still r
 ## Platform support
 - Windows 7+ (tested on Windows 10 officially only)
 
+Depends upon libuv for sockets+timer support.
+Can load+extract from a [Nuget]() package. Thie linked packed is fat, meaning it should work on Linux, OSX and Windows.
+
 ## Tasks
 
 - [ ] General structure
@@ -44,17 +47,17 @@ So why should we take you seriously? After all glib exists. Well, you're still r
        - [ ] VRAM
        - [ ] OpenGL
        - [ ] Vulkan
-  - [ ] WinAPI
+  - [x] WinAPI
     - [ ] Core
-    - [ ] Features:
-       - [ ] notifications
-       - [ ] cursor
-       - [ ] icon
-       - [ ] menu
-       - [ ] screenshot
+    - [x] Features:
+       - [x] notifications
+       - [x] cursor
+       - [x] icon
+       - [x] menu
+       - [x] screenshot
     - [ ] Contexts:
-       - [ ] VRAM
-       - [ ] OpenGL
+       - [x] VRAM
+       - [x] OpenGL
        - [ ] DirectX
        - [ ] Vulkan
   - [ ] Cocoa
