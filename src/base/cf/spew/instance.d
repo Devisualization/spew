@@ -1,5 +1,6 @@
 ﻿///
 module cf.spew.instance;
+import std.experimental.memory.managed;
 
 ///
 abstract class Instance {
@@ -9,6 +10,9 @@ abstract class Instance {
 		shared(Management_EventLoop) eventLoop() shared;
 		/// The user interfacing implementation for this application
 		shared(Management_UserInterface) userInterface() shared;
+		/// Streams implementation, might be only available on the main thread.
+		shared(Management_Streams) streams() shared;
+
 		///
 		pragma(inline, true)
 		final shared(Management_UserInterface) ui() shared { return userInterface; }
@@ -73,28 +77,43 @@ interface Management_EventLoop {
 interface Management_UserInterface {
 	import cf.spew.ui : IWindow, IDisplay, IWindowCreator, IRenderPoint, IRenderPointCreator;
 	import std.experimental.allocator : IAllocator, theAllocator;
-	import std.experimental.memory.managed;
 
 	///
-	managed!IRenderPointCreator createRenderPoint(IAllocator alloc = cast(IAllocator)theAllocator()) shared;
+	managed!IRenderPointCreator createRenderPoint(IAllocator alloc = theAllocator()) shared;
 	
 	/// completely up to platform implementation to what the defaults are
-	IRenderPoint createARenderPoint(IAllocator alloc = cast(IAllocator)theAllocator()) shared;
+	IRenderPoint createARenderPoint(IAllocator alloc = theAllocator()) shared;
 	
 	///
-	managed!IWindowCreator createWindow(IAllocator alloc = cast(IAllocator)theAllocator()) shared;
+	managed!IWindowCreator createWindow(IAllocator alloc = theAllocator()) shared;
 	
 	/// completely up to platform implementation to what the defaults are
-	IWindow createAWindow(IAllocator alloc = cast(IAllocator)theAllocator()) shared;
+	IWindow createAWindow(IAllocator alloc = theAllocator()) shared;
 	
 	@property {
 		///
-		managed!IDisplay primaryDisplay(IAllocator alloc = cast(IAllocator)theAllocator()) shared;
+		managed!IDisplay primaryDisplay(IAllocator alloc = theAllocator()) shared;
 		
 		///
-		managed!(IDisplay[]) displays(IAllocator alloc = cast(IAllocator)theAllocator()) shared;
+		managed!(IDisplay[]) displays(IAllocator alloc = theAllocator()) shared;
 		
 		///
-		managed!(IWindow[]) windows(IAllocator alloc = cast(IAllocator)theAllocator()) shared;
+		managed!(IWindow[]) windows(IAllocator alloc = theAllocator()) shared;
 	}
+}
+
+/// Beware, thread-local!
+interface Management_Streams {
+	import cf.spew.streams.defs;
+	import std.socket : Address;
+	import std.experimental.allocator : IAllocator, theAllocator;
+
+	///
+	managed!IStreamCreator createStream(StreamType type, IAllocator alloc=theAllocator()) shared;
+
+	///
+	managed!(Address[]) allLocalAddress(IAllocator alloc=theAllocator()) shared;
+
+	/// 
+	void forceCloseAll() shared;
 }

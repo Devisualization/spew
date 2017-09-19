@@ -200,6 +200,7 @@ version(Windows) {
 		}
 
 		@property {
+			override Nullable!EventSource pairOnlyWithSource() shared { return Nullable!EventSource(EventSources.WinAPI); }
 			bool onMainThread() shared { return true; }
 			bool onAdditionalThreads() shared { return true; }
 		}

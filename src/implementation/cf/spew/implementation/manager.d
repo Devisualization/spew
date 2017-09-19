@@ -293,22 +293,23 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 					Event event;
 					while(instance.retriever.nextEvent(event)) {
 						bool handled;
-
-						try {
-							foreach(consumer; instance.consumers) {
-								if (consumer.pairOnlyWithEvents == event.type) {
-									handled = true;
-									consumer.processEvent(event);
+						if (event.type.value > 0) {
+							try {
+								foreach(consumer; instance.consumers) {
+									if (consumer.pairOnlyWithEvents == event.type) {
+										handled = true;
+										consumer.processEvent(event);
+									}
 								}
-							}
 
-							if (handled)
-								instance.retriever.handledEvent(event);
-							else
-								instance.retriever.unhandledEvent(event);
-						} catch(Exception e) {
-							instance.retriever.handledErrorEvent(event);
-							onErrorDelegate(threadId, e);
+								if (handled)
+									instance.retriever.handledEvent(event);
+								else
+									instance.retriever.unhandledEvent(event);
+							} catch(Exception e) {
+								instance.retriever.handledErrorEvent(event);
+								onErrorDelegate(threadId, e);
+							}
 						}
 					}
 				}

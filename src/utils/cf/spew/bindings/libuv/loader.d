@@ -1,6 +1,9 @@
 ﻿module cf.spew.bindings.libuv.loader;
 import cf.spew.bindings.symbolloader;
 
+///
+__gshared LibUVLoader libuvLoader;
+
 /// uses GC because it is "smart" in loading the library
 struct LibUVLoader {
 	private {

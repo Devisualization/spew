@@ -23,7 +23,7 @@ module cf.spew.bindings.libuv.uv_win;
 import cf.spew.bindings.libuv.uv;
 version(Windows):
 
-__gshared nothrow @nogc @system extern(C):
+__gshared extern(C):
 
 import core.sys.windows.winsock2;
 public import core.sys.windows.winsock2;

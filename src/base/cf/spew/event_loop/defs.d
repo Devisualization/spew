@@ -72,6 +72,8 @@ interface EventLoopConsumer : IEventLoopThing {
 ///
 interface EventLoopSourceRetriever {
 	/**
+	 * If the events type value is 0, then don't search for a consumer.
+	 * 
 	 * Returns:
 	 * 		If a valid event
 	 */

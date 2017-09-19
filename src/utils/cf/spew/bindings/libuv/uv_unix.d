@@ -1,7 +1,7 @@
 ﻿module cf.spew.bindings.libuv.uv_unix;
 __EOF__
 version(Posix):
-__gshared nothrow @nogc @system extern(C):
+__gshared extern(C):
 
 import core.sys.posix.sys.types;
 import core.sys.posix.sys.stat;

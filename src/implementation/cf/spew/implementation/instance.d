@@ -9,11 +9,13 @@ import cf.spew.ui.rendering : vec2;
 
 final class DefaultImplementation : Instance {
 	import cf.spew.event_loop.defs : EventLoopSource, EventLoopConsumer;
+	import core.thread : ThreadID, Thread;
 
 	~this() {
 		if (__Initialized) {
 			allocator.dispose(_eventLoop);
 			allocator.dispose(_userInterface);
+			allocator.dispose(_streamInstance);
 
 			allocator.dispose(_mainEventSource_);
 			allocator.dispose(_mainEventConsumer_);
@@ -24,6 +26,7 @@ final class DefaultImplementation : Instance {
 	shared(ISharedAllocator) allocator;
 	shared(Management_EventLoop) _eventLoop;
 	shared(UIInstance) _userInterface;
+	shared(StreamsInstance) _streamInstance;
 
 	@property {
 		override shared(Management_EventLoop) eventLoop() shared {
@@ -34,6 +37,11 @@ final class DefaultImplementation : Instance {
 		override shared(Management_UserInterface) userInterface() shared {
 			__guardCheck();
 			return _userInterface;
+		}
+
+		override shared(Management_Streams) streams() shared {
+			__guardCheck();
+			return _streamInstance;
 		}
 	}
 
@@ -54,6 +62,14 @@ final class DefaultImplementation : Instance {
 		allocator = processAllocator();
 
 		_eventLoop = allocator.make!(shared(EventLoopWrapper))(allocator);
+
+		// LibUV stuff for streams support
+		version(all) {
+			import cf.spew.event_loop.wells.libuv;
+
+			_streamInstance = allocator.make!(shared(StreamsInstance_LibUV))(allocator);
+			_eventLoop.manager.addSources(LibUVEventLoopSource.instance);
+		}
 
 		version(Windows) {
 			import cf.spew.event_loop.wells.winapi;
@@ -319,5 +335,43 @@ version(Windows) {
 				void clearNotifications() shared { assert(0); }
 			}
 		}
+	}
+}
+
+abstract class StreamsInstance : Management_Streams {
+	import cf.spew.streams.defs;
+	import std.socket : Address;
+	import std.experimental.allocator : ISharedAllocator, processAllocator;
+
+	shared(ISharedAllocator) allocator;
+
+	~this() {
+		(cast(shared)this).forceCloseAll();
+	}
+
+	this(shared(ISharedAllocator) allocator) shared {
+		this.allocator = allocator;
+	}
+
+	void forceCloseAll() shared {
+		import cf.spew.implementation.streams : closeAllInstances;
+		closeAllInstances();
+	}
+}
+
+class StreamsInstance_LibUV : StreamsInstance {
+	import cf.spew.streams.defs;
+
+	this(shared(ISharedAllocator) allocator) shared {
+		super(allocator);
+	}
+
+	managed!IStreamCreator createStream(StreamType type, IAllocator alloc=theAllocator()) shared {
+		import cf.spew.implementation.streams;
+		return cast(managed!IStreamCreator)managed!LibUVStreamCreator(alloc.make!LibUVStreamCreator(type, alloc), managers(), alloc);
+	}
+	
+	managed!(Address[]) allLocalAddress(IAllocator alloc=theAllocator()) shared {
+		assert(0);
 	}
 }
