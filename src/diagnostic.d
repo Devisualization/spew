@@ -2,12 +2,13 @@ module diagnostic;
 
 import core.time : Duration;
 import std.experimental.allocator;
+import std.experimental.memory.managed;
 
+import cf.spew.instance;
 import cf.spew.events.defs;
 import cf.spew.event_loop.defs;
 
 int main() {
-	import cf.spew.instance;
 
 	version(all) {
 		import std.stdio;
@@ -88,17 +89,58 @@ int main() {
 		writeln("\t- Event loop");
 		//writeln("\t- User interface");
 		writeln("are all provided and functioning correctly.");
-
-		aWindowTest();
 	}
+
+	aSocketTCPClientCreate();
+	aSocketTCPServerCreate();
+
+	// normally 3s would be ok for a timeout, but ugh with sockets, not so much!
+	import std.datetime : msecs;
+	Instance.current.eventLoop.manager.setSourceTimeout(30.msecs);
+	aWindowTest();
+	Instance.current.eventLoop.execute();
 
 	return 0;
 }
 
+import cf.spew.streams.defs;
+managed!IStreamEndpoint tcpClientEndPoint;
+managed!IStreamServer tcpServer;
+
+void aSocketTCPClientCreate() {
+	import std.socket : InternetAddress;
+	import std.stdio : write, stdout;
+	
+	auto streamCreator = Instance.current.streams.createStream(StreamType.TCP);
+	streamCreator.onData = (client, data) {
+		write(cast(string)data); stdout.flush;
+		return true;
+	};
+	streamCreator.onStreamCreate = (client) { client.write(cast(ubyte[])"
+GET / HTTP/1.1\r
+Host: cattermole.co.nz\r
+\r
+\r\n"[1 .. $]); };
+	tcpClientEndPoint = streamCreator.connectClient(new InternetAddress("cattermole.co.nz", 80));
+}
+
+void aSocketTCPServerCreate() {
+	import std.socket : InternetAddress;
+	import std.stdio : write, stdout;
+
+	auto streamCreator = Instance.current.streams.createStream(StreamType.TCP);
+	streamCreator.onData = (client, data) {
+		client.write(data);
+		write(cast(string)data);stdout.flush;
+		return true;
+	};
+	tcpServer = streamCreator.bindServer(new InternetAddress("127.0.0.1", 50968));
+}
 
 import cf.spew.bindings.opengl;
 import cf.spew.ui;
 GL* gl;
+OpenGL_Loader!OpenGL_Context_Callbacks oglLoader; // global becuase of unload order
 bool openglContextCreated, openglObjectsCreated;
 GLuint vertexShaderGL, fragmentShaderGL, programGL, vertexbufferGL, vertexArrayGL;
 GLint resultGL, infoLogLengthGL;
@@ -142,8 +184,8 @@ void aWindowTest() {
 
 	version(all) {
 		gl = new GL;
-		auto openglLoader = OpenGL_Loader!OpenGL_Context_Callbacks(gl);
-		creator.assignOpenGLContext(OpenGLVersion(3, 2), &openglLoader.callbacks);
+		oglLoader = OpenGL_Loader!OpenGL_Context_Callbacks(gl);
+		creator.assignOpenGLContext(OpenGLVersion(3, 2), &oglLoader.callbacks);
 	}
 
 	window = creator.createWindow();
@@ -254,8 +296,6 @@ void aWindowTest() {
 	
 	window.show();
 
-	import std.datetime : seconds;
-	Instance.current.eventLoop.manager.setSourceTimeout(3.seconds);
 	Instance.current.eventLoop.manager.addSources(new shared ASource);
 	Instance.current.eventLoop.execute();
 }
@@ -303,7 +343,7 @@ void onForcedDraw() {
 
 	if (!window.context.readyToBeUsed)
 		return;
-	
+
 	if (window.context.capableOfVRAM) {
 		auto buffer = window.context.vramAlphaBuffer;
 		buffer.fillOn(RGBA8(255, 0, 0, 255));

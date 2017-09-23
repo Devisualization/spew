@@ -26,11 +26,18 @@ Can load+extract from a [Nuget]() package. Thie linked packed is fat, meaning it
     - [ ] X11
     - [x] WinAPI
     - [ ] Cocoa
+	- [x] LibUV
   - [ ] Consumers:
     - [ ] X11
     - [x] WinAPI
     - [ ] Cocoa
-- [ ] Sockets
+- [ ] Streams
+	- [x] TCP
+		- [x] Client
+		- [x] Server
+	- [ ] UDP
+		- [ ] Client
+		- [ ] Server
 - [ ] Threading
 - [ ] File system
 - [ ] Timer

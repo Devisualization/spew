@@ -30,7 +30,7 @@
 			"name": "implementation",
 			"sourcePaths": ["src/implementation"],
 			"importPaths": ["src/implementation"],
-			"versions": ["IE5"],
+			"versions-windows": ["IE5"],
 
 			"targetType": "library",
 			
@@ -45,6 +45,7 @@
 			"targetType": "library",
 			"sourcePaths": ["src/utils"],
 			"importPaths": ["src/utils"],
+			"versions-windows": ["Windows2003"],
 		}
 	]
 }

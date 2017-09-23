@@ -41,6 +41,7 @@ class LibUVStreamCreator : IStreamCreator {
 
 		bool tcp_nodelay_;
 		Duration tcp_timeout_ = Duration.zero;
+		ushort listBacklogAmount_ = 128;
 
 		OnStreamDataDel onData_;
 		OnStreamLifeDel onClose_, onCreate_;
@@ -58,6 +59,7 @@ class LibUVStreamCreator : IStreamCreator {
 		void onData(OnStreamDataDel callback) { onData_ = callback; }
 		void onStreamCreate(OnStreamLifeDel callback) { onCreate_ = callback; }
 		void onStreamClose(OnStreamLifeDel callback) { onClose_ = callback; }
+		void listenBacklog(ushort amount) { listBacklogAmount_ = amount; }
 	}
 
 	managed!IStreamEndpoint connectClient(scope Address addr) {
@@ -98,17 +100,47 @@ class LibUVStreamCreator : IStreamCreator {
 	}
 
 	managed!IStreamServer bindServer(scope Address addr) {
+		import cf.spew.event_loop.wells.libuv;
 		AnStreamServer ret;
 
+		if (type == StreamType.TCP) {
+			auto temp = alloc.make!LibUVStreamServer(type, alloc);
 
+			auto seconds = tcp_timeout_.total!"seconds";
+			temp.tcp_timeout = seconds;
+			temp.tcp_nodelay = tcp_nodelay_;
 
-		if (ret is null) {
-			return managed!IStreamServer.init;
+			if (addr.addressFamily == AddressFamily.INET) {
+				(*cast(sockaddr_in*)&temp.addrstorage) = *cast(sockaddr_in*)addr.name();
+			} else if (addr.addressFamily == AddressFamily.INET6) {
+				(*cast(sockaddr_in6*)&temp.addrstorage) = *cast(sockaddr_in6*)addr.name();
+			}
+
+			uv_tcp_bind(&temp.ctx_tcp, cast(sockaddr*)&temp.addrstorage, 0);
+
+			int r = uv_listen(&temp.ctx, listBacklogAmount_, &onStreamServerConnectCB);
+			if (r) {
+				alloc.dispose(temp);
+				temp = null;
+			}
+
+			ret = temp;
+		} else if (type == StreamType.UDP) {
+			/+auto temp = alloc.make!LibUVStreamServer(type, null, alloc);
+			
+			ret = temp;+/
+			assert(0, "Not implemented");
 		}
+
+		if (ret is null) return managed!IStreamServer.init;
 		
 		ret.next = serverLL;
 		serverLL = ret.next;
-		
+
+		ret.onCreate_ = onCreate_;
+		ret.onClose_ = onClose_;
+		ret.onData_ = onData_;
+
 		return cast(managed!IStreamServer)managed!AnStreamServer(ret, managers(), alloc);
 	}
 }
@@ -155,11 +187,19 @@ abstract class AnStreamServer : IStreamServer {
 	AnStreamServer next;
 	StreamType _type;
 	IAllocator alloc;
-	
+
+	private {
+		long tcp_timeout;
+		bool tcp_nodelay;
+	}
+
 	this(StreamType type, IAllocator alloc) {
 		_type = type;
 		this.alloc = alloc;
 	}
+
+	OnStreamDataDel onData_;
+	OnStreamLifeDel onClose_, onCreate_;
 
 	~this() {
 		AnStreamServer last,
@@ -179,6 +219,12 @@ abstract class AnStreamServer : IStreamServer {
 			current = current.next;
 		}
 	}
+
+	@property {
+		void onStreamCreate(OnStreamLifeDel callback) { onCreate_ = callback; }
+		void onStreamClose(OnStreamLifeDel callback) { onClose_ = callback; }
+		void onData(OnStreamDataDel callback) { onData_ = callback; }
+	}
 }
 
 class LibUVStreamEndpoint : AnStreamEndPoint {
@@ -188,6 +234,8 @@ class LibUVStreamEndpoint : AnStreamEndPoint {
 		LibUVWriteLL[] allWriteLL;
 		LibUVWriteLL* writeLLFreeList;
 		sockaddr_storage addrstorage;
+
+		LibUVStreamEndpoint* endPointInServerList;
 	}
 
 	union {
@@ -214,12 +262,12 @@ class LibUVStreamEndpoint : AnStreamEndPoint {
 	}
 
 	~this() {
-		if (isOpen)
-			close();
+		if (isOpen) close();
+		if (endPointInServerList !is null) *endPointInServerList = null;
 		alloc.dispose(allWriteLL);
 	}
 
-	void write(ubyte[] data...) {
+	void write(const(ubyte[]) data...) {
 		if (!writable) return;
 		LibUVWriteLL* theLL;
 
@@ -331,7 +379,96 @@ class LibUVStreamEndpoint : AnStreamEndPoint {
 	}
 }
 
+class LibUVStreamServer : AnStreamServer {
+	union {
+		uv_stream_t ctx;
+		uv_tcp_t ctx_tcp;
+		uv_udp_t ctx_udp;
+	}
+
+	private {
+		LibUVStreamServer self;
+		sockaddr_storage addrstorage;
+		bool isClosed;
+		LibUVStreamEndpoint[] allEndPoints;
+	}
+
+	~this() {
+		if (isOpen) close();
+		alloc.dispose(allEndPoints);
+	}
+
+	this(StreamType type, IAllocator alloc) {
+		import cf.spew.event_loop.wells.libuv;
+		super(type, alloc);
+		self = this;
+
+		if (type == StreamType.TCP) {
+			uv_tcp_init(getThreadLoop_UV(), &ctx_tcp);
+		} else if (type == StreamType.UDP) {
+			uv_udp_init(getThreadLoop_UV(), &ctx_udp);
+		} else assert(0);
+
+		allEndPoints = alloc.makeArray!LibUVStreamEndpoint(64);
+		ctx.data = &self;
+	}
+
+	bool isOpen() { return !isClosed; }
+
+	void close() {
+		foreach(ep; allEndPoints) {
+			if (ep !is null && ep.isOpen) ep.close;
+		}
+		uv_close(cast(uv_handle_t*)&ctx, &onStreamServerCloseCB);
+	}
+}
+
 extern(C) {
+	// server
+
+	void onStreamServerConnectCB(uv_stream_t* server, int status) {
+		if (status < 0) return;
+		auto ctx = *cast(LibUVStreamServer*)server.data;
+
+		LibUVStreamEndpoint* slot;
+		foreach(ref v; ctx.allEndPoints) {
+			if (v is null) {
+				slot = &v;
+				break;
+			}
+		}
+
+		if (slot is null) {
+			ctx.alloc.expandArray(ctx.allEndPoints, 128);
+			slot = &ctx.allEndPoints[$-128];
+		}
+
+		LibUVStreamEndpoint endpoint = ctx.alloc.make!LibUVStreamEndpoint(ctx._type, ctx, ctx.alloc);
+		endpoint.endPointInServerList = slot;
+		*slot = endpoint;
+
+		endpoint.onCreate_ = ctx.onCreate_;
+		endpoint.onData_ = ctx.onData_;
+		endpoint.onStreamClose = ctx.onClose_;
+
+		if (uv_accept(server, &endpoint.ctx) == 0) {
+			if (ctx.tcp_timeout > 0) uv_tcp_keepalive(&endpoint.ctx_tcp, 1, cast(uint)ctx.tcp_timeout);
+			uv_tcp_nodelay(&endpoint.ctx_tcp, ctx.tcp_nodelay ? 1 : 0);
+
+			uv_read_start(&endpoint.ctx, &streamAllocCB, &streamEndPointReadCB);
+			if (endpoint.onCreate_ !is null) endpoint.onCreate_(endpoint);
+		} else {
+			ctx.alloc.dispose(endpoint);
+		}
+	}
+
+	void onStreamServerCloseCB(uv_handle_t* handle, int status) {
+		auto ctx = *cast(LibUVStreamServer*)handle.data;
+		ctx.isClosed = true;
+	}
+
+	// end point
+
 	void streamEndPointCreateCB(uv_connect_t* connection, int status) {
 		LibUVStreamEndpoint ctx = *cast(LibUVStreamEndpoint*)connection.handle.data;
 
@@ -353,9 +490,7 @@ extern(C) {
 		if (ctx.onData_ !is null) {
 			if (nread > 0 && ctx.onData_(ctx, cast(ubyte[])buf.base[0 .. cast(size_t)nread])) {}
 			else ctx.close();
-		} else if (nread < 0)
-			ctx.close();
-
+		} else if (nread < 0) ctx.close();
 		ctx.alloc.dispose(cast(char[])buf.base[0 .. buf.len]);
 	}
 

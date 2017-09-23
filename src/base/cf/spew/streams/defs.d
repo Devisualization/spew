@@ -71,6 +71,13 @@ interface IStreamCreator {
 		 *     callback = Calls when the data was available.
 		 */
 		void onData(OnStreamDataDel callback);
+
+		/**
+		 * Number of packets/connections to backlog for a server.
+		 * 
+		 * If you are unsure, do NOT set this!
+		 */
+		void listenBacklog(ushort amount);
 	}
 
 	/// Connects and constructs a stream end point.
@@ -127,7 +134,7 @@ interface IStreamEndpoint {
 	 * Params:
 	 *     data = The data to write
 	 */
-	void write(ubyte[] data...);
+	void write(const(ubyte[]) data...);
 
 	@property {
 		/**
