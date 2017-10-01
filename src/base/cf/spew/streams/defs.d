@@ -24,6 +24,13 @@ alias OnStreamDataDel = bool delegate(IStreamEndpoint conn, const(ubyte[]) data)
  */
 alias OnStreamLifeDel = void delegate(IStreamEndpoint conn);
 
+/**
+ * Callback which is called when stream server is closed.
+ * 
+ * Params:
+ *     conn =  The connection to the stream server
+ */
+alias OnServerLifeDel = void delegate(IStreamServer server);
 ///
 enum StreamType {
 	///
@@ -73,6 +80,14 @@ interface IStreamCreator {
 		void onData(OnStreamDataDel callback);
 
 		/**
+		 * When the stream server is closed, call the callback.
+		 * 
+		 * Params:
+		 *     callback = Calls when the stream server closes.
+		 */
+		void onServerClose(OnServerLifeDel callback);
+
+		/**
 		 * Number of packets/connections to backlog for a server.
 		 * 
 		 * If you are unsure, do NOT set this!
@@ -112,6 +127,14 @@ interface IStreamServer {
 		 *     callback = Calls when the data was available.
 		 */
 		void onData(OnStreamDataDel callback);
+
+		/**
+		 * When the stream server is closed, call the callback.
+		 * 
+		 * Params:
+		 *     callback = Calls when the stream server closes.
+		 */
+		void onServerClose(OnServerLifeDel callback);
 	}
 
 	/// Is the stream open still?

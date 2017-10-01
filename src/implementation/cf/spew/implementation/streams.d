@@ -45,6 +45,7 @@ class LibUVStreamCreator : IStreamCreator {
 
 		OnStreamDataDel onData_;
 		OnStreamLifeDel onClose_, onCreate_;
+		OnServerLifeDel onServerClose_;
 	}
 
 	this(StreamType type, IAllocator alloc) {
@@ -59,6 +60,7 @@ class LibUVStreamCreator : IStreamCreator {
 		void onData(OnStreamDataDel callback) { onData_ = callback; }
 		void onStreamCreate(OnStreamLifeDel callback) { onCreate_ = callback; }
 		void onStreamClose(OnStreamLifeDel callback) { onClose_ = callback; }
+		void onServerClose(OnServerLifeDel callback) { onServerClose_ = callback; }
 		void listenBacklog(ushort amount) { listBacklogAmount_ = amount; }
 	}
 
@@ -140,6 +142,7 @@ class LibUVStreamCreator : IStreamCreator {
 		ret.onCreate_ = onCreate_;
 		ret.onClose_ = onClose_;
 		ret.onData_ = onData_;
+		ret.onServerClose_ = onServerClose_;
 
 		return cast(managed!IStreamServer)managed!AnStreamServer(ret, managers(), alloc);
 	}
@@ -200,6 +203,7 @@ abstract class AnStreamServer : IStreamServer {
 
 	OnStreamDataDel onData_;
 	OnStreamLifeDel onClose_, onCreate_;
+	OnServerLifeDel onServerClose_;
 
 	~this() {
 		AnStreamServer last,
@@ -224,6 +228,7 @@ abstract class AnStreamServer : IStreamServer {
 		void onStreamCreate(OnStreamLifeDel callback) { onCreate_ = callback; }
 		void onStreamClose(OnStreamLifeDel callback) { onClose_ = callback; }
 		void onData(OnStreamDataDel callback) { onData_ = callback; }
+		void onServerClose(OnServerLifeDel callback) { onServerClose_ = callback; }
 	}
 }
 
@@ -465,6 +470,8 @@ extern(C) {
 	void onStreamServerCloseCB(uv_handle_t* handle, int status) {
 		auto ctx = *cast(LibUVStreamServer*)handle.data;
 		ctx.isClosed = true;
+		if (ctx.onServerClose_ !is null)
+			ctx.onServerClose_(ctx);
 	}
 
 	// end point
