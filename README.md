@@ -36,6 +36,8 @@ Can load+extract from a [Nuget]() package. Thie linked packed is fat, meaning it
 		- [x] Client
 		- [x] Server
 	- [ ] UDP
+			I hate sockets with a passion - alphaglosined
+		If you wish to finish implementation [Be Our Guest](https://www.youtube.com/watch?v=hIKhoEIBSxU), a good portion of the TCP code can be reused for UDP.
 		- [ ] Client
 		- [ ] Server
 - [ ] Threading
