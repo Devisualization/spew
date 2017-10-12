@@ -7,3 +7,4 @@
 module cf.spew.ui.context.features;
 public import cf.spew.ui.context.features.vram;
 public import cf.spew.ui.context.features.opengl;
+public import cf.spew.ui.context.features.custom;

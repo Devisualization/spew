@@ -2,12 +2,13 @@
 import cf.spew.implementation.instance;
 import cf.spew.ui;
 import cf.spew.ui.rendering : vec2;
+import cf.spew.ui.context.features.custom;
 import std.experimental.graphic.image : ImageStorage;
 import std.experimental.graphic.color : RGBA8;
 import std.experimental.memory.managed;
 import std.experimental.allocator : IAllocator, make;
 
-abstract class WindowCreatorImpl : IWindowCreator { 
+abstract class WindowCreatorImpl : IWindowCreator, Have_CustomCtx { 
 	package(cf.spew) {
 		shared(UIInstance) uiInstance;
 		
@@ -31,6 +32,8 @@ abstract class WindowCreatorImpl : IWindowCreator {
 		OpenGLVersion oglVersion;
 		OpenGL_Context_Callbacks* oglCallbacks;
 
+		managed!ICustomContext customContext;
+
 		bool shouldAssignMenu;
 	}
 
@@ -46,6 +49,12 @@ abstract class WindowCreatorImpl : IWindowCreator {
 		void location(vec2!short v) { location_ = v; }
 		void display(IDisplay v) { display_ = v; }
 		void allocator(IAllocator v) { alloc = v; }
+	}
+
+	void assignCustomContext(managed!ICustomContext ctx) {
+		customContext = ctx;
+		useOGLContext = false;
+		useVRAMContext = false;
 	}
 
 	void parentWindow(IWindow window) {
@@ -68,6 +77,7 @@ version(Windows) {
 		import cf.spew.implementation.windowing.window;
 		import cf.spew.implementation.windowing.contexts.vram;
 		import cf.spew.implementation.windowing.contexts.opengl;
+		import cf.spew.implementation.windowing.contexts.custom;
 
 		import core.sys.windows.windows : DWORD, RECT, HWND, HMENU, WNDCLASSEXW, HINSTANCE,
 			GetClassInfoExW, IDC_ARROW, IMAGE_CURSOR, LR_DEFAULTSIZE, LR_SHARED, RegisterClassExW,
@@ -205,12 +215,17 @@ version(Windows) {
 				context = alloc.make!VRAMContextImpl_WinAPI(hwnd, vramWithAlpha, alloc);
 			} else if (useOGLContext) {
 				context = alloc.make!OpenGLContextImpl_WinAPI(hwnd, oglVersion, oglCallbacks);
+			} else if (customContext !is null) {
+				context = alloc.make!CustomContext(customContext);
 			}
 			
 			ret = alloc.make!WindowImpl_WinAPI(hwnd, context, alloc, uiInstance, hMenu, true);
 			ret.impl_callbacks_struct.modifySetCursor = &ret.impl_cursorset;
 			ret.impl_callbacks_struct.onDestroy = &ret.impl_callOnClose;
 			SetWindowLongPtrW(hwnd, GWLP_USERDATA, cast(size_t)&ret.impl_callbacks_struct);
+
+			if (customContext !is null)
+				(cast(CustomContext)context).init(ret);
 
 			if (icon !is null)
 				ret.setIcon(icon);
