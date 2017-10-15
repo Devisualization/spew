@@ -2,11 +2,11 @@
 import cf.spew.event_loop.defs;
 import cf.spew.events.defs;
 import std.experimental.allocator : ISharedAllocator, make;
-import cf.spew.bindings.libuv.uv;
+import devisualization.bindings.libuv.uv;
 import core.time;
 
 uv_loop_t* getThreadLoop_UV() {
-	import cf.spew.bindings.libuv.loader;
+	import devisualization.bindings.libuv.loader;
 
 	if (libuvLoader is LibUVLoader.init)
 		libuvLoader = LibUVLoader(null);
@@ -55,9 +55,9 @@ final class LibUVEventLoopSource : EventLoopSource {
 
 	static shared(LibUVEventLoopSource) instance() { return uvLoopSource; }
 }
+
 final class LibUVEventLoopSourceRetrieve : EventLoopSourceRetriever {
 	import cf.spew.event_loop.known_implementations;
-	import cf.spew.bindings.libuv.uv;
 	
 	bool nextEvent(ref Event event) shared {
 		// we can't return an event :(

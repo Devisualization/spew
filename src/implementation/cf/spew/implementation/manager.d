@@ -2,25 +2,26 @@
 import cf.spew.event_loop.defs;
 import cf.spew.event_loop.base;
 import cf.spew.events.defs;
+import devisualization.util.core.memory.managed;
 import std.experimental.allocator;
 import core.thread : ThreadID, Thread;
 import core.time : Duration, seconds;
 
 class EventLoopManager_Impl : EventLoopManager_Base {
-	import std.experimental.containers.list;
-	import std.experimental.containers.map;
-	import core.atomic : atomicLoad, atomicStore, atomicOp;
+	import containers.hashmap;
+	import containers.dynamicarray;
+	import core.atomic;
 	import core.sync.mutex;
 
 	protected {
 		Duration hintSourceTimeout;
 
 		shared(Mutex) mutex_sourcesAlter, mutex_consumersAlter;
-		shared(SharedList!(shared(EventLoopSource))) sources;
-		shared(SharedList!(shared(EventLoopConsumer))) consumers;
+		DynamicArray!(EventLoopSource, shared(ISharedAllocator)) sources;
+		DynamicArray!(EventLoopConsumer, shared(ISharedAllocator)) consumers;
 
 		Mutex mutex_threadData;
-		shared(SharedMap!(ThreadID, InternalData)) threadData;
+		HashMap!(ThreadID, InternalData, shared(ISharedAllocator)) threadData;
 	}
 
 	this(shared(ISharedAllocator) allocator = processAllocator(), ThreadID mainThreadID = Thread.getThis().id) shared {
@@ -29,28 +30,28 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 		this.hintSourceTimeout = 0.seconds;
 		this.onErrorDelegate = &onErrorDelegateDefaultImpl;
 
-		this.sources = SharedList!(shared(EventLoopSource))(allocator);
-		this.consumers = SharedList!(shared(EventLoopConsumer))(allocator);
+		this.sources = cast(shared)DynamicArray!(EventLoopSource, shared(ISharedAllocator))(allocator);
+		this.consumers = cast(shared)DynamicArray!(EventLoopConsumer, shared(ISharedAllocator))(allocator);
 
 		this.mutex_sourcesAlter = allocator.make!(shared(Mutex));
 		this.mutex_consumersAlter = allocator.make!(shared(Mutex));
 		this.mutex_threadData = allocator.make!(shared(Mutex));
 
-		this.threadData = SharedMap!(ThreadID, InternalData)(allocator);
+		this.threadData = cast(shared)HashMap!(ThreadID, InternalData, shared(ISharedAllocator))(allocator);
 	}
 
 	void addConsumers(shared(EventLoopConsumer)[] toAdd...) shared {
 		synchronized(mutex_consumersAlter) {
 			foreach(v; toAdd) {
 				bool dontAdd;
-				foreach(csmr; consumers) {
+				foreach(csmr; cast()consumers) {
 					if (csmr == v) {
 						dontAdd = true;
 					}
 				}
 
 				if (!dontAdd)
-					consumers ~= v;
+					cast()consumers ~= cast()v;
 			}
 		}
 	}
@@ -61,27 +62,27 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 				bool dontAdd;
 				EventSource id = v.identifier;
 
-				foreach(src; sources) {
-					if (src == v || src.identifier == id) {
+				foreach(src; cast()sources) {
+					if ((cast(shared)src) == v || (cast(shared)src).identifier == id) {
 						dontAdd = true;
 					}
 				}
 
 				if (!dontAdd)
-					sources ~= v;
+					cast()sources ~= cast()v;
 			}
 		}
 	}
 
 	void clearConsumers() shared {
 		synchronized(mutex_consumersAlter) {
-			consumers.length = 0;
+			while(!(cast()consumers).empty) (cast()consumers).removeBack;
 		}
 	}
 
 	void clearSources() shared {
 		synchronized(mutex_sourcesAlter) {
-			sources.length = 0;
+			while(!(cast()sources).empty) (cast()sources).removeBack;
 		}
 	}
 
@@ -94,7 +95,7 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 		import std.conv : text;
 
 		auto result = appender!string;
-		size_t countEle = threadsState.keys.length;
+		size_t countEle = (cast()threadsState).keys.length;
 		result.reserve(100 * countEle + 1);
 
 		result ~= "There are currently ";
@@ -104,14 +105,14 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 		result ~= "The thread ids are: [";
 		if (countEle > 3)
 			result ~= "\n\t";
-		foreach(i, tid; threadsState.keys) {
+		foreach(i, tid; (cast()threadsState).keys) {
 			result ~= tid.text;
 			if (i + 1 < countEle)
 				result ~= ", ";
 		}
 		result ~= "]\n\n";
 
-		foreach(tid; threadsState.keys) {
+		foreach(tid; (cast()threadsState).keys) {
 			result ~= describeRulesFor(tid);
 		}
 
@@ -136,10 +137,10 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 			result ~= " [AUXILLARY] {\n";
 
 		result ~= "\tCurrent state: ";
-		result ~= threadsState[id].text;
+		result ~= (cast()threadsState)[id].text;
 		result ~= "\n";
 
-		shared InternalData data = threadData[id];
+		InternalData data = (cast()threadData)[id];
 		atomicOp!"+="(data.refCount, 1);
 
 		if (data !is null) {
@@ -215,10 +216,10 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 	protected override {
 		void cleanupRemovingImpl(ThreadID id) shared {
 			synchronized(mutex_threadData) {
-				atomicOp!"-="(threadData[id].refCount, 1);
-				if (atomicLoad(threadData[id].refCount) == 0)
-					threadData.remove(id);
-				threadsState.remove(id);
+				atomicOp!"-="((cast()threadData)[id].refCount, 1);
+				if (atomicLoad((cast()threadData)[id].refCount) == 0)
+					(cast()threadData).remove(id);
+				(cast()threadsState).remove(id);
 			}
 		}
 
@@ -229,23 +230,23 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 			bool isOnMainThread = isMainThread(threadId);
 			size_t sourceCount;
 
-			foreach(source; sources) {
-				if ((isOnMainThread && source.onMainThread) || (!isOnMainThread && source.onAdditionalThreads)) {
+			foreach(source; cast()sources) {
+				if ((isOnMainThread && (cast(shared)source).onMainThread) || (!isOnMainThread && (cast(shared)source).onAdditionalThreads)) {
 					sourceCount++;
 				}
 			}
 
-			shared(EventLoopConsumer)[] allConsumers = allocator.makeArray!(shared(EventLoopConsumer))(consumers.length);
+			shared(EventLoopConsumer)[] allConsumers = allocator.makeArray!(shared(EventLoopConsumer))((cast()consumers).length);
 			ret.instances = allocator.makeArray!(shared(InternalData.Instance))(sourceCount);
 
 			size_t i, j;
-			foreach(source; sources) {
+			foreach(source; cast()sources) {
 				size_t k;
 
-				foreach(consumer; consumers) {
-					if (((isOnMainThread && consumer.onMainThread) || (!isOnMainThread && consumer.onAdditionalThreads)) &&
-						(consumer.pairOnlyWithSource.isNull || consumer.pairOnlyWithSource.get == source.identifier)) {
-						allConsumers[k] = consumer;
+				foreach(consumer; cast()consumers) {
+					if (((isOnMainThread && (cast(shared)consumer).onMainThread) || (!isOnMainThread && (cast(shared)consumer).onAdditionalThreads)) &&
+						((cast(shared)consumer).pairOnlyWithSource.isNull || (cast(shared)consumer).pairOnlyWithSource.get == (cast(shared)source).identifier)) {
+						allConsumers[k] = cast(shared)consumer;
 						k++;
 					}
 
@@ -255,8 +256,8 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 				shared(EventLoopConsumer)[] allConsumersSlice = allConsumers[0 .. k];
 				short lastPriority = byte.min;
 				
-				ret.instances[i].source = source;
-				ret.instances[i].retriever = source.nextEventGenerator(allocator);
+				ret.instances[i].source = (cast(shared)source);
+				ret.instances[i].retriever = (cast(shared)source).nextEventGenerator(allocator);
 				ret.instances[i].retriever.hintTimeout(hintSourceTimeout);
 				ret.instances[i].consumers = allocator.makeArray!(shared(EventLoopConsumer))(allConsumersSlice.length);
 
@@ -278,8 +279,8 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 			allocator.dispose(cast(EventLoopConsumer[])allConsumers);
 
 			synchronized(mutex_threadData) {
-				threadData[threadId] = ret;
-				threadsState[threadId] = ThreadState.Initialized;
+				(cast()threadData)[threadId] = cast()ret;
+				(cast()threadsState)[threadId] = ThreadState.Initialized;
 				return cast(void*)ret;
 			}
 		}
@@ -288,7 +289,7 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 			InternalData data = cast(InternalData)ctx;
 			atomicOp!"+="(data.refCount, 1);
 
-			while(threadsState[threadId] != ThreadState.Stop) {
+			while((cast()threadsState)[threadId] != ThreadState.Stop) {
 				foreach(instance; data.instances) {
 					Event event;
 					while(instance.retriever.nextEvent(event)) {

@@ -7,6 +7,7 @@ import devisualization.util.core.memory.managed;
 import cf.spew.instance;
 import cf.spew.events.defs;
 import cf.spew.event_loop.defs;
+import cf.spew.event_loop.base;
 
 int main() {
 
@@ -137,7 +138,7 @@ void aSocketTCPServerCreate() {
 	tcpServer = streamCreator.bindServer(new InternetAddress("127.0.0.1", 50968));
 }
 
-import cf.spew.bindings.opengl;
+import devisualization.bindings.opengl;
 import cf.spew.ui;
 GL* gl;
 OpenGL_Loader!OpenGL_Context_Callbacks oglLoader; // global becuase of unload order

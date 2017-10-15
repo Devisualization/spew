@@ -2,13 +2,14 @@
 module cf.spew.event_loop.base;
 import cf.spew.event_loop.defs;
 import cf.spew.events.defs;
+import devisualization.util.core.memory.managed;
 import std.experimental.allocator;
 import core.thread : ThreadID, Thread;
 import core.time : Duration, seconds;
 
 /// Base implementation which you're not required to use, just makes things a little easier
 abstract class EventLoopManager_Base : IEventLoopManager {
-	import std.experimental.containers.map;
+	import containers.hashmap;
 	import core.sync.mutex;
 	
 	protected {
@@ -16,8 +17,8 @@ abstract class EventLoopManager_Base : IEventLoopManager {
 		ThreadID mainThreadID;
 		void delegate(ThreadID, Exception) shared onErrorDelegate;
 		
-		shared(SharedMap!(ThreadID, ThreadState)) threadsState;
-		
+		HashMap!(ThreadID, ThreadState, shared(ISharedAllocator)) threadsState;
+
 		shared(Mutex) mutex_threadsStateAlter, mutex_threadsStateModify;
 	}
 	
@@ -25,33 +26,33 @@ abstract class EventLoopManager_Base : IEventLoopManager {
 	this(shared(ISharedAllocator) allocator = processAllocator(), ThreadID mainThreadID = Thread.getThis().id) shared {
 		this.allocator = allocator;
 		this.mainThreadID = mainThreadID;
-		this.threadsState = SharedMap!(ThreadID, ThreadState)(allocator);
+		this.threadsState = cast(shared)HashMap!(ThreadID, ThreadState, shared(ISharedAllocator))(allocator);
 		
 		this.mutex_threadsStateAlter = allocator.make!(shared(Mutex));
 		this.mutex_threadsStateModify = allocator.make!(shared(Mutex));
 
-		this.threadsState[mainThreadID] = ThreadState.Uninitialized;
+		(cast()threadsState)[mainThreadID] = ThreadState.Uninitialized;
 	}
 	
 	///
 	bool runningOnThreadFor(ThreadID id = Thread.getThis().id) shared {
 		synchronized(mutex_threadsStateModify) {
-			return threadsState[id] == ThreadState.Started;
+			return (cast()threadsState)[id] == ThreadState.Started;
 		}
 	}
 	
 	///
 	void stopMainThread() shared {
 		synchronized(mutex_threadsStateModify) {
-			threadsState[mainThreadID] = ThreadState.Stop;
+			(cast()threadsState)[mainThreadID] = ThreadState.Stop;
 		}
 	}
 	
 	///
 	void stopAuxillaryThreads() shared {
 		synchronized(mutex_threadsStateModify) {
-			foreach(id, ref state; threadsState) {
-				if (id != mainThreadID && threadsState[id] == ThreadState.Started)
+			foreach(const ThreadID id, ref ThreadState state; cast()threadsState) {
+				if (id != mainThreadID && (cast()threadsState)[id] == ThreadState.Started)
 					state = ThreadState.Stop;
 			}
 		}
@@ -60,8 +61,8 @@ abstract class EventLoopManager_Base : IEventLoopManager {
 	///
 	void stopAllThreads() shared {
 		synchronized(mutex_threadsStateModify) {
-			foreach(id, ref state; threadsState) {
-				if (threadsState[id] == ThreadState.Started)
+			foreach(const ThreadID id, ref ThreadState state; cast()threadsState) {
+				if ((cast()threadsState)[id] == ThreadState.Started)
 					state = ThreadState.Stop;
 			}
 		}
@@ -70,15 +71,15 @@ abstract class EventLoopManager_Base : IEventLoopManager {
 	///
 	void stopThreadFor(ThreadID id = Thread.getThis().id) shared {
 		synchronized(mutex_threadsStateModify) {
-			if (threadsState[id] == ThreadState.Started)
-				threadsState[id] = ThreadState.Stop;
+			if ((cast()threadsState)[id] == ThreadState.Started)
+				(cast()threadsState)[id] = ThreadState.Stop;
 		}
 	}
 	
 	///
 	bool runningOnMainThread() shared {
 		synchronized(mutex_threadsStateModify) {
-			return threadsState[mainThreadID] == ThreadState.Started;
+			return (cast()threadsState)[mainThreadID] == ThreadState.Started;
 		}
 	}
 	
@@ -91,7 +92,7 @@ abstract class EventLoopManager_Base : IEventLoopManager {
 	uint countRunningOnAuxillaryThread() shared {
 		synchronized(mutex_threadsStateModify) {
 			uint ret;
-			foreach(id, ref state; threadsState) {
+			foreach(const ThreadID id, ref ThreadState state; cast()threadsState) {
 				if (state == ThreadState.Started)
 					ret++;
 			}
@@ -107,7 +108,7 @@ abstract class EventLoopManager_Base : IEventLoopManager {
 			// prevents somebody else from adding/removing entries
 			
 			bool found;
-			foreach(k; threadsState.keys) {
+			foreach(k; (cast()threadsState).keys) {
 				if (id == k) {
 					found = true;
 					break;
@@ -115,7 +116,7 @@ abstract class EventLoopManager_Base : IEventLoopManager {
 			}
 			
 			if (!found)
-				threadsState[id] = ThreadState.Uninitialized;
+				(cast()threadsState)[id] = ThreadState.Uninitialized;
 		}
 	}
 	
@@ -160,9 +161,9 @@ abstract class EventLoopManager_Base : IEventLoopManager {
 				execute_ctx = initializeImpl(currentThread);
 				
 				// Not running but it has been initialized
-				threadsState[currentThread] = ThreadState.Stopped;
+				(cast()threadsState)[currentThread] = ThreadState.Stopped;
 			} else {
-				foreach(id, ref state; threadsState) {
+				foreach(const ThreadID id, ref ThreadState state; cast()threadsState) {
 					void* ctx = initializeImpl(id);
 					
 					if (id == currentThread)
@@ -173,7 +174,7 @@ abstract class EventLoopManager_Base : IEventLoopManager {
 				}
 			}
 			
-			threadsState[currentThread] = ThreadState.Started;
+			(cast()threadsState)[currentThread] = ThreadState.Started;
 		}
 		
 		// ok now implementation code can execute as it is all nice and happy
@@ -181,7 +182,7 @@ abstract class EventLoopManager_Base : IEventLoopManager {
 		executeImpl(currentThread, execute_ctx);
 		
 		synchronized(mutex_threadsStateModify) {
-			threadsState[currentThread] = ThreadState.Stopped;
+			(cast()threadsState)[currentThread] = ThreadState.Stopped;
 		}
 	}
 	
@@ -209,10 +210,10 @@ abstract class EventLoopManager_Base : IEventLoopManager {
 			if (mutex_threadsStateAlter.tryLock) {
 				// don't let somebody else go modify existing entries while we are removing
 				synchronized(mutex_threadsStateModify) {
-					foreach(ThreadID k; threadsState.keys) {
+					foreach(ThreadID k; (cast()threadsState).keys) {
 						if (!isThreadAlive(k)) {
 							cleanupRemovingImpl(k);
-							threadsState.remove(k);
+							(cast()threadsState).remove(k);
 						}
 					}
 				}

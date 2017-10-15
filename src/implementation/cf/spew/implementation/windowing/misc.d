@@ -2,7 +2,7 @@
 import cf.spew.ui.display;
 import cf.spew.ui.context.defs;
 import cf.spew.ui.window.defs;
-import cf.spew.bindings.symbolloader;
+import derelict.util.sharedlib;
 
 version(Windows) {
 	public import winapi = core.sys.windows.windows;

@@ -11,6 +11,7 @@
 	"mainSourceFile": "src/diagnostic.d",
 	"targetType": "executable",
 	"dependencies": {
+		"de_bindings:opengl": "~>0.2.1",
 		"spew:implementation": "*"
 	},
 
@@ -24,6 +25,7 @@
 			"targetType": "sourceLibrary",
 			"dependencies": {
 				"de_image:base": "~>1.0.0",
+				"emsi_containers": "~>0.5.3",
 				"spew:utils": "*"
 			}
 		},
@@ -38,6 +40,8 @@
 			"libs-windows": ["gdi32", "user32"],
 			"dependencies": {
 				"spew:base": "*",
+				"de_bindings:libuv": "~>0.2.1",
+				"derelict-util": "*",
 				"spew:utils": "*"
 			}
 		},
