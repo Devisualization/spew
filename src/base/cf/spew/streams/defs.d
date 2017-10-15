@@ -1,6 +1,6 @@
 ﻿///
 module cf.spew.streams.defs;
-import std.experimental.memory.managed;
+import devisualization.util.core.memory.managed;
 import std.experimental.allocator : IAllocator, theAllocator;
 import std.socket : Address;
 import core.time : Duration;

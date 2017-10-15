@@ -1,6 +1,6 @@
 module std.experimental.containers.list;
 import std.experimental.allocator : IAllocator, ISharedAllocator, theAllocator, processAllocator, make, dispose, makeArray, shrinkArray, expandArray;
-import std.experimental.memory.managed;
+import devisualization.util.core.memory.managed;
 import std.traits : isArray, isPointer;
 import core.atomic : atomicOp, atomicLoad;
 

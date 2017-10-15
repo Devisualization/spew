@@ -6,9 +6,9 @@
  */
 module cf.spew.ui.window.features.menu;
 import cf.spew.ui.window.defs;
-import std.experimental.graphic.image : ImageStorage;
-import std.experimental.graphic.color : RGB8;
-import std.experimental.memory.managed;
+import devisualization.image : ImageStorage;
+import std.experimental.color : RGB8;
+import devisualization.util.core.memory.managed;
 
 interface Have_Window_MenuCreator {
 	void assignMenu();

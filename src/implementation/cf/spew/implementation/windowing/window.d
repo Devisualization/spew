@@ -6,9 +6,9 @@ import cf.spew.implementation.windowing.menu;
 import cf.spew.ui;
 import cf.spew.events.windowing;
 import std.experimental.allocator : IAllocator, make, makeArray, dispose;
-import std.experimental.memory.managed;
-import std.experimental.graphic.image : ImageStorage;
-import std.experimental.graphic.color : RGBA8, RGB8;
+import devisualization.util.core.memory.managed;
+import devisualization.image : ImageStorage;
+import std.experimental.color : RGBA8, RGB8;
 
 abstract class WindowImpl : IWindow, IWindowEvents {
 	package(cf.spew.implementation) {
@@ -363,14 +363,14 @@ version(Windows) {
 		}
 		
 		void setCustomCursor(ImageStorage!RGBA8 image) {
-			import std.experimental.graphic.image.storage.base : ImageStorageHorizontal;
-			import std.experimental.graphic.image.interfaces : imageObjectFrom;
+			import devisualization.image.storage.base : ImageStorageHorizontal;
+			import devisualization.image.interfaces : imageObjectFrom;
 			
 			assert(cursorStyle != WindowCursorStyle.Underterminate);
 			
 			// The comments here specify the preferred way to do this.
 			// Unfortunately at the time of writing, it is not possible to
-			//  use std.experimental.graphic.image for resizing.
+			//  use devisualization.image for resizing.
 			
 			setCursor(WindowCursorStyle.Custom);
 			

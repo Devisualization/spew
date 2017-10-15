@@ -6,9 +6,9 @@
  */
 module cf.spew.ui.window.features.icon;
 import cf.spew.ui.window.defs;
-import std.experimental.graphic.image : ImageStorage;
-import std.experimental.graphic.color : RGBA8;
-import std.experimental.memory.managed;
+import devisualization.image : ImageStorage;
+import std.experimental.color : RGBA8;
+import devisualization.util.core.memory.managed;
 
 interface Have_Icon {
     Feature_Icon __getFeatureIcon();

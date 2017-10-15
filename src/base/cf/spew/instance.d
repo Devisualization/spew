@@ -1,6 +1,6 @@
 ﻿///
 module cf.spew.instance;
-import std.experimental.memory.managed;
+import devisualization.util.core.memory.managed;
 
 ///
 abstract class Instance {

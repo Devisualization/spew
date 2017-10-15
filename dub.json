@@ -23,6 +23,7 @@
 			"excludedSourceFiles": ["src/diagnostic.d"],
 			"targetType": "sourceLibrary",
 			"dependencies": {
+				"de_image:base": "~>1.0.0",
 				"spew:utils": "*"
 			}
 		},
@@ -46,6 +47,9 @@
 			"sourcePaths": ["src/utils"],
 			"importPaths": ["src/utils"],
 			"versions-windows": ["Windows2003"],
+			"dependencies": {
+				"de_util:core": "*"
+			}
 		}
 	]
 }

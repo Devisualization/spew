@@ -2,7 +2,7 @@
 import cf.spew.ui.rendering;
 import cf.spew.ui.context.defs;
 import cf.spew.ui.context.features.custom;
-import std.experimental.memory.managed;
+import devisualization.util.core.memory.managed;
 
 final class CustomContext : IContext {
 	private managed!ICustomContext context_;

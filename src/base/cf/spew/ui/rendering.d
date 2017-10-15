@@ -9,7 +9,7 @@ module cf.spew.ui.rendering;
 import cf.spew.ui.events;
 import cf.spew.ui.display;
 import cf.spew.ui.context.defs : IContext;
-import std.experimental.memory.managed;
+import devisualization.util.core.memory.managed;
 import std.experimental.allocator : IAllocator;
 //import std.experimental.math.linearalgebra.vector : vec2;
 

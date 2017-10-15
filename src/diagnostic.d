@@ -2,7 +2,7 @@ module diagnostic;
 
 import core.time : Duration;
 import std.experimental.allocator;
-import std.experimental.memory.managed;
+import devisualization.util.core.memory.managed;
 
 import cf.spew.instance;
 import cf.spew.events.defs;
@@ -174,7 +174,7 @@ void main() {
 void aWindowTest() {
 	import cf.spew.events.windowing;
 	import cf.spew.instance;
-	import std.experimental.memory.managed;
+	import devisualization.util.core.memory.managed;
 	import std.stdio : writeln, stdout;
 
 	auto creator = Instance.current.ui.createWindow();
@@ -335,8 +335,8 @@ final class ASource : EventLoopSource, EventLoopSourceRetriever {
 
 void onForcedDraw() {
 	import std.stdio : writeln, stdout;
-	import std.experimental.graphic.image.manipulation.base : fillOn;
-	import std.experimental.graphic.color : RGBA8;
+	import devisualization.image.manipulation.base : fillOn;
+	import std.experimental.color : RGBA8;
 
 	writeln("onForcedDraw");stdout.flush;
 	window.context.activate;

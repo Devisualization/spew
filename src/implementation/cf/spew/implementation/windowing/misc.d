@@ -68,12 +68,12 @@ version(Windows) {
 	//
 
 	import cf.spew.ui.rendering : vec2;
-	import std.experimental.graphic.image : ImageStorage;
-	import std.experimental.graphic.color : RGB8, RGBA8;
+	import devisualization.image : ImageStorage;
+	import std.experimental.color : RGB8, RGBA8;
 	import std.experimental.containers.list;
 	import std.experimental.containers.map;
 	import std.experimental.allocator : IAllocator, ISharedAllocator, processAllocator, theAllocator, dispose, make, makeArray, expandArray, shrinkArray;
-	import std.experimental.memory.managed;
+	import devisualization.util.core.memory.managed;
 
 	ImageStorage!RGB8 screenshotImpl_WinAPI(IAllocator alloc, winapi.HDC hFrom, uint width, uint height) {
 		winapi.HDC hMemoryDC = winapi.CreateCompatibleDC(hFrom);
@@ -91,8 +91,8 @@ version(Windows) {
 	}
 	
 	ImageStorage!RGB8 bitmapToImage_WinAPI(winapi.HBITMAP hBitmap, winapi.HDC hMemoryDC, vec2!size_t size_, IAllocator alloc) {
-		import std.experimental.graphic.image.storage.base : ImageStorageHorizontal;
-		import std.experimental.graphic.image.interfaces : imageObject;
+		import devisualization.image.storage.base : ImageStorageHorizontal;
+		import devisualization.image.interfaces : imageObject;
 		
 		size_t dwBmpSize = ((size_.x * 32 + 31) / 32) * 4 * size_.y;
 		ubyte[] buffer = alloc.makeArray!ubyte(dwBmpSize);
@@ -138,8 +138,8 @@ version(Windows) {
 	}
 	
 	ImageStorage!RGBA8 bitmapToAlphaImage_WinAPI(winapi.HBITMAP hBitmap, winapi.HDC hMemoryDC, vec2!size_t size_, IAllocator alloc) {
-		import std.experimental.graphic.image.storage.base : ImageStorageHorizontal;
-		import std.experimental.graphic.image.interfaces : imageObject;
+		import devisualization.image.storage.base : ImageStorageHorizontal;
+		import devisualization.image.interfaces : imageObject;
 		
 		size_t dwBmpSize = ((size_.x * 32 + 31) / 32) * 4 * size_.y;
 		ubyte[] buffer = alloc.makeArray!ubyte(dwBmpSize);

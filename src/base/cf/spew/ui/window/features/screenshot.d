@@ -6,10 +6,10 @@
  */
 module cf.spew.ui.window.features.screenshot;
 import cf.spew.ui.window.defs;
-import std.experimental.graphic.image : ImageStorage;
+import devisualization.image : ImageStorage;
 import std.experimental.allocator : IAllocator, theAllocator;
-import std.experimental.graphic.color : RGB8;
-import std.experimental.memory.managed;
+import std.experimental.color : RGB8;
+import devisualization.util.core.memory.managed;
 
 interface Have_Window_ScreenShot {
 	Feature_Window_ScreenShot __getFeatureScreenShot();

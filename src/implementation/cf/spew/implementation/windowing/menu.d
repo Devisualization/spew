@@ -3,10 +3,10 @@ import cf.spew.implementation.windowing.misc;
 import cf.spew.implementation.instance;
 import cf.spew.ui.window.features.menu;
 import cf.spew.ui.rendering : vec2;
-import std.experimental.memory.managed;
+import devisualization.util.core.memory.managed;
 import std.experimental.allocator : IAllocator, make, makeArray, expandArray, dispose;
-import std.experimental.graphic.image : ImageStorage;
-import std.experimental.graphic.color : RGB8, RGBA8;
+import devisualization.image : ImageStorage;
+import std.experimental.color : RGB8, RGBA8;
 
 class MenuItemImpl : Window_MenuItem {
 	import std.experimental.containers.list;

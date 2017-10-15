@@ -2,7 +2,7 @@
 module cf.spew.ui.context.features.custom;
 import cf.spew.ui.context.defs;
 import cf.spew.ui.rendering;
-import std.experimental.memory.managed;
+import devisualization.util.core.memory.managed;
 
 interface Have_CustomCtx {
 	void assignCustomContext(managed!ICustomContext);

@@ -2,9 +2,9 @@
 import cf.spew.instance;
 import cf.spew.ui.features;
 import std.experimental.allocator : IAllocator, ISharedAllocator, make, dispose, processAllocator, theAllocator;
-import std.experimental.graphic.image : ImageStorage;
-import std.experimental.graphic.color : RGBA8;
-import std.experimental.memory.managed;
+import devisualization.image : ImageStorage;
+import std.experimental.color : RGBA8;
+import devisualization.util.core.memory.managed;
 import cf.spew.ui.rendering : vec2;
 
 final class DefaultImplementation : Instance {
@@ -113,7 +113,7 @@ final class EventLoopWrapper : Management_EventLoop {
 abstract class UIInstance : Management_UserInterface, Have_Notification {
 	import cf.spew.ui : IWindow, IDisplay, IWindowCreator, IRenderPoint, IRenderPointCreator;
 	import std.experimental.allocator : IAllocator, processAllocator;
-	import std.experimental.memory.managed;
+	import devisualization.util.core.memory.managed;
 	import std.experimental.containers.map;
 
 	this(shared(ISharedAllocator) allocator) shared {
@@ -164,8 +164,8 @@ version(Windows) {
 	final class UIInstance_WinAPI : UIInstance, Feature_Notification {
 		import cf.spew.implementation.windowing.window_creator : WindowCreatorImpl_WinAPI;
 		import cf.spew.implementation.windowing.misc;
-		import std.experimental.graphic.image.storage.base : ImageStorageHorizontal;
-		import std.experimental.graphic.image.interfaces : imageObjectFrom;
+		import devisualization.image.storage.base : ImageStorageHorizontal;
+		import devisualization.image.interfaces : imageObjectFrom;
 		import std.typecons : tuple;
 		import winapi = core.sys.windows.windows;
 		import winapishell = core.sys.windows.shellapi;

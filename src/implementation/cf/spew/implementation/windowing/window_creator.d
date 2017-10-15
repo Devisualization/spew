@@ -3,9 +3,9 @@ import cf.spew.implementation.instance;
 import cf.spew.ui;
 import cf.spew.ui.rendering : vec2;
 import cf.spew.ui.context.features.custom;
-import std.experimental.graphic.image : ImageStorage;
-import std.experimental.graphic.color : RGBA8;
-import std.experimental.memory.managed;
+import devisualization.image : ImageStorage;
+import std.experimental.color : RGBA8;
+import devisualization.util.core.memory.managed;
 import std.experimental.allocator : IAllocator, make;
 
 abstract class WindowCreatorImpl : IWindowCreator, Have_CustomCtx { 

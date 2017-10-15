@@ -3,9 +3,9 @@ import cf.spew.implementation.instance;
 import cf.spew.implementation.windowing.misc;
 import cf.spew.ui;
 import cf.spew.ui.rendering : vec2;
-import std.experimental.graphic.image : ImageStorage;
-import std.experimental.graphic.color : RGB8;
-import std.experimental.memory.managed;
+import devisualization.image : ImageStorage;
+import std.experimental.color : RGB8;
+import devisualization.util.core.memory.managed;
 import std.experimental.allocator : IAllocator, make, makeArray;
 
 abstract class DisplayImpl : IDisplay {

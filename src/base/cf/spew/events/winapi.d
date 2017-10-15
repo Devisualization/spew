@@ -1,7 +1,7 @@
 ﻿///
 module cf.spew.events.winapi;
 import cf.spew.events.defs;
-import std.experimental.memory.managed;
+import devisualization.util.core.memory.managed;
 
 ///
 enum WinAPI_Events_Types {

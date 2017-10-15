@@ -7,9 +7,9 @@
 module cf.spew.ui.features.notifications;
 import cf.spew.ui.window.defs;
 import cf.spew.instance;
-import std.experimental.graphic.image : ImageStorage;
-import std.experimental.graphic.color : RGBA8;
-import std.experimental.memory.managed;
+import devisualization.image : ImageStorage;
+import std.experimental.color : RGBA8;
+import devisualization.util.core.memory.managed;
 import std.experimental.allocator : ISharedAllocator, processAllocator;
 import std.traits : isSomeString;
 

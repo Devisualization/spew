@@ -5,13 +5,13 @@
  * Authors: $(LINK2 http://cattermole.co.nz, Richard Andrew Cattermole)
  */
 module cf.spew.ui.window.defs;
-import std.experimental.graphic.image.interfaces : SwappableImage;
-import std.experimental.graphic.color.rgb : RGB8, RGBA8;
+import devisualization.image.interfaces : SwappableImage;
+import std.experimental.color.rgb : RGB8, RGBA8;
 import cf.spew.ui.rendering;
 import cf.spew.ui.window.events : IWindowEvents;
 //import std.experimental.math.linearalgebra.vector : vec2;
 import std.experimental.allocator : IAllocator;
-import std.experimental.memory.managed;
+import devisualization.util.core.memory.managed;
 
 ///
 interface IWindow : IRenderPoint {

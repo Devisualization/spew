@@ -6,7 +6,7 @@ module cf.spew.ui.display.defs;
  */
 interface IDisplay {
 	import cf.spew.ui.window.defs : IWindow;
-	import std.experimental.memory.managed;
+	import devisualization.util.core.memory.managed;
 	import std.experimental.allocator : IAllocator;
 
 	private import cf.spew.ui.rendering : vec2;

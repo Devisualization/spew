@@ -1,8 +1,8 @@
 ﻿module cf.spew.implementation.windowing.contexts.vram;
 import cf.spew.ui.context.defs;
 import cf.spew.ui.context.features.vram;
-import std.experimental.graphic.image : ImageStorage;
-import std.experimental.graphic.color : RGB8, RGBA8;
+import devisualization.image : ImageStorage;
+import std.experimental.color : RGB8, RGBA8;
 import std.experimental.allocator : IAllocator, make, dispose;
 
 class VRAMContextImpl : IContext, Have_VRam, Feature_VRam {
@@ -21,9 +21,9 @@ class VRAMContextImpl : IContext, Have_VRam, Feature_VRam {
 }
 
 version(Windows) {
-	import std.experimental.graphic.image.interfaces : SwappableImage, imageObject;
-	import std.experimental.graphic.color.rgb : BGR8, BGRA8;
-	import std.experimental.graphic.image.storage.flat;
+	import devisualization.image.interfaces : SwappableImage, imageObject;
+	import std.experimental.color.rgb : BGR8, BGRA8;
+	import devisualization.image.storage.flat;
 
 	final class VRAMContextImpl_WinAPI : VRAMContextImpl {
 		import core.sys.windows.windows : HWND, HDC, GetDC, CreateCompatibleDC, IsWindowVisible,
