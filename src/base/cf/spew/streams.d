@@ -1,5 +1,8 @@
-﻿///
-module cf.spew.streams.defs;
+﻿/**
+ * Copyright: <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * Authors: $(LINK2 http://cattermole.co.nz, Richard Andrew Cattermole)
+ */
+module cf.spew.streams;
 import devisualization.util.core.memory.managed;
 import std.experimental.allocator : IAllocator, theAllocator;
 import std.socket : Address;
