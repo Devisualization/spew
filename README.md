@@ -35,11 +35,6 @@ Can load+extract from a [Nuget]() package. Thie linked packed is fat, meaning it
 	- [x] TCP
 		- [x] Client
 		- [x] Server
-	- [ ] UDP
-			I hate sockets with a passion - alphaglosined
-		If you wish to finish implementation [Be Our Guest](https://www.youtube.com/watch?v=hIKhoEIBSxU), a good portion of the TCP code can be reused for UDP.
-		- [ ] Client
-		- [ ] Server
 - [ ] Threading
 - [ ] File system
 - [ ] Timer
@@ -55,7 +50,6 @@ Can load+extract from a [Nuget]() package. Thie linked packed is fat, meaning it
     - [ ] Contexts:
        - [ ] VRAM
        - [ ] OpenGL
-       - [ ] Vulkan
   - [x] WinAPI
     - [ ] Core
     - [x] Features:
@@ -64,16 +58,20 @@ Can load+extract from a [Nuget]() package. Thie linked packed is fat, meaning it
        - [x] icon
        - [x] menu
        - [x] screenshot
-    - [ ] Contexts:
+    - [x] Contexts:
        - [x] VRAM
        - [x] OpenGL
-       - [ ] DirectX
-       - [ ] Vulkan
   - [ ] Cocoa
     Contexts:
     - [ ] VRAM
     - [ ] OpenGL
-    - [ ] Vulkan
+
+__Short list of won't-implement__:
+- UDP
+- Contexts
+	- DirectX
+	- Vulkan
+	- Metal
 
 ## License
 Boost
