@@ -1,5 +1,5 @@
 ﻿module cf.spew.implementation.streams;
-import cf.spew.streams.defs;
+import cf.spew.streams;
 import devisualization.bindings.libuv.uv;
 import std.socket : Address, InternetAddress, Internet6Address, AddressFamily, sockaddr;
 import std.experimental.allocator : IAllocator, theAllocator, make, makeArray, expandArray, dispose;

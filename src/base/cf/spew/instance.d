@@ -107,7 +107,7 @@ interface Management_UserInterface {
 
 /// Beware, thread-local!
 interface Management_Streams {
-	import cf.spew.streams.defs;
+	import cf.spew.streams;
 	import std.socket : Address;
 	import std.experimental.allocator : IAllocator, theAllocator;
 

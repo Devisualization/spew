@@ -339,7 +339,7 @@ version(Windows) {
 }
 
 abstract class StreamsInstance : Management_Streams {
-	import cf.spew.streams.defs;
+	import cf.spew.streams;
 	import std.socket : Address;
 	import std.experimental.allocator : ISharedAllocator, processAllocator;
 
@@ -360,7 +360,7 @@ abstract class StreamsInstance : Management_Streams {
 }
 
 class StreamsInstance_LibUV : StreamsInstance {
-	import cf.spew.streams.defs;
+	import cf.spew.streams;
 
 	this(shared(ISharedAllocator) allocator) shared {
 		super(allocator);
