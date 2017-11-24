@@ -35,6 +35,9 @@ Can load+extract from a [Nuget]() package. Thie linked packed is fat, meaning it
 	- [x] TCP
 		- [x] Client
 		- [x] Server
+	- [ ] UDP
+		- [ ] Local
+		- [ ] Remote
 - [ ] Threading
 - [ ] File system
 - [ ] Timer
@@ -67,7 +70,6 @@ Can load+extract from a [Nuget]() package. Thie linked packed is fat, meaning it
     - [ ] OpenGL
 
 __Short list of won't-implement__:
-- UDP
 - Contexts
 	- DirectX
 	- Vulkan

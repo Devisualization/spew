@@ -98,44 +98,62 @@ int main() {
 	// normally 3s would be ok for a timeout, but ugh with sockets, not so much!
 	import std.datetime : msecs;
 	Instance.current.eventLoop.manager.setSourceTimeout(30.msecs);
-	aWindowTest();
+	//aWindowTest();
 	Instance.current.eventLoop.execute();
 
 	return 0;
 }
 
-import cf.spew.streams.defs;
-managed!IStreamEndpoint tcpClientEndPoint;
-managed!IStreamServer tcpServer;
+import cf.spew.streams;
+managed!ISocket_TCP tcpClientEndPoint;
+managed!ISocket_TCPServer tcpServer;
 
 void aSocketTCPClientCreate() {
 	import std.socket : InternetAddress;
 	import std.stdio : write, stdout;
+	import core.time : dur;
 	
-	auto streamCreator = Instance.current.streams.createStream(StreamType.TCP);
-	streamCreator.onData = (client, data) {
+	tcpClientEndPoint = Instance.current.streams.tcpConnect(new InternetAddress("cattermole.co.nz", 80));
+	tcpClientEndPoint.onData = (scope client, scope data) {
 		write(cast(string)data); stdout.flush;
 		return true;
 	};
-	streamCreator.onStreamCreate = (client) { client.write(cast(ubyte[])"
+	tcpClientEndPoint.onStreamClose = (scope IStreamThing conn) {
+		import std.stdio : writeln;
+		writeln("closed tcp client");
+		tcpClientEndPoint = managed!ISocket_TCP.init;
+	};
+	tcpClientEndPoint.onConnect = (scope IStreamEndPoint conn) {
+		tcpClientEndPoint.write(cast(ubyte[])"
 GET / HTTP/1.1\r
 Host: cattermole.co.nz\r
 \r
-\r\n"[1 .. $]); };
-	tcpClientEndPoint = streamCreator.connectClient(new InternetAddress("cattermole.co.nz", 80));
+\r\n"[1 .. $]);
+	};
 }
 
 void aSocketTCPServerCreate() {
 	import std.socket : InternetAddress;
 	import std.stdio : write, stdout;
 
-	auto streamCreator = Instance.current.streams.createStream(StreamType.TCP);
-	streamCreator.onData = (client, data) {
-		client.write(data);
-		write(cast(string)data);stdout.flush;
-		return true;
+	tcpServer = Instance.current.streams.tcpServer(new InternetAddress("127.0.0.1", 50968));
+	tcpServer.onServerConnect = (scope IStreamServer server, scope IStreamEndPoint conn) {
+		if (ISocket_TCP tcpClient = cast(ISocket_TCP)conn) {
+			tcpClient.onData = (scope conn, scope data) {
+				if (ISocket_TCP tcpClient = cast(ISocket_TCP)conn) {
+					tcpClient.write(data);
+				}
+				write(cast(char[])data);stdout.flush;
+				tcpServer.close();
+				return true;
+			};
+		}
 	};
-	tcpServer = streamCreator.bindServer(new InternetAddress("127.0.0.1", 50968));
+	tcpServer.onStreamClose = (scope IStreamThing conn) {
+		import std.stdio : writeln;
+		writeln("closed tcp server");
+		tcpServer = managed!ISocket_TCPServer.init;
+	};
 }
 
 import devisualization.bindings.opengl;

@@ -354,8 +354,8 @@ abstract class StreamsInstance : Management_Streams {
 	}
 
 	void forceCloseAll() shared {
-		import cf.spew.implementation.streams : closeAllInstances;
-		closeAllInstances();
+		import cf.spew.implementation.streams.base : StreamPoint;
+		StreamPoint.closeAllInstances();
 	}
 }
 
@@ -366,9 +366,17 @@ class StreamsInstance_LibUV : StreamsInstance {
 		super(allocator);
 	}
 
-	managed!IStreamCreator createStream(StreamType type, IAllocator alloc=theAllocator()) shared {
-		import cf.spew.implementation.streams;
-		return cast(managed!IStreamCreator)managed!LibUVStreamCreator(alloc.make!LibUVStreamCreator(type, alloc), managers(), alloc);
+	managed!ISocket_TCPServer tcpServer(Address address, ushort listBacklogAmount=64, IAllocator alloc=theAllocator()) shared {
+		import cf.spew.implementation.streams.tcp_server : LibUVTCPServer;
+		return LibUVTCPServer.create(address, listBacklogAmount, alloc);
+	}
+	managed!ISocket_TCP tcpConnect(Address address, IAllocator alloc=theAllocator()) shared {
+		import cf.spew.implementation.streams.tcp : LibUVTCPSocket;
+		return LibUVTCPSocket.create(address, alloc);
+	}
+	managed!ISocket_UDPLocalPoint udpLocalPoint(Address address, IAllocator alloc=theAllocator()) shared {
+		import cf.spew.implementation.streams.udp : LibUVUDPLocalPoint;
+		return LibUVUDPLocalPoint.create(address, alloc);
 	}
 	
 	managed!(Address[]) allLocalAddress(IAllocator alloc=theAllocator()) shared {

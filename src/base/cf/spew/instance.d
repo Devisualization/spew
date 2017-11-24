@@ -111,8 +111,12 @@ interface Management_Streams {
 	import std.socket : Address;
 	import std.experimental.allocator : IAllocator, theAllocator;
 
-	///
-	managed!IStreamCreator createStream(StreamType type, IAllocator alloc=theAllocator()) shared;
+	/// A TCP server
+	managed!ISocket_TCPServer tcpServer(Address address, ushort listBacklogAmount=64, IAllocator alloc=theAllocator()) shared;
+	/// A TCP client
+	managed!ISocket_TCP tcpConnect(Address address, IAllocator alloc=theAllocator()) shared;
+	/// A UDP local end point, create destination from this
+	managed!ISocket_UDPLocalPoint udpLocalPoint(Address address, IAllocator alloc=theAllocator()) shared;
 
 	///
 	managed!(Address[]) allLocalAddress(IAllocator alloc=theAllocator()) shared;
