@@ -1,4 +1,8 @@
-﻿module cf.spew.implementation.windowing.contexts.opengl;
+﻿/**
+ * Copyright: <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * Authors: $(LINK2 http://cattermole.co.nz, Richard Andrew Cattermole)
+ */
+module cf.spew.implementation.windowing.contexts.opengl;
 import cf.spew.ui.context.defs;
 import cf.spew.ui.context.features.opengl;
 import cf.spew.implementation.windowing.window : WindowImpl;

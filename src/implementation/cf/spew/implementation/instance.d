@@ -1,4 +1,8 @@
-﻿module cf.spew.implementation.instance;
+﻿/**
+ * Copyright: <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * Authors: $(LINK2 http://cattermole.co.nz, Richard Andrew Cattermole)
+ */
+module cf.spew.implementation.instance;
 import cf.spew.instance;
 import cf.spew.ui.features;
 import std.experimental.allocator : IAllocator, ISharedAllocator, make, dispose, processAllocator, theAllocator;

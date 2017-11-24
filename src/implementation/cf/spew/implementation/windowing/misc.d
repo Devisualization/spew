@@ -1,4 +1,8 @@
-﻿module cf.spew.implementation.windowing.misc;
+﻿/**
+ * Copyright: <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * Authors: $(LINK2 http://cattermole.co.nz, Richard Andrew Cattermole)
+ */
+module cf.spew.implementation.windowing.misc;
 import cf.spew.ui.display;
 import cf.spew.ui.context.defs;
 import cf.spew.ui.window.defs;

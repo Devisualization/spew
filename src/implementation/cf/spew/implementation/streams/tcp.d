@@ -1,4 +1,8 @@
-﻿module cf.spew.implementation.streams.tcp;
+﻿/**
+ * Copyright: <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * Authors: $(LINK2 http://cattermole.co.nz, Richard Andrew Cattermole)
+ */
+module cf.spew.implementation.streams.tcp;
 import cf.spew.implementation.streams.base;
 import cf.spew.streams.defs;
 import cf.spew.streams.tcp;
@@ -174,8 +178,6 @@ private {
 		uv_buf_t buf;
 	}
 }
-
-import std.stdio;
 
 extern(C) {
 	void streamTCPCreateCB(uv_connect_t* connection, int status) {
