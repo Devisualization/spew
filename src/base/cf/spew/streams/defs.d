@@ -99,6 +99,7 @@ interface IStreamServer : IStreamThing {
  * Callback which is called when data is made available.
  * 
  * Params:
+ *     conn = The local end point
  *     data =  The data
  * 
  * Returns:
