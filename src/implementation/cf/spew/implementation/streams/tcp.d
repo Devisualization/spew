@@ -123,7 +123,7 @@ class LibUVTCPSocket : AnTCPSocket {
 		GC.removeRoot(writebuf);
 
 		writebuf.req.data = writebuf;
-		writebuf.self = this;
+		writebuf.alloc = alloc;
 
 		char* buffer = alloc.makeArray!char(data.length).ptr;
 		GC.removeRoot(buffer);
@@ -173,7 +173,7 @@ class LibUVTCPSocket : AnTCPSocket {
 
 private {
 	struct LibUVWriteTCP {
-		LibUVTCPSocket self;
+		IAllocator alloc;
 		uv_write_t req;
 		uv_buf_t buf;
 	}
@@ -213,6 +213,7 @@ extern(C) {
 	void streamTCPReadCB(uv_stream_t* client, ptrdiff_t nread, const(uv_buf_t)* buf) {
 		if (client.data is null) return;
 		auto self = *cast(LibUVTCPSocket*)client.data;
+		if (self is null) return;
 
 		if (self.onDataDel !is null) {
 			if (nread > 0 && self.onDataDel(self, cast(ubyte[])buf.base[0 .. cast(size_t)nread])) {}
@@ -225,7 +226,7 @@ extern(C) {
 	void streamTCPWriteCB(uv_write_t* req, int status) {
 		auto writebuf = cast(LibUVWriteTCP*)req.data;
 
-		writebuf.self.alloc.dispose(cast(ubyte[])writebuf.buf.base[0 .. writebuf.buf.len]);
-		writebuf.self.alloc.dispose(writebuf);
+		writebuf.alloc.dispose(cast(ubyte[])writebuf.buf.base[0 .. writebuf.buf.len]);
+		writebuf.alloc.dispose(writebuf);
 	}
 }

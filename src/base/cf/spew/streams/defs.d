@@ -105,7 +105,7 @@ interface IStreamServer : IStreamThing {
  * Returns:
  *     To continue reading, or stop (false).
  */
-alias OnStreamDataDel = bool delegate(scope IStreamLocalPoint conn, scope const(ubyte[]) data);
+alias OnStreamDataDel = bool delegate(scope IStreamEndPoint conn, scope const(ubyte[]) data);
 
 /**
  * Callback which is called when stream is closed.

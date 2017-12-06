@@ -12,17 +12,17 @@ import core.time : Duration;
 ///
 interface ISocket_UDPLocalPoint : IStreamLocalPoint {
 	/// Joins a multicast group
-	void joinMulticastGroup(scope Address multicastAddress, scope string interfaceAddress=null);
+	bool joinMulticastGroup(scope string multicastAddress, scope string interfaceAddress=null);
 
 	/// Leaves a multicast group
-	void leaveMulticastGroup(scope Address multicastAddress, scope string interfaceAddress=null);
+	bool leaveMulticastGroup(scope string multicastAddress, scope string interfaceAddress=null);
 
 	@property {
 		/// Makes multicast packets loopback to local sockets
 		void multicastLoopBack(bool);
 
 		/// Address that multicasting should occur from
-		void multicastInterface(scope string);
+		bool multicastInterface(scope string);
 
 		/// Sets the TTL on a multicast connection, 0 rounds up to 1.
 		void multicastTTL(ubyte value=1);
