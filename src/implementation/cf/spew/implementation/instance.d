@@ -5,11 +5,12 @@
 module cf.spew.implementation.instance;
 import cf.spew.instance;
 import cf.spew.ui.features;
-import std.experimental.allocator : IAllocator, ISharedAllocator, make, dispose, processAllocator, theAllocator;
+import std.experimental.allocator : IAllocator, ISharedAllocator, make, dispose, processAllocator, theAllocator, makeArray;
 import devisualization.image : ImageStorage;
 import std.experimental.color : RGBA8;
 import devisualization.util.core.memory.managed;
 import cf.spew.ui.rendering : vec2;
+import std.socket :  InternetAddress, Internet6Address;
 
 final class DefaultImplementation : Instance {
 	import cf.spew.event_loop.defs : EventLoopSource, EventLoopConsumer;
@@ -383,7 +384,28 @@ class StreamsInstance_LibUV : StreamsInstance {
 		return LibUVUDPLocalPoint.create(address, alloc);
 	}
 	
-	managed!(Address[]) allLocalAddress(IAllocator alloc=theAllocator()) shared {
-		assert(0);
+	managed!(managed!Address[]) allLocalAddress(IAllocator alloc=theAllocator()) shared {
+		import devisualization.bindings.libuv.uv;
+		if (alloc is null) return managed!(managed!Address[]).init;
+
+		managed!Address[] ret;
+
+		int count;
+		uv_interface_address_t* addresses;
+		uv_interface_addresses(&addresses, &count);
+
+		ret = cast(managed!Address[])alloc.makeArray!(ubyte)(count * managed!Address.sizeof);
+		foreach(i, v; addresses[0 .. count]) {
+			if (v.address.address4.sin_family == AF_INET) {
+				ret[i] = cast(managed!Address)managed!InternetAddress(alloc.make!InternetAddress(v.address.address4), managers(), alloc);
+			} else if (v.address.address4.sin_family == AF_INET6) {
+				ret[i] = cast(managed!Address)managed!Internet6Address(alloc.make!Internet6Address(v.address.address6), managers(), alloc);
+			} else {
+				ret[i] = managed!Address.init;
+			}
+		}
+
+		uv_free_interface_addresses(addresses, count);
+		return managed!(managed!Address[])(ret, managers(), alloc);
 	}
 }

@@ -119,7 +119,7 @@ interface Management_Streams {
 	managed!ISocket_UDPLocalPoint udpLocalPoint(Address address, IAllocator alloc=theAllocator()) shared;
 
 	///
-	managed!(Address[]) allLocalAddress(IAllocator alloc=theAllocator()) shared;
+	managed!(managed!Address[]) allLocalAddress(IAllocator alloc=theAllocator()) shared;
 
 	/// 
 	void forceCloseAll() shared;
