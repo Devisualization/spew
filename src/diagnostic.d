@@ -1,18 +1,58 @@
 module diagnostic;
 
 import core.time : Duration;
+import std.datetime : msecs;
 import std.experimental.allocator;
+
 import devisualization.util.core.memory.managed;
+import devisualization.bindings.opengl;
 
 import cf.spew.instance;
 import cf.spew.events.defs;
+import cf.spew.events.windowing;
 import cf.spew.event_loop.defs;
 import cf.spew.event_loop.base;
+import cf.spew.streams;
+import cf.spew.ui;
+
+enum : bool {
+	Enable_Test_Window = true,
+	Enable_Test_TCP = true,
+	Enable_Test_UDP = false,
+
+	Enable_Kill_Window = true,
+	Enable_Kill_TCP_Client = false,
+	Enable_Kill_TCP_Server = false,
+	//Enable_Kill_UDP = false,
+
+	Enable_Window_GL = true,
+}
+
+// \/ global state
+
+// | \/ streams
+managed!ISocket_TCP tcpClientEndPoint;
+managed!ISocket_TCPServer tcpServer;
+// | /\ streams
+
+// | \/ windowing
+IWindow window;
+
+static if (Enable_Window_GL) {
+	GL* gl;
+	OpenGL_Loader!OpenGL_Context_Callbacks oglLoader; // global becuase of unload order
+	bool openglContextCreated, openglObjectsCreated;
+	GLuint vertexShaderGL, fragmentShaderGL, programGL, vertexbufferGL, vertexArrayGL;
+	GLint resultGL, infoLogLengthGL;
+}
+// | /\ windowing
+
+// /\ global state
 
 int main() {
-
 	version(all) {
-		import std.stdio;
+		import std.stdio : writeln;
+
 		writeln("Hello there!");
 		writeln("Now lets do a quick diagnostic on the platform...");
 		writeln;
@@ -66,6 +106,25 @@ int main() {
 			writeln(" implementation compiled in.");
 			writeln("No really, it has no user interface support!");
 			return -4;
+		} else if (Instance.current.ui.primaryDisplay().isNull) {
+			writeln;
+			writeln("Just because we can, we looked to see if there was a display");
+			writeln(" as it turns out, there are none.");
+			writeln("Because this is a diagnostic, I am going to assume this is a problem.");
+			return -5;
+		}
+
+		if (Instance.current.streams is null) {
+			writeln;
+			writeln("The implementation seems to be missing stream support.");
+			writeln("This is quite a problem if you want to open up a socket.");
+			return -6;
+		} else if (Instance.current.streams.allLocalAddress().isNull) {
+			writeln;
+			writeln("Weird, we have stream support.");
+			writeln("Yet it cannot get a list of network interfaces that the system has");
+			writeln(" not even loop back!");
+			return -7;
 		}
 
 		writeln;
@@ -88,32 +147,48 @@ int main() {
 
 		writeln("So it looks like:");
 		writeln("\t- Event loop");
-		//writeln("\t- User interface");
-		writeln("are all provided and functioning correctly.");
+		writeln("\t- User interface");
+		writeln("\t- Stream (sockets)");
+		writeln("are all provided and functioning possibly.");
+
+		writeln;
+		writeln("Continuing on to more resillient tests...");
+
+		static if (Enable_Test_Window) {
+			writeln;
+			writeln("Window handling:");
+			aWindowTest();
+		}
+
+		static if (Enable_Test_TCP) {
+			writeln;
+			writeln("TCP client:");
+			aSocketTCPClientCreate();
+
+			writeln;
+			writeln("TCP server:");
+			aSocketTCPServerCreate();
+		}
 	}
 
-	aSocketTCPClientCreate();
-	aSocketTCPServerCreate();
+	static if (Enable_Test_TCP) {
+		// normally 3s would be ok for a timeout, but ugh with sockets, not so much!
+		Instance.current.eventLoop.manager.setSourceTimeout(30.msecs);
+	}
 
-	// normally 3s would be ok for a timeout, but ugh with sockets, not so much!
-	import std.datetime : msecs;
-	Instance.current.eventLoop.manager.setSourceTimeout(30.msecs);
-	//aWindowTest();
 	Instance.current.eventLoop.execute();
 
 	return 0;
 }
 
-import cf.spew.streams;
-managed!ISocket_TCP tcpClientEndPoint;
-managed!ISocket_TCPServer tcpServer;
+// | \/ streams
 
 void aSocketTCPClientCreate() {
 	import std.socket : InternetAddress;
 	import std.stdio : write, stdout;
 	import core.time : dur;
 	
-	tcpClientEndPoint = Instance.current.streams.tcpConnect(new InternetAddress("cattermole.co.nz", 80));
+	tcpClientEndPoint = Instance.current.streams.tcpConnect(new InternetAddress("127.0.0.1", 50968));
 	tcpClientEndPoint.onData = (scope client, scope data) {
 		write(cast(string)data); stdout.flush;
 		return true;
@@ -122,6 +197,10 @@ void aSocketTCPClientCreate() {
 		import std.stdio : writeln;
 		writeln("closed tcp client");
 		tcpClientEndPoint = managed!ISocket_TCP.init;
+
+		static if (Enable_Kill_TCP_Client) {
+			Instance.current.eventLoop.stopAllThreads;
+		}
 	};
 	tcpClientEndPoint.onConnect = (scope IStreamEndPoint conn) {
 		tcpClientEndPoint.write(cast(ubyte[])"
@@ -153,17 +232,15 @@ void aSocketTCPServerCreate() {
 		import std.stdio : writeln;
 		writeln("closed tcp server");
 		tcpServer = managed!ISocket_TCPServer.init;
+
+		static if (Enable_Kill_TCP_Server) {
+			Instance.current.eventLoop.stopAllThreads;
+		}
 	};
 }
 
-import devisualization.bindings.opengl;
-import cf.spew.ui;
-GL* gl;
-OpenGL_Loader!OpenGL_Context_Callbacks oglLoader; // global becuase of unload order
-bool openglContextCreated, openglObjectsCreated;
-GLuint vertexShaderGL, fragmentShaderGL, programGL, vertexbufferGL, vertexArrayGL;
-GLint resultGL, infoLogLengthGL;
-IWindow window;
+// | /\ streams
+// | \/ windowing
 
 float[] opengl_example_vertex_bufferdata = [
 	-1.0f, -1.0f, 0.0f,
@@ -190,10 +267,16 @@ void main() {
 }
 \0";
 
+/*
+ * The below code as designed, is meant to be hacked.
+ * No single variation will be good enough.
+ * 
+ * Different contexts, window states (e.g. full screen) and menu
+ *  is just the start of what is required.
+ * Best to hack it into a form to confirm/deny a hypothesis.
+ */
 void aWindowTest() {
-	import cf.spew.events.windowing;
 	import cf.spew.instance;
-	import devisualization.util.core.memory.managed;
 	import std.stdio : writeln, stdout;
 
 	auto creator = Instance.current.ui.createWindow();
@@ -201,7 +284,7 @@ void aWindowTest() {
 	//creator.size = vec2!ushort(cast(short)800, cast(short)600);
 	creator.assignMenu;
 
-	version(all) {
+	static if (Enable_Window_GL) {
 		gl = new GL;
 		oglLoader = OpenGL_Loader!OpenGL_Context_Callbacks(gl);
 		creator.assignOpenGLContext(OpenGLVersion(3, 2), &oglLoader.callbacks);
@@ -298,7 +381,10 @@ void aWindowTest() {
 	window.events.onClose = () {
 		writeln("onClose");
 		stdout.flush;
-		Instance.current.eventLoop.stopAllThreads;
+
+		static if (Enable_Kill_Window) {
+			Instance.current.eventLoop.stopAllThreads;
+		}
 	};
 
 	window.events.onSizeChange = (uint width, uint height) {
@@ -346,12 +432,23 @@ final class ASource : EventLoopSource, EventLoopSourceRetriever {
 		}
 		return false;
 	}
+
 	void handledEvent(ref Event event) shared {}
 	void unhandledEvent(ref Event event) shared {}
 	void handledErrorEvent(ref Event event) shared {}
 	void hintTimeout(Duration timeout) shared {}
 }
 
+/*
+ * The below code is rather complex, far more than required.
+ * In real code, you would save the context then for each call:
+ *  1. activate
+ *  2. readyToBeUsed
+ *  3. deactivate
+ * 
+ * Until you know which kind of context you have (including version)
+ *  which has been setup for your use, you must assume none and wait.
+ */
 void onForcedDraw() {
 	import std.stdio : writeln, stdout;
 	import devisualization.image.manipulation.base : fillOn;
@@ -450,3 +547,4 @@ void onForcedDraw() {
 	window.context.deactivate;
 }
 
+// | /\ windowing
