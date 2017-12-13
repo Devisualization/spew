@@ -18,14 +18,15 @@ import cf.spew.ui;
 enum : bool {
 	Enable_Test_Window = true,
 	Enable_Test_TCP = true,
-	Enable_Test_UDP = false,
+	Enable_Test_UDP = true,
 
 	Enable_Kill_Window = true,
 	Enable_Kill_TCP_Client = false,
 	Enable_Kill_TCP_Server = false,
-	//Enable_Kill_UDP = false,
+	Enable_Kill_UDP = false,
 
 	Enable_Window_GL = true,
+	Enable_Force_Kill_Window = false,
 }
 
 // \/ global state
@@ -33,14 +34,19 @@ enum : bool {
 // | \/ streams
 managed!ISocket_TCP tcpClientEndPoint;
 managed!ISocket_TCPServer tcpServer;
+managed!ISocket_UDPLocalPoint udpLocalPoint;
 // | /\ streams
 
 // | \/ windowing
 IWindow window;
 
 static if (Enable_Window_GL) {
+	/*
+	 * Both of GL and OpenGL_Loader are rather sensitive to where they are placed in memory.
+	 * So both are allocated on the heap.
+	 */
 	GL* gl;
-	OpenGL_Loader!OpenGL_Context_Callbacks oglLoader; // global becuase of unload order
+	OpenGL_Loader!OpenGL_Context_Callbacks* oglLoader;
 	bool openglContextCreated, openglObjectsCreated;
 	GLuint vertexShaderGL, fragmentShaderGL, programGL, vertexbufferGL, vertexArrayGL;
 	GLint resultGL, infoLogLengthGL;
@@ -154,12 +160,6 @@ int main() {
 		writeln;
 		writeln("Continuing on to more resillient tests...");
 
-		static if (Enable_Test_Window) {
-			writeln;
-			writeln("Window handling:");
-			aWindowTest();
-		}
-
 		static if (Enable_Test_TCP) {
 			writeln;
 			writeln("TCP client:");
@@ -169,10 +169,22 @@ int main() {
 			writeln("TCP server:");
 			aSocketTCPServerCreate();
 		}
+
+		static if (Enable_Test_UDP) {
+			writeln;
+			writeln("UDP:");
+			aSocketUDPCreate();
+		}
+
+		static if (Enable_Test_Window) {
+			writeln;
+			writeln("Window handling:");
+			aWindowTest();
+		}
 	}
 
-	static if (Enable_Test_TCP) {
-		// normally 3s would be ok for a timeout, but ugh with sockets, not so much!
+	// normally 3s would be ok for a timeout, but ugh with sockets, not so much!
+	static if (Enable_Test_TCP || Enable_Test_UDP) {
 		Instance.current.eventLoop.manager.setSourceTimeout(30.msecs);
 	}
 
@@ -222,7 +234,7 @@ void aSocketTCPServerCreate() {
 				if (ISocket_TCP tcpClient = cast(ISocket_TCP)conn) {
 					tcpClient.write(data);
 				}
-				write(cast(char[])data);stdout.flush;
+				write("TCP:\t", cast(char[])data);stdout.flush;
 				tcpServer.close();
 				return true;
 			};
@@ -237,6 +249,29 @@ void aSocketTCPServerCreate() {
 			Instance.current.eventLoop.stopAllThreads;
 		}
 	};
+}
+
+void aSocketUDPCreate() {
+	import std.socket : InternetAddress;
+	import std.stdio : write, stdout;
+
+	udpLocalPoint = Instance.current.streams.udpLocalPoint(new InternetAddress("127.0.0.1", 30486));
+	udpLocalPoint.onData =  (scope conn, scope data) {
+		if (ISocket_UDPEndPoint udpEndPoint = cast(ISocket_UDPEndPoint)conn) {
+		}
+
+		write("UDP:\t", cast(char[])data);stdout.flush;
+		conn.close();
+
+		static if (Enable_Kill_UDP) {
+			Instance.current.eventLoop.stopAllThreads;
+		}
+
+		return true;
+	};
+
+	auto remote = udpLocalPoint.connectTo(new InternetAddress("127.0.0.1", 30486));
+	remote.write(cast(ubyte[])"Hi there!\nSome text via UDP.");
 }
 
 // | /\ streams
@@ -286,7 +321,7 @@ void aWindowTest() {
 
 	static if (Enable_Window_GL) {
 		gl = new GL;
-		oglLoader = OpenGL_Loader!OpenGL_Context_Callbacks(gl);
+		oglLoader = new OpenGL_Loader!OpenGL_Context_Callbacks(gl);
 		creator.assignOpenGLContext(OpenGLVersion(3, 2), &oglLoader.callbacks);
 	}
 
@@ -333,9 +368,14 @@ void aWindowTest() {
 		writeln("onKeyEntry: key: ", key, " specialKey: ", specialKey, " modifiers: ", modifiers);
 		stdout.flush;
 
-		if (specialKey == SpecialKey.Escape)
-			Instance.current.eventLoop.stopAllThreads;
-		else if (key == '1')
+		static if (Enable_Force_Kill_Window) {
+			if (specialKey == SpecialKey.Escape) {
+				Instance.current.eventLoop.stopAllThreads;
+			}
+		} else if (specialKey == SpecialKey.Escape)
+			window.close();
+
+		if (key == '1')
 			window.lockCursorToWindow;
 		else if (key == '2')
 			window.unlockCursorFromWindow;
@@ -349,10 +389,15 @@ void aWindowTest() {
 	window.windowEvents.onKeyPress = (dchar key, SpecialKey specialKey, ushort modifiers) {
 		writeln("onKeyPress: key: ", key, " specialKey: ", specialKey, " modifiers: ", modifiers);
 		stdout.flush;
-		
-		if (specialKey == SpecialKey.Escape)
-			Instance.current.eventLoop.stopAllThreads;
-		else if (key == '1')
+
+		static if (Enable_Force_Kill_Window) {
+			if (specialKey == SpecialKey.Escape) {
+				Instance.current.eventLoop.stopAllThreads;
+			}
+		} else if (specialKey == SpecialKey.Escape)
+			window.close();
+
+		if (key == '1')
 			window.lockCursorToWindow;
 		else if (key == '2')
 			window.unlockCursorFromWindow;
@@ -393,16 +438,16 @@ void aWindowTest() {
 		if (window.context.capableOfOpenGL && window.context.readyToBeUsed) {
 			window.context.activate;
 
-			gl.glViewport(0, 0, width, height);
+			static if (Enable_Window_GL) {
+				gl.glViewport(0, 0, width, height);
+			}
 
 			window.context.deactivate;
 		}
 	};
 	
 	window.show();
-
 	Instance.current.eventLoop.manager.addSources(new shared ASource);
-	Instance.current.eventLoop.execute();
 }
 
 final class ASource : EventLoopSource, EventLoopSourceRetriever {
@@ -420,14 +465,16 @@ final class ASource : EventLoopSource, EventLoopSourceRetriever {
 	shared(EventLoopSourceRetriever) nextEventGenerator(shared(ISharedAllocator)) shared { return this; }
 
 	bool nextEvent(ref Event event) shared {
-		import std.stdio;writeln("====TICK====");
+		import std.stdio;
+		writeln("====TICK====");stdout.flush;
 
 		StopWatch* sw = cast(StopWatch*)&stopWatch;
 		if (!sw.running)
 			sw.start;
 
 		if ((cast(Duration)sw.peek()).total!"msecs" >= 16) {
-			onForcedDraw();
+			if (window.renderable)
+				onForcedDraw();
 			sw.reset;
 		}
 		return false;
@@ -456,91 +503,93 @@ void onForcedDraw() {
 
 	writeln("onForcedDraw");stdout.flush;
 	window.context.activate;
-
-	if (!window.context.readyToBeUsed)
+	if (!window.context.readyToBeUsed) {
 		return;
+	}
 
 	if (window.context.capableOfVRAM) {
 		auto buffer = window.context.vramAlphaBuffer;
 		buffer.fillOn(RGBA8(255, 0, 0, 255));
 	} else if (window.context.capableOfOpenGL) {
-		if (!openglContextCreated) {
-			gl.glGenVertexArrays(1, &vertexArrayGL);
-			gl.glBindVertexArray(vertexArrayGL);
-			
-			gl.glGenBuffers(1, &vertexbufferGL);
-			gl.glBindBuffer(GL_ARRAY_BUFFER, vertexbufferGL);
-			gl.glBufferData(GL_ARRAY_BUFFER, opengl_example_vertex_bufferdata.length*float.sizeof, opengl_example_vertex_bufferdata.ptr, GL_STATIC_DRAW);
+		static if (Enable_Window_GL) {
+			if (!openglContextCreated) {
+				gl.glGenVertexArrays(1, &vertexArrayGL);
+				gl.glBindVertexArray(vertexArrayGL);
+				
+				gl.glGenBuffers(1, &vertexbufferGL);
+				gl.glBindBuffer(GL_ARRAY_BUFFER, vertexbufferGL);
+				gl.glBufferData(GL_ARRAY_BUFFER, opengl_example_vertex_bufferdata.length*float.sizeof, opengl_example_vertex_bufferdata.ptr, GL_STATIC_DRAW);
 
-			openglContextCreated = true;
-		} else if (!openglObjectsCreated) {
-			char* source = cast(char*)VertexShaderGL_Source.ptr;
-			
-			vertexShaderGL = gl.glCreateShader(GL_VERTEX_SHADER);
-			gl.glShaderSource(vertexShaderGL, 1, &source, null);
-			gl.glCompileShader(vertexShaderGL);
-			
-			gl.glGetShaderiv(vertexShaderGL, GL_COMPILE_STATUS, &resultGL);
-			gl.glGetShaderiv(vertexShaderGL, GL_INFO_LOG_LENGTH, &infoLogLengthGL);
-			
-			if (resultGL == GL_FALSE) {
-				char[] log;
-				log.length = infoLogLengthGL+1;
-				gl.glGetShaderInfoLog(vertexShaderGL, infoLogLengthGL, null, log.ptr);
-				writeln("onForcedDraw OGL vertex fail: ", log[0 .. $-1]);
-				return;
-			}
+				openglContextCreated = true;
+			} else if (!openglObjectsCreated) {
+				char* source = cast(char*)VertexShaderGL_Source.ptr;
+				
+				vertexShaderGL = gl.glCreateShader(GL_VERTEX_SHADER);
+				gl.glShaderSource(vertexShaderGL, 1, &source, null);
+				gl.glCompileShader(vertexShaderGL);
+				
+				gl.glGetShaderiv(vertexShaderGL, GL_COMPILE_STATUS, &resultGL);
+				gl.glGetShaderiv(vertexShaderGL, GL_INFO_LOG_LENGTH, &infoLogLengthGL);
+				
+				if (resultGL == GL_FALSE) {
+					char[] log;
+					log.length = infoLogLengthGL+1;
+					gl.glGetShaderInfoLog(vertexShaderGL, infoLogLengthGL, null, log.ptr);
+					writeln("onForcedDraw OGL vertex fail: ", log[0 .. $-1]);
+					return;
+				}
 
-			source = cast(char*)FragmentShaderGL_Source.ptr;
-			
-			fragmentShaderGL = gl.glCreateShader(GL_FRAGMENT_SHADER);
-			gl.glShaderSource(fragmentShaderGL, 1, &source, null);
-			gl.glCompileShader(fragmentShaderGL);
-			
-			gl.glGetShaderiv(fragmentShaderGL, GL_COMPILE_STATUS, &resultGL);
-			gl.glGetShaderiv(fragmentShaderGL, GL_INFO_LOG_LENGTH, &infoLogLengthGL);
-			
-			if (resultGL == GL_FALSE) {
-				char[] log;
-				log.length = infoLogLengthGL+1;
-				gl.glGetShaderInfoLog(fragmentShaderGL, infoLogLengthGL, null, log.ptr);
-				writeln("onForcedDraw OGL fragment fail: ", log[0 .. $-1]);
-				return;
-			}
+				source = cast(char*)FragmentShaderGL_Source.ptr;
+				
+				fragmentShaderGL = gl.glCreateShader(GL_FRAGMENT_SHADER);
+				gl.glShaderSource(fragmentShaderGL, 1, &source, null);
+				gl.glCompileShader(fragmentShaderGL);
+				
+				gl.glGetShaderiv(fragmentShaderGL, GL_COMPILE_STATUS, &resultGL);
+				gl.glGetShaderiv(fragmentShaderGL, GL_INFO_LOG_LENGTH, &infoLogLengthGL);
+				
+				if (resultGL == GL_FALSE) {
+					char[] log;
+					log.length = infoLogLengthGL+1;
+					gl.glGetShaderInfoLog(fragmentShaderGL, infoLogLengthGL, null, log.ptr);
+					writeln("onForcedDraw OGL fragment fail: ", log[0 .. $-1]);
+					return;
+				}
 
-			programGL = gl.glCreateProgram();
-			gl.glAttachShader(programGL, vertexShaderGL);
-			gl.glAttachShader(programGL, fragmentShaderGL);
-			gl.glLinkProgram(programGL);
-			
-			gl.glGetProgramiv(programGL, GL_LINK_STATUS, &resultGL);
-			gl.glGetProgramiv(programGL, GL_INFO_LOG_LENGTH, &infoLogLengthGL);
-			if (resultGL == GL_FALSE) {
-				char[] log;
-				log.length = infoLogLengthGL+1;
-				gl.glGetProgramInfoLog(programGL, infoLogLengthGL, null, log.ptr);
-				writeln("onForcedDraw OGL link fail: ", log[0 .. $-1]);
-				return;
+				programGL = gl.glCreateProgram();
+				gl.glAttachShader(programGL, vertexShaderGL);
+				gl.glAttachShader(programGL, fragmentShaderGL);
+				gl.glLinkProgram(programGL);
+				
+				gl.glGetProgramiv(programGL, GL_LINK_STATUS, &resultGL);
+				gl.glGetProgramiv(programGL, GL_INFO_LOG_LENGTH, &infoLogLengthGL);
+				if (resultGL == GL_FALSE) {
+					char[] log;
+					log.length = infoLogLengthGL+1;
+					gl.glGetProgramInfoLog(programGL, infoLogLengthGL, null, log.ptr);
+					writeln("onForcedDraw OGL link fail: ", log[0 .. $-1]);
+					return;
+				}
+				
+				openglObjectsCreated = true;
+			} else {
+				gl.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+				gl.glUseProgram(programGL);
+				gl.glBindVertexArray(vertexArrayGL);
+				
+				gl.glEnableVertexAttribArray(0);
+				gl.glBindBuffer(GL_ARRAY_BUFFER, vertexbufferGL);
+				gl.glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, null);
+				gl.glDrawArrays(GL_TRIANGLES, 0, 3);
+				gl.glDisableVertexAttribArray(0);
+				
+				/+
+				gl.glDetachShader(programGL, vertexShaderGL);
+				gl.glDetachShader(programGL, fragmentShaderGL);
+				gl.glDeleteProgram(programGL);
+				gl.glDeleteShader(vertexShaderGL);
+				gl.glDeleteShader(fragmentShaderGL);+/
 			}
-			
-			openglObjectsCreated = true;
-		} else {
-			gl.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			gl.glUseProgram(programGL);
-			gl.glBindVertexArray(vertexArrayGL);
-			
-			gl.glEnableVertexAttribArray(0);
-			gl.glBindBuffer(GL_ARRAY_BUFFER, vertexbufferGL);
-			gl.glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, null);
-			gl.glDrawArrays(GL_TRIANGLES, 0, 3);
-			gl.glDisableVertexAttribArray(0);
-			
-			/+
-			gl.glDetachShader(programGL, vertexShaderGL);
-			gl.glDetachShader(programGL, fragmentShaderGL);
-			gl.glDeleteProgram(programGL);
-			gl.glDeleteShader(vertexShaderGL);
-			gl.glDeleteShader(fragmentShaderGL);+/
 		}
 	}
 

@@ -40,9 +40,8 @@ abstract class StreamPoint : IStreamThing {
 		}
 
 		void removeFromLifeLL() {
-			if (nextLL is null && lastLL is null) return;
-
-			lastLL.nextLL = nextLL;
+			if (lastLL !is null)
+				lastLL.nextLL = nextLL;
 			if (nextLL !is null)
 				nextLL.lastLL = lastLL;
 
@@ -54,8 +53,7 @@ abstract class StreamPoint : IStreamThing {
 			auto point = cast(StreamPoint)streamPointsLL;
 			
 			while(point !is null) {
-				if (point.isOpen)
-					point.close;
+				point.close;
 				point = point.nextLL;
 			}
 			

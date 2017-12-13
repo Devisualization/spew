@@ -65,7 +65,7 @@ abstract class EventLoopManager_Base : IEventLoopManager {
 	void stopAllThreads() shared {
 		synchronized(mutex_threadsStateModify) {
 			foreach(const ThreadID id, ref ThreadState state; cast()threadsState) {
-				if ((cast()threadsState)[id] == ThreadState.Started)
+				if (state == ThreadState.Started)
 					state = ThreadState.Stop;
 			}
 		}

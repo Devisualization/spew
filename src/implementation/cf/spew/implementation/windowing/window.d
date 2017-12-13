@@ -162,7 +162,10 @@ version(Windows) {
 			void* __handle() { return hwnd; }
 		}
 
-		void close() { CloseWindow(hwnd); }
+		void close() {
+			// specifically requested to close!
+			DestroyWindow(hwnd);
+		}
 
 		@property {
 			managed!dstring title() {

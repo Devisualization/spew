@@ -30,7 +30,7 @@ class OpenGLContextImpl : IContext, Have_OpenGL, Feature_OpenGL {
 version(Windows) {
 	import core.sys.windows.windows : HWND, HDC, HGLRC,
 		PIXELFORMATDESCRIPTOR, PFD_DRAW_TO_WINDOW, PFD_SUPPORT_OPENGL, PFD_DOUBLEBUFFER, PFD_TYPE_RGBA, PFD_MAIN_PLANE,
-		ChoosePixelFormat, SetPixelFormat, GetDC, SwapBuffers;
+		ChoosePixelFormat, SetPixelFormat, GetDC, SwapBuffers, IsWindowVisible;
 
 	ubyte 
 		WinAPI_ColorBits = 32,
@@ -125,7 +125,6 @@ version(Windows) {
 
 			if (callbacks.loadSymbol !is null &&
 				(wglCreateContext is null)) {
-
 				wglCreateContext = cast(typeof(wglCreateContext))callbacks.loadSymbol("wglCreateContext");
 				wglMakeCurrent = cast(typeof(wglMakeCurrent))callbacks.loadSymbol("wglMakeCurrent");
 				wglDeleteContext = cast(typeof(wglDeleteContext))callbacks.loadSymbol("wglDeleteContext");

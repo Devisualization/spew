@@ -136,7 +136,6 @@ class LibUVUDPLocalPoint : AnUDPLocalPoint {
 
 	~this() {
 		if (isOpen) {
-			ctx_udp.data = null;
 			close();
 		}
 	}

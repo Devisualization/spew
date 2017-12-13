@@ -315,6 +315,7 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 								instance.retriever.handledErrorEvent(event);
 								onErrorDelegate(threadId, e);
 							}
+							if ((cast()threadsState)[threadId] == ThreadState.Stop) break;
 						}
 					}
 				}
