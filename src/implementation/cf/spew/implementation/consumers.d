@@ -179,6 +179,49 @@ version(Windows) {
 						tryFunc(w.menuCallbacks[event.wellData2Value], w.menuItemsIds[event.wellData2Value]);
 						return true;
 
+					case WinAPI_Events_Types.Window_DragAndDrop:
+						import std.utf : byChar, codeLength;
+						import core.sys.windows.windows;
+
+						HDROP hdrop = cast(HDROP)event.wellData2Ptr;
+						POINT point;
+						DragQueryPoint(hdrop, &point);
+
+						auto alloc = w2.allocator();
+						wchar[] buffer1 = alloc.makeArray!wchar(256);
+						char[] buffer2 = alloc.makeArray!char(256);
+
+						size_t count, len1, len2;
+						while((len1 = DragQueryFileW(hdrop, count, null, 0)) != 0) {
+							if (buffer1.length < len1) {
+								alloc.expandArray(buffer1, len1-buffer1.length);
+							}
+
+							DragQueryFileW(hdrop, count++, buffer1.ptr, buffer1.length);
+
+							len2 = codeLength!char(buffer1[0 .. len1]);
+							if (buffer2.length < len2) {
+								alloc.expandArray(buffer2, len2-buffer2.length);
+							}
+
+							size_t offset;
+							foreach(c; buffer1[0 .. len1].byChar) {
+								buffer2[offset++] = c;
+							}
+
+							if (w2.onFileDropDel !is null) {
+								try {
+									w2.onFileDropDel(cast(string)buffer2[0 .. len2], point.x, point.y);
+								} catch(Exception e) {}
+							}
+						}
+
+						alloc.dispose(buffer1);
+						alloc.dispose(buffer2);
+
+						DragFinish(hdrop);
+						return true;
+
 					case Windowing_Events_Types.Window_KeyUp:
 						tryFunc(w2.onKeyEntryDel, event.windowing.keyInput.key, event.windowing.keyInput.special, event.windowing.keyInput.modifiers);
 						tryFunc(w2.onKeyReleaseDel, event.windowing.keyUp.key, event.windowing.keyUp.special, event.windowing.keyUp.modifiers);

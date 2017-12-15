@@ -42,6 +42,12 @@ alias EventOnSizeChangeDel = void delegate(uint width, uint height);
 ///
 alias EventOnSizeChangeFunc = void function(uint width, uint height);
 
+///
+alias EventOnFileDropDel = void delegate(scope string filename, int x, int y);
+///
+alias EventOnFileDropFunc = void function(scope string filename, int x, int y);
+
+
 /**
  * Group of hookable events for rendering upon
  */
@@ -162,5 +168,18 @@ interface IRenderEvents {
 
 		/// Ditto
 		final void onSizeChange(EventOnSizeChangeFunc func) { onSizeChange(func.toDelegate); }
+
+		/**
+		 * When the window has had a file dragged on top of it, call this.
+		 * 
+		 * If this is not set, drag and drop will be disabled.
+		 * 
+		 * Params:
+		 * 		del		=	The callback to call
+		 */
+		void onFileDrop(EventOnFileDropDel del);
+
+		/// Ditto
+		final void onFileDrop(EventOnFileDropFunc func) { onFileDrop(func.toDelegate); }
 	}
 }

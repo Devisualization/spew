@@ -40,6 +40,8 @@ enum WinAPI_Events_Types {
 	Window_ExitSizeMove = EventType.from("|w/szmv"),
 	///
 	Menu_Click = EventType.from("|wmclk"),
+	///
+	Window_DragAndDrop = EventType.from("|wd&d,"),
 }
 
 // windows specific stuff

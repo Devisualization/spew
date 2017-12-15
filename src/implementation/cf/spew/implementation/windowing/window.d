@@ -28,6 +28,7 @@ abstract class WindowImpl : IWindow, IWindowEvents {
 		EventOnKeyDel onKeyEntryDel, onKeyPressDel, onKeyReleaseDel;
 		EventOnSizeChangeDel onSizeChangeDel;
 		EventOnMoveDel onMoveDel;
+		EventOnFileDropDel onFileDropDel;
 
 		EventOnForcedDrawDel onDrawDel;
 		EventOnCloseDel onCloseDel;
@@ -62,6 +63,7 @@ abstract class WindowImpl : IWindow, IWindowEvents {
 		void onClose(EventOnCloseDel del) { onCloseDel = del; }
 		void onKeyEntry(EventOnKeyDel del) { onKeyEntryDel = del; }
 		void onSizeChange(EventOnSizeChangeDel del) { onSizeChangeDel = del; }
+		void onFileDrop(EventOnFileDropDel del) { onFileDropDel = del; }
 
 		void onMove(EventOnMoveDel del) { onMoveDel = del; }
 		void onRequestClose(EventOnRequestCloseDel del) { onRequestCloseDel = del; }
@@ -123,6 +125,8 @@ version(Windows) {
 				hCursor = LoadImageW(null, cast(wchar*)IDC_APPSTARTING, IMAGE_CURSOR, 0, 0, LR_DEFAULTSIZE | LR_SHARED);
 			else
 				cursorStyle = WindowCursorStyle.Underterminate;
+
+			DragAcceptFiles(hwnd, false);
 		}
 		
 		~this() {
@@ -160,6 +164,11 @@ version(Windows) {
 			bool renderable() { return IsWindowVisible(hwnd) == 1; }
 
 			void* __handle() { return hwnd; }
+
+			override void onFileDrop(EventOnFileDropDel del) {
+				super.onFileDrop(del);
+				DragAcceptFiles(hwnd, del !is null);
+			}
 		}
 
 		void close() {

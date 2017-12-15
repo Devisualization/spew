@@ -573,6 +573,12 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 			}
 			return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 
+		case WM_DROPFILES:
+			HDROP hdrop = cast(HDROP)wParam;
+			_event.type = WinAPI_Events_Types.Window_DragAndDrop;
+			_event.wellData2Ptr = hdrop;
+			return 0;
+
 		//case WM_SYSTEMERROR:
 		//case WM_CTLCOLOR:
 
@@ -689,8 +695,7 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 		case WM_MDIICONARRANGE:
 		case WM_MDIGETACTIVE:
 		case WM_MDISETMENU:
-
-		case WM_DROPFILES:
+		
 		case WM_MDIREFRESHMENU:
 			
 		case WM_IME_SETCONTEXT:

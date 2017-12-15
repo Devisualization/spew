@@ -445,6 +445,10 @@ void aWindowTest() {
 			window.context.deactivate;
 		}
 	};
+
+	window.events.onFileDrop = (scope filename, int x, int y) {
+		writeln("onFileDrop ", filename, " ", x, "x", y);
+	};
 	
 	window.show();
 	Instance.current.eventLoop.manager.addSources(new shared ASource);
