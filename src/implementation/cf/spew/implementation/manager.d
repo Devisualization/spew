@@ -25,7 +25,7 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 		DynamicArray!(EventLoopConsumer, shared(ISharedAllocator)) consumers;
 
 		Mutex mutex_threadData;
-		HashMap!(ThreadID, InternalData, shared(ISharedAllocator)) threadData;
+		HashMap!(ThreadID, InternalData*, shared(ISharedAllocator)) threadData;
 	}
 
 	this(shared(ISharedAllocator) allocator = processAllocator(), ThreadID mainThreadID = Thread.getThis().id) shared {
@@ -41,7 +41,7 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 		this.mutex_consumersAlter = allocator.make!(shared(Mutex));
 		this.mutex_threadData = allocator.make!(shared(Mutex));
 
-		this.threadData = cast(shared)HashMap!(ThreadID, InternalData, shared(ISharedAllocator))(allocator);
+		this.threadData = cast(shared)HashMap!(ThreadID, InternalData*, shared(ISharedAllocator))(allocator);
 	}
 
 	void addConsumers(shared(EventLoopConsumer)[] toAdd...) shared {
@@ -144,7 +144,7 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 		result ~= (cast()threadsState)[id].text;
 		result ~= "\n";
 
-		InternalData data = (cast()threadData)[id];
+		InternalData* data = (cast()threadData)[id];
 		atomicOp!"+="(data.refCount, 1);
 
 		if (data !is null) {
@@ -228,7 +228,9 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 		}
 
 		void* initializeImpl(ThreadID threadId) shared {
-			shared(InternalData) ret = allocator.make!(shared(InternalData))(allocator);
+			import core.stdc.stdlib : malloc;
+			// GC will deallocate it prior to us doing so.
+			shared(InternalData*) ret = cast(shared(InternalData*))malloc(InternalData.sizeof);
 			ret.refCount = 1;
 
 			bool isOnMainThread = isMainThread(threadId);
@@ -283,14 +285,14 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 			allocator.dispose(cast(EventLoopConsumer[])allConsumers);
 
 			synchronized(mutex_threadData) {
-				(cast()threadData)[threadId] = cast()ret;
+				(cast()threadData)[threadId] = cast(InternalData*)ret;
 				(cast()threadsState)[threadId] = ThreadState.Initialized;
 				return cast(void*)ret;
 			}
 		}
 
 		void executeImpl(ThreadID threadId, void* ctx) shared {
-			InternalData data = cast(InternalData)ctx;
+			InternalData* data = cast(InternalData*)ctx;
 			atomicOp!"+="(data.refCount, 1);
 
 			while((cast()threadsState)[threadId] != ThreadState.Stop) {
@@ -321,14 +323,15 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 				}
 			}
 
+			import core.stdc.stdlib : free;
 			atomicOp!"-="(data.refCount, 1);
 			if (atomicLoad(data.refCount) == 0)
-				allocator.dispose(data);
+				free(data);
 		}
 	}
 }
 
-private final class InternalData {
+private struct InternalData {
 	shared uint refCount;
 	Instance[] instances;
 	shared(ISharedAllocator) allocator;
