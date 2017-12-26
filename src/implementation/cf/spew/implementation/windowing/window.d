@@ -28,7 +28,10 @@ abstract class WindowImpl : IWindow, IWindowEvents {
 		EventOnKeyDel onKeyEntryDel, onKeyPressDel, onKeyReleaseDel;
 		EventOnSizeChangeDel onSizeChangeDel;
 		EventOnMoveDel onMoveDel;
+
+		EvenOnFileDragDel onFileDragStartDel, onFileDragStopDel;
 		EventOnFileDropDel onFileDropDel;
+		EventOnFileDraggingDel onFileDraggingDel;
 
 		EventOnForcedDrawDel onDrawDel;
 		EventOnCloseDel onCloseDel;
@@ -63,7 +66,11 @@ abstract class WindowImpl : IWindow, IWindowEvents {
 		void onClose(EventOnCloseDel del) { onCloseDel = del; }
 		void onKeyEntry(EventOnKeyDel del) { onKeyEntryDel = del; }
 		void onSizeChange(EventOnSizeChangeDel del) { onSizeChangeDel = del; }
+
+		void onFileDragStart(EvenOnFileDragDel del) { onFileDragStartDel = del; }
+		void onFileDragStopped(EvenOnFileDragDel del) { onFileDragStopDel = del; }
 		void onFileDrop(EventOnFileDropDel del) { onFileDropDel = del; }
+		void onFileDragging(EventOnFileDraggingDel del) { onFileDraggingDel = del; }
 
 		void onMove(EventOnMoveDel del) { onMoveDel = del; }
 		void onRequestClose(EventOnRequestCloseDel del) { onRequestCloseDel = del; }
@@ -73,6 +80,109 @@ abstract class WindowImpl : IWindow, IWindowEvents {
 }
 
 version(Windows) {
+	import core.sys.windows.oleidl : IDropTarget, LPDATAOBJECT;
+
+	final class WinAPI_DropTarget : IDropTarget {
+		import core.sys.windows.windows : HRESULT, IID, DWORD, POINTL, PDWORD, IID_IUnknown, IID_IDropTarget,
+			IUnknown, S_OK, E_NOINTERFACE, ULONG, DROPEFFECT;
+		import core.atomic : atomicLoad, atomicOp;
+
+		shared(long) count;
+		WindowImpl_WinAPI window;
+		IAllocator alloc;
+
+		this(WindowImpl_WinAPI window, IAllocator alloc) {
+			this.window = window;
+			this.alloc = alloc;
+			window.comDropTargetLoc = &window;
+		}
+
+	extern(System):
+
+		HRESULT QueryInterface(const(IID)* riid, void** ppv) {
+			import std.stdio;
+			writeln("QueryInterface");stdout.flush;
+
+			if (*riid == IID_IDropTarget) { 
+				*ppv = cast(void*)cast(IDropTarget)this;
+				AddRef();
+				return S_OK;
+			} else if (*riid == IID_IUnknown) {
+				*ppv = cast(void*)cast(IUnknown)this;
+				AddRef();
+				return S_OK;
+			} else {
+				*ppv = null;
+				return E_NOINTERFACE;
+			}
+		}
+
+		ULONG AddRef() {
+			atomicOp!"+="(count, 1);
+			return cast(ULONG)atomicLoad(count);
+		}
+
+		ULONG Release() {
+			atomicOp!"-="(count, 1);
+			auto ret = atomicLoad(count);
+
+			if (ret == 0)
+				alloc.dispose(this);
+			return cast(ULONG)ret;
+		}
+
+		HRESULT DragEnter(LPDATAOBJECT pDataObj,DWORD grfKeyState,POINTL pt,PDWORD pdwEffect) {
+			if (window !is null) {
+				try {
+					if (window.onFileDragStartDel !is null)
+						window.onFileDragStartDel();
+				} catch(Exception e) {
+					// don't let the exceptions propergate!
+					// could cause some real issues in another process...
+				}
+			}
+			*pdwEffect = DROPEFFECT.DROPEFFECT_COPY;
+			return S_OK;
+		}
+
+		HRESULT DragOver(DWORD grfKeyState,POINTL pt,PDWORD pdwEffect) {
+			*pdwEffect = DROPEFFECT.DROPEFFECT_NONE;
+
+			if (window !is null) {
+				try {
+					if (window.onFileDraggingDel !is null && window.onFileDraggingDel(pt.x, pt.y))
+						*pdwEffect = DROPEFFECT.DROPEFFECT_COPY;
+				} catch(Exception e) {
+					// don't let the exceptions propergate!
+					// could cause some real issues in another process...
+				}
+			}
+			return S_OK;
+		}
+
+		HRESULT DragLeave() {
+			if (window !is null) {
+				try {
+					if (window.onFileDragStopDel !is null)
+						window.onFileDragStopDel();
+				} catch(Exception e) {
+					// don't let the exceptions propergate!
+					// could cause some real issues in another process...
+				}
+			}
+
+			return S_OK;
+		}
+
+		HRESULT Drop(LPDATAOBJECT,DWORD,POINTL,PDWORD) {
+			// We do nothing here.
+			// The COM interface method is quite complex.
+			// But since WM_FILES event works quite ok, we'll be doing that instead.
+			// Unfortunately we need this class for the other events.
+			return S_OK;
+		}
+	}
+
 	final class WindowImpl_WinAPI : WindowImpl,
 		Feature_Window_ScreenShot, Feature_Icon, Feature_Window_Menu, Feature_Cursor, Feature_Style,
 		Have_Window_ScreenShot, Have_Icon, Have_Window_Menu, Have_Cursor, Have_Style {
@@ -100,6 +210,7 @@ version(Windows) {
 			Map!(size_t, Window_MenuCallback) menuCallbacks = void;
 			
 			WindowStyle windowStyle;
+			WindowImpl_WinAPI* comDropTargetLoc;
 			
 			WindowCursorStyle cursorStyle;
 			ImageStorage!RGBA8 customCursor;
@@ -120,7 +231,7 @@ version(Windows) {
 			menuItemsIds = Map!(size_t, Window_MenuItem)(alloc);
 			menuCallbacks = Map!(size_t, Window_MenuCallback)(alloc);
 			menuItemsCount = 9000;
-			
+
 			if (processOwns)
 				hCursor = LoadImageW(null, cast(wchar*)IDC_APPSTARTING, IMAGE_CURSOR, 0, 0, LR_DEFAULTSIZE | LR_SHARED);
 			else
@@ -167,12 +278,26 @@ version(Windows) {
 
 			override void onFileDrop(EventOnFileDropDel del) {
 				super.onFileDrop(del);
-				DragAcceptFiles(hwnd, del !is null);
+
+				if (del !is null) {
+					RegisterDragDrop(hwnd, alloc.make!WinAPI_DropTarget(this, alloc));
+					DragAcceptFiles(hwnd, true);
+				} else {
+					if (comDropTargetLoc !is null) {
+						*comDropTargetLoc = null;
+						comDropTargetLoc = null;
+					}
+					
+					RevokeDragDrop(hwnd);
+					DragAcceptFiles(hwnd, false);
+				}
 			}
 		}
 
 		void close() {
 			// specifically requested to close!
+
+			onFileDrop(null);
 			DestroyWindow(hwnd);
 		}
 

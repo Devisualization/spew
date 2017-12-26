@@ -79,7 +79,9 @@ final class DefaultImplementation : Instance {
 		version(Windows) {
 			import cf.spew.event_loop.wells.winapi;
 			import cf.spew.implementation.consumers;
+			import core.sys.windows.ole2 : OleInitialize;
 
+			OleInitialize(null);
 			_userInterface = allocator.make!(shared(UIInstance_WinAPI))(allocator);
 
 			_mainEventSource_ = allocator.make!(shared(WinAPI_EventLoop_Source));

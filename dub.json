@@ -37,7 +37,7 @@
 
 			"targetType": "library",
 			
-			"libs-windows": ["gdi32", "user32"],
+			"libs-windows": ["gdi32", "user32", "ole32"],
 			"dependencies": {
 				"spew:base": "*",
 				"de_bindings:libuv": "~>0.2.1",

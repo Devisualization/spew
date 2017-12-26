@@ -446,8 +446,25 @@ void aWindowTest() {
 		}
 	};
 
+	window.events.onFileDragStart = () {
+		writeln("onFileDragStart");
+		stdout.flush;
+	};
+
+	window.events.onFileDragStopped = () {
+		writeln("onFileDragStopped");
+		stdout.flush;
+	};
+
+	window.events.onFileDragging = (int x, int y) {
+		writeln("onFileDragging ", x, "x", y);
+		stdout.flush;
+		return x < (window.size.x / 2);
+	};
+
 	window.events.onFileDrop = (scope filename, int x, int y) {
 		writeln("onFileDrop ", filename, " ", x, "x", y);
+		stdout.flush;
 	};
 	
 	window.show();

@@ -43,10 +43,19 @@ alias EventOnSizeChangeDel = void delegate(uint width, uint height);
 alias EventOnSizeChangeFunc = void function(uint width, uint height);
 
 ///
+alias EvenOnFileDragDel = void delegate();
+///
+alias EvenOnFileDragFunc = void function();
+
+///
 alias EventOnFileDropDel = void delegate(scope string filename, int x, int y);
 ///
 alias EventOnFileDropFunc = void function(scope string filename, int x, int y);
 
+/// Returns: if filenames can be dropped here.
+alias EventOnFileDraggingDel = bool delegate(int x, int y);
+/// Ditto
+alias EventOnFileDraggingFunc = bool function(int x, int y);
 
 /**
  * Group of hookable events for rendering upon
@@ -170,6 +179,29 @@ interface IRenderEvents {
 		final void onSizeChange(EventOnSizeChangeFunc func) { onSizeChange(func.toDelegate); }
 
 		/**
+		 * When dragging of files starts (inside of the window).
+		 * 
+		 * Params:
+		 * 		del		=	The callback to call
+		 */
+		void onFileDragStart(EvenOnFileDragDel del);
+
+		/// Ditto
+		final void onFileDragStart(EvenOnFileDragFunc func) { onFileDragStart(func.toDelegate); }
+
+		/**
+		 * When dragging of files is stopped.
+		 * Will not be called if the callback for file drop is called.
+		 * 
+		 * Params:
+		 * 		del		=	The callback to call
+		 */
+		void onFileDragStopped(EvenOnFileDragDel del);
+		
+		/// Ditto
+		final void onFileDragStopped(EvenOnFileDragFunc func) { onFileDragStopped(func.toDelegate); }
+
+		/**
 		 * When the window has had a file dragged on top of it, call this.
 		 * 
 		 * If this is not set, drag and drop will be disabled.
@@ -181,5 +213,16 @@ interface IRenderEvents {
 
 		/// Ditto
 		final void onFileDrop(EventOnFileDropFunc func) { onFileDrop(func.toDelegate); }
+
+		/**
+		 * While dragging of files has occured.
+		 * 
+		 * Params:
+		 * 		del		=	The callback to call
+		 */
+		void onFileDragging(EventOnFileDraggingDel del);
+
+		/// Ditto
+		final void onFileDragging(EventOnFileDraggingFunc func) { onFileDragging(func.toDelegate); }
 	}
 }
