@@ -68,7 +68,7 @@ Can load+extract from a [Nuget]() package. The linked packed is fat, meaning it 
        - [x] menu
        - [x] screenshot
        - [ ] Clipboard
-       - [ ] Drag&Drop
+       - [x] Drag&Drop
     - [x] Contexts:
        - [x] VRAM
        - [x] OpenGL
