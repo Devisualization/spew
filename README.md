@@ -13,8 +13,8 @@ So why should we take you seriously? After all glib exists. Well, you're still r
 ## Platform support
 - Windows 7+ (tested on Windows 10 officially only)
 
-Depends upon libuv for sockets+timer support.
-Can load+extract from a [Nuget]() package. Thie linked packed is fat, meaning it should work on Linux, OSX and Windows.
+Depends upon LibUV for sockets+timer+file watcher support.
+Can load+extract from a [Nuget]() package. The linked packed is fat, meaning it should work on Linux, OSX and Windows.
 
 ## Tasks
 
@@ -31,16 +31,20 @@ Can load+extract from a [Nuget]() package. Thie linked packed is fat, meaning it
     - [ ] X11
     - [x] WinAPI
     - [ ] Cocoa
-- [ ] Streams
+- [x] Streams
 	- [x] TCP
 		- [x] Client
 		- [x] Server
-	- [ ] UDP
-		- [ ] Local
-		- [ ] Remote
+	- [x] UDP
+		- [x] Local
+		- [x] Remote
 - [ ] Threading
 - [ ] File system
+  - [ ] Watcher
+      - [ ] LibUV
 - [ ] Timer
+  - [ ] WinAPI
+  - [ ] LibUV
 - [ ] Windowing
   - [ ] X11
     - [ ] Core
@@ -50,6 +54,8 @@ Can load+extract from a [Nuget]() package. Thie linked packed is fat, meaning it
        - [ ] icon
        - [ ] menu
        - [ ] screenshot
+       - [ ] Clipboard
+       - [ ] Drag&Drop
     - [ ] Contexts:
        - [ ] VRAM
        - [ ] OpenGL
@@ -61,13 +67,24 @@ Can load+extract from a [Nuget]() package. Thie linked packed is fat, meaning it
        - [x] icon
        - [x] menu
        - [x] screenshot
+       - [ ] Clipboard
+       - [ ] Drag&Drop
     - [x] Contexts:
        - [x] VRAM
        - [x] OpenGL
   - [ ] Cocoa
-    Contexts:
-    - [ ] VRAM
-    - [ ] OpenGL
+    - [ ] Core
+    - [ ] Features:
+       - [ ] notifications
+       - [ ] cursor
+       - [ ] icon
+       - [ ] menu
+       - [ ] screenshot
+       - [ ] Clipboard
+       - [ ] Drag&Drop
+    - [ ] Contexts:
+       - [ ] VRAM
+       - [ ] OpenGL
 
 __Short list of won't-implement__:
 - Contexts
