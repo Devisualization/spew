@@ -17,14 +17,16 @@ import cf.spew.ui;
 import cf.spew.miscellaneous;
 
 enum : bool {
-	Enable_Test_Window = false,
+	Enable_Test_Window = true,
 	Enable_Test_TCP = true,
 	Enable_Test_UDP = true,
+	Enable_Test_FileSystemWatch = true,
 
 	Enable_Kill_Window = true,
 	Enable_Kill_TCP_Client = false,
 	Enable_Kill_TCP_Server = false,
 	Enable_Kill_UDP = false,
+	Enable_Kill_FileSystemWatch = true,
 
 	Enable_Window_GL = true,
 	Enable_Force_Kill_Window = false,
@@ -187,6 +189,12 @@ int main() {
 			writeln("Window handling:");
 			aWindowTest();
 		}
+
+		static if (Enable_Test_FileSystemWatch) {
+			writeln;
+			writeln("File system watching");
+			fileSystemWatcherCreate();
+		}
 	}
 
 	// normally 3s would be ok for a timeout, but ugh with sockets, not so much!
@@ -194,15 +202,19 @@ int main() {
 		Instance.current.eventLoop.manager.setSourceTimeout(30.msecs);
 	}
 
-	fileSystemWatcherCreate();
-
 	Instance.current.eventLoop.execute();
 
 	return 0;
 }
 
 void fileSystemWatcherCreate() {
-	testDirFileSystemWatcher = Instance.current.misc.createFileSystemWatcher("C:\\projects\\spew\\testdir");
+	import std.file : write, remove, exists, mkdir;
+
+	if (!exists("testdirFSwatch")) {
+		mkdir("testdirFSwatch");
+	}
+
+	testDirFileSystemWatcher = Instance.current.misc.createFileSystemWatcher("testdirFSwatch");
 	testDirFileSystemWatcher.onCreate = (scope watcher, scope filename) {
 		import std.stdio : writeln, stdout;
 		writeln("File system watcher [", watcher.path, "]: create ", filename);stdout.flush;
@@ -210,11 +222,18 @@ void fileSystemWatcherCreate() {
 	testDirFileSystemWatcher.onDelete = (scope watcher, scope filename) {
 		import std.stdio : writeln, stdout;
 		writeln("File system watcher [", watcher.path, "]: delete ", filename);stdout.flush;
+
+		static if (Enable_Kill_FileSystemWatch) {
+			Instance.current.eventLoop.stopAllThreads;
+		}
 	};
 	testDirFileSystemWatcher.onChange = (scope watcher, scope filename) {
 		import std.stdio : writeln, stdout;
 		writeln("File system watcher [", watcher.path, "]: change ", filename);stdout.flush;
 	};
+
+	write("testdirFSwatch/test.txt", "Hi there!");
+	remove("testdirFSwatch/test.txt");
 }
 
 // | \/ streams

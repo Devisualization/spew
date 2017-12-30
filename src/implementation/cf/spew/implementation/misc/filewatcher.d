@@ -28,7 +28,7 @@ abstract class FileSystemWatcherImpl : IFileSystemWatcher {
 	}
 
 	@property {
-		scope string path() { return cast(string)thePath[0 .. $-1]; }
+		scope string path() { return cast(string)thePath; }
 	}
 	
 	void onChange(FileSystemWatcherEventDel del) { onChangeDel = del; }
@@ -50,7 +50,7 @@ class LibUVFileSystemWatcher : FileSystemWatcherImpl {
 		thePathC[0 .. $-1] = path[];
 		thePathC[$-1] = 0;
 
-		super(thePathC, alloc);
+		super(thePathC[0 .. $-1], alloc);
 		self = this;
 
 		uv_fs_event_init(getThreadLoop_UV(), &ctx);
