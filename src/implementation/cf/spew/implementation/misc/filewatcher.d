@@ -5,23 +5,30 @@ import std.experimental.allocator : IAllocator, makeArray, dispose;
 
 abstract class FileSystemWatcherImpl : IFileSystemWatcher {
 	package(cf.spew.implementation) {
-		string thePath;
 		IAllocator alloc;
+
+		// some weirdo bug for 32bit - windows dmd.
+		version(Windows) {
+			version(DigitalMars) {
+				ubyte[4] padding1;
+			}
+		}
+		char[] thePath;
 
 		FileSystemWatcherEventDel onChangeDel, onCreateDel, onDeleteDel;
 	}
 
 	~this() {
-		alloc.dispose(cast(char[])thePath);
+		alloc.dispose(thePath);
 	}
 
-	this(string thePath, IAllocator alloc) {
-		this.thePath = thePath;
+	this(char[] path, IAllocator alloc) {
+		this.thePath = path;
 		this.alloc = alloc;
 	}
 
 	@property {
-		scope string path() { return thePath; }
+		scope string path() { return cast(string)thePath[0 .. $-1]; }
 	}
 	
 	void onChange(FileSystemWatcherEventDel del) { onChangeDel = del; }
@@ -31,29 +38,24 @@ abstract class FileSystemWatcherImpl : IFileSystemWatcher {
 
 class LibUVFileSystemWatcher : FileSystemWatcherImpl {
 	package(cf.spew.implementation) {
+		LibUVFileSystemWatcher self;
 		uv_fs_event_t ctx;
 		bool stopped;
-		LibUVFileSystemWatcher self;
 	}
 
 	this(string path, IAllocator alloc) {
 		import cf.spew.event_loop.wells.libuv;
 
-		char[] thePath = alloc.makeArray!char(path.length);
 		char[] thePathC = alloc.makeArray!char(path.length+1);
-
-		thePath[] = path[];
 		thePathC[0 .. $-1] = path[];
 		thePathC[$-1] = 0;
 
-		super(cast(string)thePath, alloc);
+		super(thePathC, alloc);
 		self = this;
 
 		uv_fs_event_init(getThreadLoop_UV(), &ctx);
 		ctx.data = &self;
 		uv_fs_event_start(&ctx, &libuvFSWatcherCB, thePathC.ptr, uv_fs_event_flags.UV_FS_EVENT_RECURSIVE);
-
-		alloc.dispose(thePathC);
 	}
 
 	~this() {
