@@ -52,7 +52,7 @@
 			"importPaths": ["src/utils"],
 			"versions-windows": ["Windows2003"],
 			"dependencies": {
-				"de_util:core": "*"
+				"de_util:core": "~>0.1.4"
 			}
 		}
 	]
