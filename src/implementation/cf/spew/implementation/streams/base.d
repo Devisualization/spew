@@ -7,10 +7,6 @@ import cf.spew.streams.defs;
 
 private {
 	StreamPoint streamPointsLL;
-	
-	static ~this() {
-		StreamPoint.closeAllInstances();
-	}
 }
 
 abstract class StreamPoint : IStreamThing {
