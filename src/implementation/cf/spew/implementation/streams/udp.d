@@ -301,7 +301,7 @@ extern(C) {
 		
 		buf.base = self.alloc.makeArray!char(suggested_size).ptr;
 		GC.removeRoot(buf.base);
-		buf.len = suggested_size;
+		buf.len = cast(uint)suggested_size;
 	}
 
 	void streamUDPReadCB(uv_udp_t* handle, ptrdiff_t nread, const(uv_buf_t)* buf, const(sockaddr)* addr, uint flags) {

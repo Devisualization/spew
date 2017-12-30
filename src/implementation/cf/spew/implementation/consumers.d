@@ -192,12 +192,12 @@ version(Windows) {
 						char[] buffer2 = alloc.makeArray!char(256);
 
 						size_t count, len1, len2;
-						while((len1 = DragQueryFileW(hdrop, count, null, 0)) != 0) {
+						while((len1 = DragQueryFileW(hdrop, cast(uint)count, null, 0)) != 0) {
 							if (buffer1.length < len1) {
 								alloc.expandArray(buffer1, len1-buffer1.length);
 							}
 
-							DragQueryFileW(hdrop, count++, buffer1.ptr, buffer1.length);
+							DragQueryFileW(hdrop, cast(uint)count++, buffer1.ptr, cast(uint)buffer1.length);
 
 							len2 = codeLength!char(buffer1[0 .. len1]);
 							if (buffer2.length < len2) {

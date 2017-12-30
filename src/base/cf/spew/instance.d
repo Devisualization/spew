@@ -13,9 +13,10 @@ abstract class Instance {
 		shared(Management_EventLoop) eventLoop() shared;
 		/// The user interfacing implementation for this application
 		shared(Management_UserInterface) userInterface() shared;
-		/// Streams implementation, might be only available on the main thread.
+		/// Streams implementation aka sockets.
 		shared(Management_Streams) streams() shared;
-
+		/// Got a better name for this?
+		shared(Management_Miscellaneous) misc() shared;
 		///
 		pragma(inline, true)
 		final shared(Management_UserInterface) ui() shared { return userInterface; }
@@ -123,4 +124,27 @@ interface Management_Streams {
 
 	/// 
 	void forceCloseAll() shared;
+}
+
+/// Beware, thread-local!
+interface Management_Miscellaneous {
+	import std.experimental.allocator : IAllocator, theAllocator;
+	import cf.spew.miscellaneous;
+	import core.time : Duration;
+
+	/**
+	 * Creates a timer.
+	 * 
+	 * Params:
+	 *     timeout = Timeout till callback is called.
+	 *     hintSystemWait = If possible an event loop able thread stopper implementation will be used,
+	 *                                Otherwise a constantly checking one (costly) will be used.
+	 * 
+	 * Returns:
+	 *     A timer
+	 */
+	managed!ITimer createTimer(Duration timeout, bool hintSystemWait=true, IAllocator alloc=theAllocator()) shared;
+
+	/// Watches a directory recursively (if possible) and notifies of changes.
+	managed!IFileSystemWatcher createFileSystemWatcher(string path, IAllocator alloc=theAllocator()) shared;
 }

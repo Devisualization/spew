@@ -207,7 +207,7 @@ extern(C) {
 
 		buf.base = self.alloc.makeArray!char(suggested_size).ptr;
 		GC.removeRoot(buf.base);
-		buf.len = suggested_size;
+		buf.len = cast(uint)suggested_size;
 	}
 
 	void streamTCPReadCB(uv_stream_t* client, ptrdiff_t nread, const(uv_buf_t)* buf) {

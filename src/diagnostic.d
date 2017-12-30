@@ -14,9 +14,10 @@ import cf.spew.event_loop.defs;
 import cf.spew.event_loop.base;
 import cf.spew.streams;
 import cf.spew.ui;
+import cf.spew.miscellaneous;
 
 enum : bool {
-	Enable_Test_Window = true,
+	Enable_Test_Window = false,
 	Enable_Test_TCP = true,
 	Enable_Test_UDP = true,
 
@@ -52,6 +53,11 @@ static if (Enable_Window_GL) {
 	GLint resultGL, infoLogLengthGL;
 }
 // | /\ windowing
+// | \/ FS watching
+
+managed!IFileSystemWatcher testDirFileSystemWatcher;
+
+// | /\ FS watching
 
 // /\ global state
 
@@ -188,9 +194,27 @@ int main() {
 		Instance.current.eventLoop.manager.setSourceTimeout(30.msecs);
 	}
 
+	fileSystemWatcherCreate();
+
 	Instance.current.eventLoop.execute();
 
 	return 0;
+}
+
+void fileSystemWatcherCreate() {
+	testDirFileSystemWatcher = Instance.current.misc.createFileSystemWatcher("C:\\projects\\spew\\testdir");
+	testDirFileSystemWatcher.onCreate = (scope watcher, scope filename) {
+		import std.stdio : writeln, stdout;
+		writeln("File system watcher [", watcher.path, "]: create ", filename);stdout.flush;
+	};
+	testDirFileSystemWatcher.onDelete = (scope watcher, scope filename) {
+		import std.stdio : writeln, stdout;
+		writeln("File system watcher [", watcher.path, "]: delete ", filename);stdout.flush;
+	};
+	testDirFileSystemWatcher.onChange = (scope watcher, scope filename) {
+		import std.stdio : writeln, stdout;
+		writeln("File system watcher [", watcher.path, "]: change ", filename);stdout.flush;
+	};
 }
 
 // | \/ streams

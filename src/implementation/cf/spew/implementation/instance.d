@@ -32,6 +32,7 @@ final class DefaultImplementation : Instance {
 	shared(Management_EventLoop) _eventLoop;
 	shared(UIInstance) _userInterface;
 	shared(StreamsInstance) _streamInstance;
+	shared(Miscellaneous_Instance) _miscInstance;
 
 	@property {
 		override shared(Management_EventLoop) eventLoop() shared {
@@ -47,6 +48,11 @@ final class DefaultImplementation : Instance {
 		override shared(Management_Streams) streams() shared {
 			__guardCheck();
 			return _streamInstance;
+		}
+
+		override shared(Management_Miscellaneous) misc() shared {
+			__guardCheck();
+			return _miscInstance;
 		}
 	}
 
@@ -67,6 +73,7 @@ final class DefaultImplementation : Instance {
 		allocator = processAllocator();
 
 		_eventLoop = allocator.make!(shared(EventLoopWrapper))(allocator);
+		_miscInstance = allocator.make!(shared(Miscellaneous_Instance))();
 
 		// LibUV stuff for streams support
 		version(all) {
@@ -409,5 +416,36 @@ class StreamsInstance_LibUV : StreamsInstance {
 
 		uv_free_interface_addresses(addresses, count);
 		return managed!(managed!Address[])(ret, managers(), alloc);
+	}
+}
+
+class Miscellaneous_Instance : Management_Miscellaneous {
+	import cf.spew.miscellaneous;
+	import core.time : Duration;
+
+	managed!ITimer createTimer(Duration timeout, bool hintSystemWait=true, IAllocator alloc=theAllocator()) shared {
+		import cf.spew.implementation.misc.timer;
+		ITimer ret;
+
+		if (hintSystemWait) {
+			version(Windows) {
+				ret = alloc.make!WinAPITimer(timeout);
+			}
+		}
+
+		if (ret is null) {
+			ret = alloc.make!LibUVTimer(timeout);
+		}
+
+		return managed!ITimer(ret, managers(), alloc);
+	}
+
+	managed!IFileSystemWatcher createFileSystemWatcher(string path, IAllocator alloc=theAllocator()) shared {
+		import cf.spew.implementation.misc.filewatcher;
+		IFileSystemWatcher ret;
+
+		ret = alloc.make!LibUVFileSystemWatcher(path, alloc);
+
+		return managed!IFileSystemWatcher(ret, managers(), alloc);
 	}
 }
