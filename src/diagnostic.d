@@ -1,6 +1,6 @@
 module diagnostic;
 
-import core.time : Duration;
+import core.time : Duration, dur;
 import std.datetime : msecs;
 import std.experimental.allocator;
 
@@ -26,7 +26,7 @@ enum : bool {
 	Enable_Kill_TCP_Client = false,
 	Enable_Kill_TCP_Server = false,
 	Enable_Kill_UDP = false,
-	Enable_Kill_FileSystemWatch = true,
+	Enable_Kill_FileSystemWatch = false,
 
 	Enable_Window_GL = true,
 	Enable_Force_Kill_Window = false,
@@ -42,6 +42,7 @@ managed!ISocket_UDPLocalPoint udpLocalPoint;
 
 // | \/ windowing
 IWindow window;
+managed!ITimer windowForceDrawTimer;
 
 static if (Enable_Window_GL) {
 	/*
@@ -206,11 +207,11 @@ int main() {
 	//  processes/threads cpu time.
 	// After all, do we REALLY need all of it?
 	// Maybe for a game, but say a GUI toolkit? Nope.
+	// This is make or break code for non-Windows platforms.
 	Instance.current.eventLoop.manager.setIdleCallback = () {
 		writeln("idle callback");
 
 		import core.thread : Thread;
-		import core.time : dur;
 		Thread.sleep(dur!"msecs"(30));
 	};
 
@@ -523,45 +524,17 @@ void aWindowTest() {
 	};
 	
 	window.show();
-	Instance.current.eventLoop.manager.addSources(new shared ASource);
-}
 
-final class ASource : EventLoopSource, EventLoopSourceRetriever {
-	import std.datetime : StopWatch, Duration;
+	windowForceDrawTimer = Instance.current.misc.createTimer(dur!"msecs"(32), false);
+	windowForceDrawTimer.onEvent = (scope timer) {
+		writeln("window force draw timer ticked");
 
-	StopWatch stopWatch;
-
-	@property {
-		bool onMainThread() shared { return true; }
-		bool onAdditionalThreads() shared { return true; }
-		string description() shared { return "ASource"; }
-		EventSource identifier() shared { return EventSource.from("asrc"); }
-	}
-
-	shared(EventLoopSourceRetriever) nextEventGenerator(shared(ISharedAllocator)) shared { return this; }
-
-	bool nextEvent(ref Event event) shared {
-		import std.stdio;
-		writeln("====TICK====");stdout.flush;
-
-		StopWatch* sw = cast(StopWatch*)&stopWatch;
-		if (!sw.running)
-			sw.start;
-
-		if ((cast(Duration)sw.peek()).total!"msecs" >= 32) {
-			if (window.renderable)
-				onForcedDraw();
-			sw.reset;
-
-			return true;
-		} else
-			return false;
-	}
-
-	void handledEvent(ref Event event) shared {}
-	void unhandledEvent(ref Event event) shared {}
-	void handledErrorEvent(ref Event event) shared {}
-	void hintTimeout(Duration timeout) shared {}
+		if (window.renderable)
+			onForcedDraw();
+	};
+	windowForceDrawTimer.onStopped = (scope timer) {
+		writeln("window force draw timer stopped");
+	};
 }
 
 /*
