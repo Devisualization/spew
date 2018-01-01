@@ -24,6 +24,8 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 		DynamicArray!(EventLoopSource, shared(ISharedAllocator)) sources;
 		DynamicArray!(EventLoopConsumer, shared(ISharedAllocator)) consumers;
 
+		shared(void function()) idleCallback;
+
 		Mutex mutex_threadData;
 		HashMap!(ThreadID, InternalData*, shared(ISharedAllocator)) threadData;
 	}
@@ -88,6 +90,10 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 		synchronized(mutex_sourcesAlter) {
 			while(!(cast()sources).empty) (cast()sources).removeBack;
 		}
+	}
+
+	void setIdleCallback(void function() func) shared {
+		atomicStore(this.idleCallback, func);
 	}
 
 	void setSourceTimeout(Duration duration = 0.seconds) shared {
@@ -296,10 +302,14 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 			atomicOp!"+="(data.refCount, 1);
 
 			while((cast()threadsState)[threadId] != ThreadState.Stop) {
+				bool processedOne;
+
 				foreach(instance; data.instances) {
 					Event event;
 					while(instance.retriever.nextEvent(event)) {
 						bool handled;
+						processedOne = true;
+
 						if (event.type.value > 0) {
 							try {
 								foreach(consumer; instance.consumers) {
@@ -320,6 +330,11 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 							if ((cast()threadsState)[threadId] == ThreadState.Stop) break;
 						}
 					}
+				}
+
+				if (!processedOne) {
+					auto callback = atomicLoad(idleCallback);
+					if (callback !is null) callback();
 				}
 			}
 

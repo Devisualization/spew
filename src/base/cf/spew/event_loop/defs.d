@@ -114,7 +114,10 @@ interface IEventLoopManager {
 	
 	/// Removes all the sources from the list.
 	void clearSources() shared;
-	
+
+	/// Sets a callback to be called when an event loop is idling.
+	void setIdleCallback(void function()) shared;
+
 	/// Does the main thread have an event loop executing?
 	bool runningOnMainThread() shared;
 	

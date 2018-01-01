@@ -202,6 +202,18 @@ int main() {
 		Instance.current.eventLoop.manager.setSourceTimeout(30.msecs);
 	}
 
+	// Idle callback job is to give the kernel a chance to give other
+	//  processes/threads cpu time.
+	// After all, do we REALLY need all of it?
+	// Maybe for a game, but say a GUI toolkit? Nope.
+	Instance.current.eventLoop.manager.setIdleCallback = () {
+		writeln("idle callback");
+
+		import core.thread : Thread;
+		import core.time : dur;
+		Thread.sleep(dur!"msecs"(30));
+	};
+
 	Instance.current.eventLoop.execute();
 
 	return 0;
@@ -536,12 +548,14 @@ final class ASource : EventLoopSource, EventLoopSourceRetriever {
 		if (!sw.running)
 			sw.start;
 
-		if ((cast(Duration)sw.peek()).total!"msecs" >= 16) {
+		if ((cast(Duration)sw.peek()).total!"msecs" >= 32) {
 			if (window.renderable)
 				onForcedDraw();
 			sw.reset;
-		}
-		return false;
+
+			return true;
+		} else
+			return false;
 	}
 
 	void handledEvent(ref Event event) shared {}
