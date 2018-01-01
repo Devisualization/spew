@@ -1,5 +1,6 @@
 ﻿module cf.spew.implementation.misc.timer;
 import cf.spew.miscellaneous.timer;
+import devisualization.bindings.libuv.uv;
 import core.time : Duration;
 
 abstract class TimerImpl : ITimer {
@@ -15,6 +16,10 @@ abstract class TimerImpl : ITimer {
 		theTimeout = duration;
 	}
 
+	~this() {
+		if (!isStopped) stop();
+	}
+
 	@property {
 		Duration timeout() { return theTimeout; }
 		bool isRunning() { return !isStopped; }
@@ -24,16 +29,43 @@ abstract class TimerImpl : ITimer {
 	}
 }
 
-// http://docs.libuv.org/en/v1.x/fs_event.html
+// http://docs.libuv.org/en/v1.x/timer.html
 class LibUVTimer : TimerImpl {
+	package(cf.spew.implementation) {
+		uv_timer_t ctx;
+		LibUVTimer self;
+	}
+
 	this(Duration duration) {
+		import cf.spew.event_loop.wells.libuv;
 		super(duration);
 
-		assert(0);
+		uv_timer_init(getThreadLoop_UV(), &ctx);
+		self = this;
+		ctx.data = cast(void*)&self;
+
+		ulong timeout = cast(ulong)duration.total!"msecs";
+		uv_timer_start(&ctx, &libuvTimerCB, timeout, timeout);
 	}
 
 	void stop() {
-		assert(0);
+		if (!isStopped) {
+			isStopped = true;
+			uv_timer_stop(&ctx);
+			uv_close(cast(uv_handle_t*)&ctx, null);
+
+			if (onStoppedDel !is null)
+				onStoppedDel(this);
+		}
+	}
+}
+
+extern(C) {
+	void libuvTimerCB(uv_timer_t* handle) {
+		LibUVTimer watcher = *cast(LibUVTimer*)handle.data;
+
+		if (watcher.onEventDel !is null)
+			watcher.onEventDel(watcher);
 	}
 }
 

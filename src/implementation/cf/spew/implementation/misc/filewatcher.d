@@ -63,8 +63,11 @@ class LibUVFileSystemWatcher : FileSystemWatcherImpl {
 	}
 
 	void stop() {
-		stopped = true;
-		uv_fs_event_stop(&ctx);
+		if (!stopped) {
+			stopped = true;
+			uv_fs_event_stop(&ctx);
+			uv_close(cast(uv_handle_t*)&ctx, null);
+		}
 	}
 }
 
