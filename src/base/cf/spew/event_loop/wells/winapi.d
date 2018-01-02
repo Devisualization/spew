@@ -579,6 +579,10 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 			_event.wellData2Ptr = hdrop;
 			return 0;
 
+		case WM_TIMER:
+			_event.type = WinAPI_Events_Types.Window_Timer;
+			return 0;
+
 		//case WM_SYSTEMERROR:
 		//case WM_CTLCOLOR:
 
@@ -657,7 +661,6 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 			
 		case WM_INITDIALOG:
 		case WM_SYSCOMMAND:
-		case WM_TIMER:
 		case WM_HSCROLL:
 		case WM_VSCROLL:
 		case WM_INITMENU:

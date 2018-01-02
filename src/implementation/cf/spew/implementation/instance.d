@@ -73,7 +73,7 @@ final class DefaultImplementation : Instance {
 		allocator = processAllocator();
 
 		_eventLoop = allocator.make!(shared(EventLoopWrapper))(allocator);
-		_miscInstance = allocator.make!(shared(Miscellaneous_Instance))();
+		_miscInstance = allocator.make!(shared(Miscellaneous_Instance))(allocator);
 
 		// LibUV stuff for streams support
 		version(all) {
@@ -421,7 +421,14 @@ class StreamsInstance_LibUV : StreamsInstance {
 
 class Miscellaneous_Instance : Management_Miscellaneous {
 	import cf.spew.miscellaneous;
+	import std.experimental.containers.map;
 	import core.time : Duration;
+
+	shared(SharedMap!(size_t, ITimer)) timerToIdMapper;
+
+	this(shared(ISharedAllocator) alloc) shared {
+		timerToIdMapper = SharedMap!(size_t, ITimer)(alloc);
+	}
 
 	managed!ITimer createTimer(Duration timeout, bool hintSystemWait=true, IAllocator alloc=theAllocator()) shared {
 		import cf.spew.implementation.misc.timer;
@@ -429,7 +436,7 @@ class Miscellaneous_Instance : Management_Miscellaneous {
 
 		if (hintSystemWait) {
 			version(Windows) {
-				ret = alloc.make!WinAPITimer(timeout);
+				ret = alloc.make!WinAPITimer(this, timeout);
 			}
 		}
 

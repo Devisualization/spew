@@ -89,15 +89,15 @@ final class LibUVEventLoopSourceRetrieve : EventLoopSourceRetriever {
 		}
 
 		// setup a timer so we can find out if we have gone beyond what we are allowed.
-		ulong timeoutms = cast(ulong)atomicLoad(timeout).total!"msecs";
+		ulong timeoutms = cast(ulong)atomicLoad(timeout).total!"msecs" / 2;
 		uvLoopTimeout.data = &uvLoop;
-		uv_timer_start(&uvLoopTimeout, &uvLoopTimerCB, timeoutms, 0);
+		uv_timer_start(&uvLoopTimeout, &uvLoopTimerCB, timeoutms, timeoutms);
 
 		// tells the manager if there are more events
 		uv_run(&uvLoop, uv_run_mode.UV_RUN_ONCE);
 		uv_timer_stop(&uvLoopTimeout);
 
-		return uvLoopTimeout.data is null;
+		return uvLoopTimeout.data !is null;
 	}
 	
 	void handledEvent(ref Event event) shared {}

@@ -525,7 +525,7 @@ void aWindowTest() {
 	
 	window.show();
 
-	windowForceDrawTimer = Instance.current.misc.createTimer(dur!"msecs"(32), false);
+	windowForceDrawTimer = Instance.current.misc.createTimer(dur!"msecs"(32), true);
 	windowForceDrawTimer.onEvent = (scope timer) {
 		writeln("window force draw timer ticked");
 

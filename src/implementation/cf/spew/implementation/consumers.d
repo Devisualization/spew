@@ -4,6 +4,7 @@
  */
 module cf.spew.implementation.consumers;
 public import cf.spew.ui;
+public import cf.spew.miscellaneous.timer;
 public import cf.spew.event_loop;
 public import cf.spew.events;
 public import devisualization.image : ImageStorage;
@@ -108,6 +109,7 @@ version(Windows) {
 	final class EventLoopConsumerImpl_WinAPI : EventLoopConsumerImpl {
 		import cf.spew.implementation.instance;
 		import cf.spew.implementation.windowing.window;
+		import cf.spew.implementation.misc.timer;
 		import cf.spew.events.windowing;
 		import cf.spew.events.winapi;
 		
@@ -119,7 +121,24 @@ version(Windows) {
 			IWindow window = cast()uiInstance.windowToIdMapper[event.wellData1Value];
 
 			if (window is null) {
+				ITimer timer = cast()this.instance._miscInstance.timerToIdMapper[event.wellData1Value];
 
+				if (timer is null) {
+				} else {
+					switch(event.type) {
+						case Windowing_Events_Types.Window_RequestClose:
+							timer.stop();
+							return true;
+
+						case WinAPI_Events_Types.Window_Timer:
+							if (TimerImpl timer2 = cast(TimerImpl)timer) {
+								tryFunc(timer2.onEventDel, timer);
+							}
+							return true;
+						default:
+							return false;
+					}
+				}
 			} else if (WindowImpl_WinAPI w = cast(WindowImpl_WinAPI)window) {
 				WindowImpl w2 = cast(WindowImpl)w;
 

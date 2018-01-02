@@ -306,6 +306,7 @@ class EventLoopManager_Impl : EventLoopManager_Base {
 
 				foreach(instance; data.instances) {
 					Event event;
+
 					while(instance.retriever.nextEvent(event)) {
 						bool handled;
 						processedOne = true;

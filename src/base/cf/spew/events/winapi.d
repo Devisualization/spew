@@ -42,6 +42,8 @@ enum WinAPI_Events_Types {
 	Menu_Click = EventType.from("|wmclk"),
 	///
 	Window_DragAndDrop = EventType.from("|wd&d,"),
+	///
+	Window_Timer = EventType.from("|wt")
 }
 
 // windows specific stuff
