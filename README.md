@@ -39,12 +39,12 @@ Can load+extract from a [Nuget]() package. The linked packed is fat, meaning it 
 		- [x] Local
 		- [x] Remote
 - [ ] Threading
-- [ ] File system
-  - [ ] Watcher
-      - [ ] LibUV
-- [ ] Timer
-  - [ ] WinAPI
-  - [ ] LibUV
+- [x] File system
+  - [x] Watcher
+      - [x] LibUV
+- [x] Timer
+  - [x] WinAPI
+  - [x] LibUV
 - [ ] Windowing
   - [ ] X11
     - [ ] Core
