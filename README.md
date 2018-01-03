@@ -60,14 +60,14 @@ Can load+extract from a [Nuget]() package. The linked packed is fat, meaning it 
        - [ ] VRAM
        - [ ] OpenGL
   - [x] WinAPI
-    - [ ] Core
+    - [x] Core
     - [x] Features:
        - [x] notifications
        - [x] cursor
        - [x] icon
        - [x] menu
        - [x] screenshot
-       - [ ] Clipboard
+       - [x] Clipboard
        - [x] Drag&Drop
     - [x] Contexts:
        - [x] VRAM

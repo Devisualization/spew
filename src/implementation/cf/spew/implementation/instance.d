@@ -124,7 +124,7 @@ final class EventLoopWrapper : Management_EventLoop {
 	@property shared(IEventLoopManager) manager() shared { return _manager; }
 }
 
-abstract class UIInstance : Management_UserInterface, Have_Notification {
+abstract class UIInstance : Management_UserInterface, Have_Notification, Have_Management_Clipboard {
 	import cf.spew.ui : IWindow, IDisplay, IWindowCreator, IRenderPoint, IRenderPointCreator;
 	import std.experimental.allocator : IAllocator, processAllocator;
 	import devisualization.util.core.memory.managed;
@@ -172,10 +172,14 @@ abstract class UIInstance : Management_UserInterface, Have_Notification {
 	// notifications
 
 	shared(Feature_Notification) __getFeatureNotification() shared { return null; }
+
+	// clipboard
+
+	shared(Feature_Management_Clipboard) __getFeatureClipboard() shared { return null; }
 }
 
 version(Windows) {
-	final class UIInstance_WinAPI : UIInstance, Feature_Notification {
+	final class UIInstance_WinAPI : UIInstance, Feature_Notification, Feature_Management_Clipboard {
 		import cf.spew.implementation.windowing.window_creator : WindowCreatorImpl_WinAPI;
 		import cf.spew.implementation.windowing.misc;
 		import devisualization.image.storage.base : ImageStorageHorizontal;
@@ -187,6 +191,8 @@ version(Windows) {
 
 		winapi.HWND taskbarIconWindow;
 		winapi.NOTIFYICONDATAW taskbarIconNID;
+
+		size_t maxClipboardSizeV = size_t.max;
 
 		this(shared(ISharedAllocator) allocator) shared {
 			super(allocator);
@@ -347,6 +353,80 @@ version(Windows) {
 				
 				void notify(ImageStorage!RGBA8, dstring, dstring, IAllocator alloc=theAllocator) shared { assert(0); }
 				void clearNotifications() shared { assert(0); }
+			}
+
+			// clipboard
+
+			shared(Feature_Management_Clipboard) __getFeatureClipboard() shared {
+				return winapi.OpenClipboard(null) != 0 ? this : null;
+			}
+
+			@property {
+				void maxClipboardDataSize(size_t amount) shared { maxClipboardSizeV = amount; }
+
+				size_t maxClipboardDataSize() shared { return maxClipboardSizeV; }
+
+				managed!string clipboardText(IAllocator alloc) shared {
+					import std.utf : byChar, codeLength;
+					char[] ret;
+
+					winapi.HANDLE h = winapi.GetClipboardData(winapi.CF_UNICODETEXT);
+					if (h !is null) {
+						wchar* theData = cast(wchar*)winapi.GlobalLock(h);
+						size_t theDataLength, realDataLength;
+						while(theData[theDataLength++] != 0) {}
+						wchar[] theData2 = theData[0 .. theDataLength-1];
+
+						realDataLength = theData2.codeLength!char;
+						ret = alloc.makeArray!char(realDataLength);
+						size_t offset;
+						foreach(c; theData2.byChar)
+							ret[offset++] = c;
+
+						winapi.GlobalUnlock(h);
+					} else {
+						h = winapi.GetClipboardData(winapi.CF_TEXT);
+
+						if (h !is null) {
+							char* theData = cast(char*)winapi.GlobalLock(h);
+							size_t theDataLength;
+							while(theData[theDataLength++] != 0) {}
+
+							ret = alloc.makeArray!char(theDataLength-1);
+							ret[] = theData[0 .. theDataLength];
+
+							winapi.GlobalUnlock(h);
+						}
+					}
+
+					winapi.CloseClipboard();
+
+					if (ret !is null)
+						return managed!string(cast(string)ret, managers(), alloc);
+					else
+						return managed!string.init;
+				}
+
+				void clipboardText(scope string text) shared {
+					import std.utf : byWchar, codeLength;
+					winapi.EmptyClipboard();
+
+					size_t realLength = text.codeLength!char;
+					winapi.HGLOBAL hglb = winapi.GlobalAlloc(winapi.GMEM_MOVEABLE, (realLength+1)*wchar.sizeof);
+
+					if (hglb !is null) {
+						wchar* wtext = cast(wchar*)winapi.GlobalLock(hglb);
+						size_t offset;
+
+						foreach(c; text.byWchar)
+							wtext[offset++] = c;
+
+						winapi.GlobalUnlock(hglb);
+						winapi.SetClipboardData(winapi.CF_UNICODETEXT, hglb);
+					}
+
+					winapi.CloseClipboard();
+				}
 			}
 		}
 	}

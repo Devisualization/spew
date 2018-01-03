@@ -14,6 +14,7 @@ import cf.spew.event_loop.defs;
 import cf.spew.event_loop.base;
 import cf.spew.streams;
 import cf.spew.ui;
+import cf.spew.ui.features.clipboard;
 import cf.spew.miscellaneous;
 
 enum : bool {
@@ -142,6 +143,18 @@ int main() {
 			return -7;
 		}
 
+		Instance.current.ui.clipboardText = "Hi from SPEW!";
+		auto gottenClipboardText = Instance.current.ui.clipboardText();
+		
+		if (gottenClipboardText[] == "Hi from SPEW!") {
+			writeln;
+			writeln("Clipboard UI support is working as intended");
+		} else {
+			writeln;
+			writeln("Clipboard UI support is not working.");
+			writeln("This may not be an error, as it is an optional feature.");
+		}
+
 		writeln;
 		writeln("Right so far everything looks all good and dandy.");
 		writeln("But it would be nice to have more features needed to be testing!");
@@ -163,6 +176,7 @@ int main() {
 		writeln("So it looks like:");
 		writeln("\t- Event loop");
 		writeln("\t- User interface");
+		writeln("\t\t- Clipboard");
 		writeln("\t- Stream (sockets)");
 		writeln("are all provided and functioning possibly.");
 

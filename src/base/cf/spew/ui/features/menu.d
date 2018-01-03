@@ -90,13 +90,13 @@ void assignMenu(scope shared(Management_UserInterface) self) {
 	}
 	
 	/**
-	 * Does the given window have a menu?
+	 * Does the given user interface manager have a menu?
 	 * 
 	 * Params:
-	 * 		self	=	The window instance
+	 * 		self	=	The user interface manager instance
 	 * 
 	 * Returns:
-	 * 		If the window/platform supports having an icon
+	 * 		If the platform supports having an menu
 	 */
 	bool capableOfMenu(scope shared(Management_UserInterface) self) {
 		if (self is null)
