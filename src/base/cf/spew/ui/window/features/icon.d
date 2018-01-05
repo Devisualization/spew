@@ -23,27 +23,27 @@ interface Feature_Icon {
 
 @property {
     /// Sets the icon on a window[creator] if capable
-	void icon(T)(scope T self, ImageStorage!RGBA8 to) if (is(T : IWindow) || is(T : IWindowCreator)) {
+	void icon(T)(managed!T self, ImageStorage!RGBA8 to) if (is(T : IWindow) || is(T : IWindowCreator)) {
 		if (self.capableOfWindowIcon) {
-			(cast(Have_Icon)self).__getFeatureIcon().setIcon(to);
+			(cast(managed!Have_Icon)self).__getFeatureIcon().setIcon(to);
 		}
     }
 
-	void icon(T)(scope T self, ImageStorage!RGBA8 to) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
+	void icon(T)(managed!T self, ImageStorage!RGBA8 to) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
         static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or IWindowCreator.");
     }
 
     /// Retrives the window icon if capable or null if not
-	managed!(ImageStorage!RGBA8) icon(T)(scope T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
+	managed!(ImageStorage!RGBA8) icon(T)(managed!T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
 		if (!self.capableOfWindowIcon)
 			return (managed!(ImageStorage!RGBA8)).init;
 		else {
-			auto ret = (cast(Have_Icon)self).__getFeatureIcon().getIcon();
+			auto ret = (cast(managed!Have_Icon)self).__getFeatureIcon().getIcon();
 			return managed!(ImageStorage!RGBA8)(ret, managers(), Ownership.Secondary, self.allocator);
 		}
     }
 
-	managed!(ImageStorage!RGBA8) icon(T)(scope T self) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
+	managed!(ImageStorage!RGBA8) icon(T)(managed!T self) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
         static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or IWindowCreator.");
     }
 
@@ -56,16 +56,16 @@ interface Feature_Icon {
 	 * Returns:
 	 * 		If the window[creator] supports having an icon
 	 */
-	bool capableOfWindowIcon(T)(scope T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
+	bool capableOfWindowIcon(T)(managed!T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
 		if (self is null)
 			return false;
-		else if (auto ss = cast(Have_Icon)self)
-			return ss.__getFeatureIcon() !is null;
-		else
-			return false;
+		else {
+			auto ss = cast(managed!Have_Icon)self;
+			return ss !is null && ss.__getFeatureIcon() !is null;
+		}
 	}
 
-	bool capableOfWindowIcon(T)(scope T self) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
+	bool capableOfWindowIcon(T)(managed!T self) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
 		static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow, IWindowCreator types.");
 	}
 }

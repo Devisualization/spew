@@ -151,10 +151,10 @@ abstract class UIInstance : Management_UserInterface, Have_Notification, Have_Ma
 	managed!IRenderPointCreator createRenderPoint(IAllocator alloc = theAllocator()) shared
 	{ return cast(managed!IRenderPointCreator)createWindow(alloc); }
 
-	IRenderPoint createARenderPoint(IAllocator alloc = theAllocator()) shared
-	{ return createAWindow(alloc); }
+	managed!IRenderPoint createARenderPoint(IAllocator alloc = theAllocator()) shared
+	{ return cast(managed!IRenderPoint)createAWindow(alloc); }
 
-	IWindow createAWindow(IAllocator alloc = theAllocator()) shared {
+	managed!IWindow createAWindow(IAllocator alloc = theAllocator()) shared {
 		import cf.spew.ui.context.features.vram;
 
 		auto creator = createWindow(alloc);

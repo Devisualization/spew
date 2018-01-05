@@ -21,11 +21,11 @@ interface Feature_Window_ScreenShot {
 
 @property {
     /// Takes a screenshot or null if not possible
-	managed!(ImageStorage!RGB8) screenshot(scope IWindow self, IAllocator alloc=theAllocator()) {
+	managed!(ImageStorage!RGB8) screenshot(managed!IWindow self, IAllocator alloc=theAllocator()) {
 		if (!self.capableOfScreenShot)
 			return (managed!(ImageStorage!RGB8)).init;
 		else {
-			auto ret = (cast(Have_Window_ScreenShot)self).__getFeatureScreenShot().screenshot;
+			auto ret = (cast(managed!Have_Window_ScreenShot)self).__getFeatureScreenShot().screenshot;
 			return managed!(ImageStorage!RGB8)(ret, managers(), alloc);
 		}
     }
@@ -39,12 +39,12 @@ interface Feature_Window_ScreenShot {
 	 * Returns:
 	 * 		If the window/display/platform supports having a screenshot taken of it
 	 */
-	bool capableOfScreenShot(scope IWindow self) {
+	bool capableOfScreenShot(managed!IWindow self) {
 		if (self is null)
 			return false;
-		else if (auto ss = cast(Have_Window_ScreenShot)self)
-			return ss.__getFeatureScreenShot() !is null;
-		else
-			return false;
+		else {
+			auto ss = cast(managed!Have_Window_ScreenShot)self;
+			return ss !is null && ss.__getFeatureScreenShot() !is null;
+		}
 	}
 }

@@ -86,13 +86,13 @@ interface Management_UserInterface {
 	managed!IRenderPointCreator createRenderPoint(IAllocator alloc = theAllocator()) shared;
 	
 	/// completely up to platform implementation to what the defaults are
-	IRenderPoint createARenderPoint(IAllocator alloc = theAllocator()) shared;
+	managed!IRenderPoint createARenderPoint(IAllocator alloc = theAllocator()) shared;
 	
 	///
 	managed!IWindowCreator createWindow(IAllocator alloc = theAllocator()) shared;
 	
 	/// completely up to platform implementation to what the defaults are
-	IWindow createAWindow(IAllocator alloc = theAllocator()) shared;
+	managed!IWindow createAWindow(IAllocator alloc = theAllocator()) shared;
 	
 	@property {
 		///

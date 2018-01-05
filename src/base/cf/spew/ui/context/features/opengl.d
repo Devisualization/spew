@@ -5,6 +5,7 @@
 module cf.spew.ui.context.features.opengl;
 import cf.spew.ui.rendering;
 import cf.spew.ui.context.defs;
+import devisualization.util.core.memory.managed;
 
 interface Have_OGLCtx {
 	void assignOpenGLContext(OpenGLVersion version_, OpenGL_Context_Callbacks* callbacks);
@@ -49,12 +50,12 @@ struct OpenGL_Context_Callbacks {
  *      version_    =   What version of OpenGL should it attempt to use
  *      callbacks   =   Callbacks that modify how the context will operate e.g. loading of OpenGL functions
  */
-void assignOpenGLContext(IRenderPointCreator self, OpenGLVersion version_, OpenGL_Context_Callbacks* callbacks) {
+void assignOpenGLContext(T)(managed!T self, OpenGLVersion version_, OpenGL_Context_Callbacks* callbacks) if (is(T : IRenderPointCreator) || is(T : IWindowCreator)) {
 	if (self is null)
 		return;
-	if (Have_OGLCtx ss = cast(Have_OGLCtx)self) {
+	auto ss = cast(managed!Have_OGLCtx)self;
+	if (ss !is null)
 		ss.assignOpenGLContext(version_, callbacks);
-	}
 }
 
 interface Have_OpenGL {

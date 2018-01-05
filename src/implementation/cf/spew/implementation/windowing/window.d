@@ -200,6 +200,7 @@ version(Windows) {
 			HCURSOR hCursor;
 
 			RECT oldCursorClipArea;
+			bool isClosed;
 
 			// this is very high up in field orders, that way this classes data will be in cache when accessed
 			EventLoopAlterationCallbacks impl_callbacks_struct;
@@ -215,7 +216,6 @@ version(Windows) {
 			WindowCursorStyle cursorStyle;
 			ImageStorage!RGBA8 customCursor;
 		}
-
 
 		@disable this(shared(UIInstance) instance);
 
@@ -246,11 +246,17 @@ version(Windows) {
 					item.remove();
 				}
 			}
+
+			if (!isClosed) {
+				if (context_ !is null)
+					alloc.dispose(context_);
+				close();
+			}
 		}
 
 		@property {
 			vec2!uint size() {
-				if (!visible)
+				if (!visible || isClosed)
 					return vec2!uint(0, 0);
 				
 				RECT rect;
@@ -264,7 +270,10 @@ version(Windows) {
 
 			managed!IDisplay display() {
 				import std.typecons : tuple;
-				
+
+				if (!visible || isClosed)
+					return managed!IDisplay.init;
+
 				HMONITOR monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONULL);
 				if (monitor is null)
 					return (managed!IDisplay).init;
@@ -272,11 +281,12 @@ version(Windows) {
 					return cast(managed!IDisplay)managed!DisplayImpl_WinAPI(managers(), tuple(monitor, alloc, instance), alloc);
 			}
 
-			bool renderable() { return IsWindowVisible(hwnd) == 1; }
+			bool renderable() { return !isClosed && IsWindowVisible(hwnd) == 1; }
 
 			void* __handle() { return hwnd; }
 
 			override void onFileDrop(EventOnFileDropDel del) {
+				if (isClosed) return;
 				super.onFileDrop(del);
 
 				if (del !is null) {
@@ -295,14 +305,19 @@ version(Windows) {
 		}
 
 		void close() {
+			if (isClosed) return;
 			// specifically requested to close!
 
+			isClosed = true;
 			onFileDrop(null);
 			DestroyWindow(hwnd);
 		}
 
 		@property {
 			managed!dstring title() {
+				if (isClosed)
+					return managed!dstring.init;
+
 				int textLength = GetWindowTextLengthW(hwnd);
 				wchar[] buffer = alloc.makeArray!wchar(textLength + 1);
 				GetWindowTextW(hwnd, buffer.ptr, cast(int)buffer.length);
@@ -325,6 +340,8 @@ version(Windows) {
 			void title(dstring text) { setTitle(text); }
 			
 			void setTitle(String)(String text) if (isSomeString!String) {
+				if (isClosed) return;
+
 				wchar[] buffer = alloc.makeArray!wchar(codeLength!wchar(text) + 1);
 				buffer[$-1] = 0;
 				
@@ -339,16 +356,23 @@ version(Windows) {
 			}
 
 			void location(vec2!int point) {
+				if (!visible || isClosed) return;
 				SetWindowPos(hwnd, null, point.x, point.y, 0, 0, SWP_NOSIZE);
 			}
 
 			vec2!int location() {
+				if (!visible || isClosed)
+					return vec2!int.init;
+
 				RECT rect;
 				GetWindowRect(hwnd, &rect);
 				return vec2!int(rect.left, rect.top);
 			}
 
 			void size(vec2!uint point) {
+				if (!visible || isClosed)
+					return;
+
 				RECT rect;
 				rect.top = point.x;
 				rect.bottom = point.y;
@@ -359,16 +383,20 @@ version(Windows) {
 		}
 
 		void hide() {
+			if (isClosed) return;
 			ShowWindow(hwnd, SW_HIDE);
 		}
 		
 		void show() {
+			if (isClosed) return;
+
 			ShowWindow(hwnd, SW_SHOW);
 			UpdateWindow(hwnd);
 		}
 
 		Feature_Window_ScreenShot __getFeatureScreenShot() {
-			return this;
+			if (isClosed) return null;
+			else return this;
 		}
 		
 		ImageStorage!RGB8 screenshot(IAllocator alloc=null) {
@@ -385,9 +413,10 @@ version(Windows) {
 			
 			return storage;
 		}
-		
+
 		Feature_Icon __getFeatureIcon() {
-			return this;
+			if (isClosed) return null;
+			else return this;
 		}
 		
 		ImageStorage!RGBA8 getIcon() @property {
@@ -430,7 +459,7 @@ version(Windows) {
 		}
 		
 		Feature_Window_Menu __getFeatureMenu() {
-			if (hMenu is null)
+			if (hMenu is null || isClosed)
 				return null;
 			else
 				return this;
@@ -453,6 +482,7 @@ version(Windows) {
 		}
 		
 		void setCursor(WindowCursorStyle style) {
+			if (isClosed) return;
 			assert(cursorStyle != WindowCursorStyle.Underterminate);
 			
 			if (cursorStyle == WindowCursorStyle.Custom) {
@@ -571,7 +601,8 @@ version(Windows) {
 		}
 		
 		Feature_Style __getFeatureStyle() {
-			return this;
+			if (isClosed) return null;
+			else return this;
 		}
 		
 		void setStyle(WindowStyle style) {

@@ -73,19 +73,18 @@ interface Window_MenuItem {
 }
 
 ///
-void assignMenu(scope IWindowCreator self) {
-	if (Have_Window_MenuCreator ss = cast(Have_Window_MenuCreator)self) {
-		ss.assignMenu();
-	}
+void assignMenu(managed!IWindowCreator self) {
+	auto ss = cast(managed!Have_Window_MenuCreator)self;
+	if (ss !is null) ss.assignMenu();
 }
 
 @property {
     /// Retrives the menu instance or null if non existant
-	Feature_Window_Menu menu(scope IWindow self) {
+	Feature_Window_Menu menu(managed!IWindow self) {
 		if (!self.capableOfMenu)
 			return null;
 		else {
-			return (cast(Have_Window_Menu)self).__getFeatureMenu();
+			return (cast(managed!Have_Window_Menu)self).__getFeatureMenu();
 		}
     }
 
@@ -98,12 +97,12 @@ void assignMenu(scope IWindowCreator self) {
 	 * Returns:
 	 * 		If the window/platform supports having an icon
 	 */
-	bool capableOfMenu(scope IWindow self) {
+	bool capableOfMenu(managed!IWindow self) {
 		if (self is null)
 			return false;
-		else if (auto ss = cast(Have_Window_Menu)self)
-			return ss.__getFeatureMenu() !is null;
-		else
-			return false;
+		else {
+			auto ss = cast(managed!Have_Window_Menu)self;
+			return ss !is null && ss.__getFeatureMenu() !is null;
+		}
 	}
 }

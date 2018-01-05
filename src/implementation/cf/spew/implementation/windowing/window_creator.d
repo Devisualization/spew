@@ -65,8 +65,8 @@ abstract class WindowCreatorImpl : IWindowCreator, Have_CustomCtx {
 		this.parentWindow_ = window;
 	}
 
-	IRenderPoint create() {
-		return cast(IRenderPoint)createWindow;
+	managed!IRenderPoint create() {
+		return cast(managed!IRenderPoint)createWindow();
 	}
 }
 
@@ -94,7 +94,7 @@ version(Windows) {
 			super(uiInstance, alloc);
 		}
 
-		IWindow createWindow() {
+		managed!IWindow createWindow() {
 			WindowImpl_WinAPI ret = null;
 			IContext context = null;
 
@@ -245,7 +245,7 @@ version(Windows) {
 			// done
 
 			InvalidateRgn(hwnd, null, true);
-			return ret;
+			return managed!IWindow(ret, managers(), alloc);
 		}
 
 		Feature_Icon __getFeatureIcon() {

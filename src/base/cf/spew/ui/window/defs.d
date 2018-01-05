@@ -75,5 +75,5 @@ interface IWindowCreator : IRenderPointCreator {
 	void parentWindow(IWindow);
 
 	/// Creates the window
-    IWindow createWindow();
+    managed!IWindow createWindow();
 }

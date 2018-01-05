@@ -133,5 +133,5 @@ interface IRenderPointCreator {
      * Returns:
      *      The render point or null if failed.
      */
-    IRenderPoint create();
+    managed!IRenderPoint create();
 }

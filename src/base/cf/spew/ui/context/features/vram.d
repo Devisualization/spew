@@ -9,6 +9,7 @@ import cf.spew.ui.rendering;
 import cf.spew.ui.window.defs;
 import cf.spew.ui.context.defs;
 import devisualization.image : ImageStorage;
+import devisualization.util.core.memory.managed;
 import std.experimental.color : RGB8, RGBA8;
 
 interface Have_VRamCtx {
@@ -23,12 +24,12 @@ interface Have_VRamCtx {
  *      self        =   The render point.
  *      withAlpha   =   Should the backing buffer have an alpha channel.
  */
-void assignVRamContext(IRenderPointCreator self, bool withAlpha=false) {
+void assignVRamContext(T)(managed!T self, bool withAlpha=false) if (is(T : IRenderPointCreator) || is(T : IWindowCreator)) {
     if (self is null)
         return;
-    if (Have_VRamCtx ss = cast(Have_VRamCtx)self) {
+	auto ss = cast(managed!Have_VRamCtx)self;
+	if (ss !is null)
         ss.assignVRamContext(withAlpha);
-    }
 }
 
 interface Have_VRam {

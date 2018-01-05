@@ -29,10 +29,10 @@ interface ICustomContext : IContext {
  *      self        =   The render point.
  *      customContext    =   The custom context to load into the window.
  */
-void assignCustomContext(IRenderPointCreator self, managed!ICustomContext customContext) {
+void assignCustomContext(T)(managed!T self, managed!ICustomContext customContext) if (is(T : IRenderPointCreator) || is(T : IWindowCreator)) {
 	if (self is null)
 		return;
-	if (Have_CustomCtx ss = cast(Have_CustomCtx)self) {
+	auto ss = cast(managed!Have_CustomCtx)self;
+	if (ss !is null)
 		ss.assignCustomContext(customContext);
-	}
 }

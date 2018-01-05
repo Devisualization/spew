@@ -42,7 +42,7 @@ managed!ISocket_UDPLocalPoint udpLocalPoint;
 // | /\ streams
 
 // | \/ windowing
-IWindow window;
+managed!IWindow window;
 managed!ITimer windowForceDrawTimer;
 
 static if (Enable_Window_GL) {
