@@ -16,6 +16,8 @@ So why should we take you seriously? After all glib exists. Well, you're still r
 Depends upon LibUV for sockets+timer+file watcher support.
 Can load+extract from a [Nuget]() package. The linked packed is fat, meaning it should work on Linux, OSX and Windows.
 
+Warning: Windows 64bit for dmd is currently bugged when using the diagnostic code. OpenGL bindings is too large for debug information.
+
 ## Tasks
 
 - [ ] General structure
