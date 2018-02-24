@@ -848,7 +848,7 @@ bool translateKeyCall(WPARAM code, LPARAM lParam, out dchar key, out SpecialKey 
 			specialKey = SpecialKey.UpArrow; break;
 		case VK_DOWN:
 			specialKey = SpecialKey.DownArrow; break;
-		case VK_F1: .. case VK_F12:
+		case VK_F1: .. case VK_F24:
 			specialKey =  cast(SpecialKey)(SpecialKey.F1 + (code - VK_F1)); break;
 		case VK_OEM_1:
 			key = isShift ? ':' : ';'; break;
