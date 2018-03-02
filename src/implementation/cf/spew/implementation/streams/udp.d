@@ -236,20 +236,27 @@ class LibUVUDPEndPoint : AnUDPEndPoint {
 	void write(const(ubyte[]) data...) {
 		import core.memory : GC;
 
-		LibUVWriteUDP* writebuf = alloc.make!LibUVWriteUDP;
-		GC.removeRoot(writebuf);
-		
-		writebuf.req.data = writebuf;
-		writebuf.alloc = alloc;
-		
-		char* buffer = alloc.makeArray!char(data.length).ptr;
-		GC.removeRoot(buffer);
-		
-		buffer[0 .. data.length] = cast(char[])data[];
-		
-		assert(data.length < uint.max, "Too big of data to write, limit uint.max");
-		writebuf.buf = libuv.uv_buf_init(buffer, cast(uint)data.length);
-		libuv.uv_write(&writebuf.req, &localPoint_.ctx_stream, cast(const)&writebuf.buf, 1, &streamUDPWriteCB);
+	    LibUVWriteUDP* writebuf = alloc.make!LibUVWriteUDP;
+	    GC.removeRoot(writebuf);
+	
+	    
+	    writebuf.alloc = alloc;
+	
+	    char* buffer = alloc.makeArray!char(data.length).ptr;
+	    GC.removeRoot(buffer);
+	
+	    buffer[0 .. data.length] = cast(char[])data[];
+	
+	    assert(data.length < uint.max, "Too big of data to write, limit uint.max");
+	    writebuf.buf = libuv.uv_buf_init(buffer, cast(uint)data.length);
+
+        version(all) {
+            writebuf.udpsend.data = writebuf;
+            libuv.uv_udp_send(&writebuf.udpsend, &localPoint_.ctx_udp, &writebuf.buf, 1, cast(sockaddr*)&addrstorage, &streamUDPWriteCB);
+        } else {
+            writebuf.req.data = writebuf;
+		    libuv.uv_write(&writebuf.req, &localPoint_.ctx_stream, cast(const)&writebuf.buf, 1, &streamUDPWriteCB);
+		}
 	}
 
 	managed!Address remoteAddress(IAllocator alloc=theAllocator()) {
@@ -269,17 +276,30 @@ class LibUVUDPEndPoint : AnUDPEndPoint {
 private {
 	struct LibUVWriteUDP {
 		IAllocator alloc;
-		uv_write_t req;
+		version(all) {
+		    uv_udp_send_t udpsend;
+		} else {
+    		uv_write_t req;
+		}
 		uv_buf_t buf;
 	}
 }
 
 extern(C) {
-	void streamUDPWriteCB(uv_write_t* req, int status) {
-		auto writebuf = cast(LibUVWriteUDP*)req.data;
+    version(all) {
+	    void streamUDPWriteCB(uv_udp_send_s* req, int status) {
+		    auto writebuf = cast(LibUVWriteUDP*)req.data;
 		
-		writebuf.alloc.dispose(cast(ubyte[])writebuf.buf.base[0 .. writebuf.buf.len]);
-		writebuf.alloc.dispose(writebuf);
+		    writebuf.alloc.dispose(cast(ubyte[])writebuf.buf.base[0 .. writebuf.buf.len]);
+		    writebuf.alloc.dispose(writebuf);
+	    }
+    } else {
+	    void streamUDPWriteCB(uv_write_t* req, int status) {
+		    auto writebuf = cast(LibUVWriteUDP*)req.data;
+		
+		    writebuf.alloc.dispose(cast(ubyte[])writebuf.buf.base[0 .. writebuf.buf.len]);
+		    writebuf.alloc.dispose(writebuf);
+	    }
 	}
 
 	void streamUDPCloseCB(uv_handle_t* handle) {
