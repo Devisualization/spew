@@ -7,11 +7,9 @@ abstract class FileSystemWatcherImpl : IFileSystemWatcher {
 	package(cf.spew.implementation) {
 		IAllocator alloc;
 
-		// some weirdo bug for 32bit - windows dmd.
-		version(Windows) {
-			version(DigitalMars) {
-				ubyte[4] padding1;
-			}
+		// some weirdo bug for dmd.
+		version(DigitalMars) {
+			ubyte[4] padding1;
 		}
 		char[] thePath;
 
