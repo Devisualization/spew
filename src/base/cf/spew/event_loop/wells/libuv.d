@@ -6,7 +6,7 @@ module cf.spew.event_loop.wells.libuv;
 import cf.spew.event_loop.defs;
 import cf.spew.events.defs;
 import std.experimental.allocator : ISharedAllocator, make;
-import devisualization.bindings.libuv.uv;
+import devisualization.bindings.libuv;
 import core.time;
 import core.atomic;
 
@@ -35,15 +35,15 @@ private {
 	static ~this() {
 		if (uvLoop.data !is null) {
 			if (uvLoopInitialized)
-				uv_close(cast(uv_handle_t*)&uvLoopTimeout, null);
+				libuv.uv_close(cast(uv_handle_t*)&uvLoopTimeout, null);
 
-			uv_stop(&uvLoop);
-			uv_loop_close(&uvLoop);
+			libuv.uv_stop(&uvLoop);
+			libuv.uv_loop_close(&uvLoop);
 		}
 	}
 
 	void performInit() {
-		uv_loop_init(&uvLoop);
+		libuv.uv_loop_init(&uvLoop);
 		uvLoop.data = cast(void*)&uvLoopSource;
 	}
 }
@@ -81,21 +81,21 @@ final class LibUVEventLoopSourceRetrieve : EventLoopSourceRetriever {
 		event.type.value = 0;
 
 		// empty event loop, important if no e.g. sockets are used.
-		if (uv_loop_alive(&uvLoop) == 0)
+		if (libuv.uv_loop_alive(&uvLoop) == 0)
 			return false;
 		else if (!uvLoopInitialized) {
 			uvLoopInitialized = true;
-			uv_timer_init(&uvLoop, &uvLoopTimeout);
+			libuv.uv_timer_init(&uvLoop, &uvLoopTimeout);
 		}
 
 		// setup a timer so we can find out if we have gone beyond what we are allowed.
 		ulong timeoutms = cast(ulong)atomicLoad(timeout).total!"msecs" / 2;
 		uvLoopTimeout.data = &uvLoop;
-		uv_timer_start(&uvLoopTimeout, &uvLoopTimerCB, timeoutms, timeoutms);
+		libuv.uv_timer_start(&uvLoopTimeout, &uvLoopTimerCB, timeoutms, timeoutms);
 
 		// tells the manager if there are more events
-		uv_run(&uvLoop, uv_run_mode.UV_RUN_ONCE);
-		uv_timer_stop(&uvLoopTimeout);
+		libuv.uv_run(&uvLoop, uv_run_mode.UV_RUN_ONCE);
+		libuv.uv_timer_stop(&uvLoopTimeout);
 
 		return uvLoopTimeout.data !is null;
 	}
@@ -112,7 +112,7 @@ extern(C) {
 		if (timer.data !is null) {
 			auto loop = cast(uv_loop_t*)timer.data;
 			timer.data = null;
-			uv_stop(loop);
+			libuv.uv_stop(loop);
 		}
 	}
 }

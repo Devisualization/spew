@@ -1,6 +1,6 @@
 ﻿module cf.spew.implementation.misc.filewatcher;
 import cf.spew.miscellaneous.filewatcher;
-import devisualization.bindings.libuv.uv;
+import devisualization.bindings.libuv;
 import std.experimental.allocator : IAllocator, makeArray, dispose;
 
 abstract class FileSystemWatcherImpl : IFileSystemWatcher {
@@ -53,9 +53,9 @@ class LibUVFileSystemWatcher : FileSystemWatcherImpl {
 		super(thePathC[0 .. $-1], alloc);
 		self = this;
 
-		uv_fs_event_init(getThreadLoop_UV(), &ctx);
+		libuv.uv_fs_event_init(getThreadLoop_UV(), &ctx);
 		ctx.data = &self;
-		uv_fs_event_start(&ctx, &libuvFSWatcherCB, thePathC.ptr, uv_fs_event_flags.UV_FS_EVENT_RECURSIVE);
+		libuv.uv_fs_event_start(&ctx, &libuvFSWatcherCB, thePathC.ptr, uv_fs_event_flags.UV_FS_EVENT_RECURSIVE);
 	}
 
 	~this() {
@@ -65,8 +65,8 @@ class LibUVFileSystemWatcher : FileSystemWatcherImpl {
 	void stop() {
 		if (!stopped) {
 			stopped = true;
-			uv_fs_event_stop(&ctx);
-			uv_close(cast(uv_handle_t*)&ctx, null);
+			libuv.uv_fs_event_stop(&ctx);
+			libuv.uv_close(cast(uv_handle_t*)&ctx, null);
 		}
 	}
 }

@@ -7,7 +7,7 @@ import cf.spew.implementation.streams.base;
 import cf.spew.streams.defs;
 import cf.spew.streams.udp;
 import devisualization.util.core.memory.managed;
-import devisualization.bindings.libuv.uv;
+import devisualization.bindings.libuv;
 import std.experimental.allocator : IAllocator, theAllocator, make, dispose, makeArray;
 import std.socket : Address, InternetAddress, Internet6Address, AddressFamily;
 import core.time : Duration;
@@ -36,7 +36,7 @@ class LibUVUDPLocalPoint : AnUDPLocalPoint {
 		import cf.spew.event_loop.wells.libuv;
 
 		this.alloc = alloc;
-		uv_udp_init(getThreadLoop_UV(), &ctx_udp);
+		libuv.uv_udp_init(getThreadLoop_UV(), &ctx_udp);
 
 		self = this;
 		ctx_udp.data = &self;
@@ -71,7 +71,7 @@ class LibUVUDPLocalPoint : AnUDPLocalPoint {
 			}
 		}
 
-		int ret = uv_udp_set_membership(&ctx_udp, cast(const(char)*)toSendMulticast.ptr, cast(const(char)*)toSendInterface.ptr, membership);
+		int ret = libuv.uv_udp_set_membership(&ctx_udp, cast(const(char)*)toSendMulticast.ptr, cast(const(char)*)toSendInterface.ptr, membership);
 
 		if (theCopyMulticast.length > 0)
 			alloc.dispose(theCopyMulticast);
@@ -84,7 +84,7 @@ class LibUVUDPLocalPoint : AnUDPLocalPoint {
 	@property {
 		void multicastLoopBack(bool v) {
 			if (!isOpen) return;
-			uv_udp_set_multicast_loop(&ctx_udp, v ? 1 : 0);
+			libuv.uv_udp_set_multicast_loop(&ctx_udp, v ? 1 : 0);
 		}
 
 		bool multicastInterface(scope string input) {
@@ -99,7 +99,7 @@ class LibUVUDPLocalPoint : AnUDPLocalPoint {
 				toSend = cast(string)theCopy;
 			}
 
-			int ret = uv_udp_set_multicast_interface(&ctx_udp, cast(const(char)*)toSend.ptr);
+			int ret = libuv.uv_udp_set_multicast_interface(&ctx_udp, cast(const(char)*)toSend.ptr);
 
 			if (theCopy.length > 0)
 				alloc.dispose(theCopy);
@@ -111,26 +111,26 @@ class LibUVUDPLocalPoint : AnUDPLocalPoint {
 			if (!isOpen) return;
 			
 			if (value == 0) value = 1;
-			uv_udp_set_multicast_ttl(&ctx_udp, value);
+			libuv.uv_udp_set_multicast_ttl(&ctx_udp, value);
 		}
 
 		void broadcast(bool v) {
 			if (!isOpen) return;
-			uv_udp_set_broadcast(&ctx_udp, v ? 1 : 0);
+			libuv.uv_udp_set_broadcast(&ctx_udp, v ? 1 : 0);
 		}
 
 		void ttl(ubyte value=1) {
 			if (!isOpen) return;
 
 			if (value == 0) value = 1;
-			uv_udp_set_ttl(&ctx_udp, value);
+			libuv.uv_udp_set_ttl(&ctx_udp, value);
 		}
 
 		bool isOpen() { return !hasBeenClosed; }
 
 		bool readable() {
 			if (!isOpen) return false;
-			else return uv_is_readable(&ctx_stream) == 1;
+			else return libuv.uv_is_readable(&ctx_stream) == 1;
 		}
 	}
 
@@ -152,12 +152,12 @@ class LibUVUDPLocalPoint : AnUDPLocalPoint {
 			(*cast(sockaddr_in6*)&addrstorage) = *cast(sockaddr_in6*)address.name();
 		} else assert(0, "Unknown address format");
 
-		if (uv_udp_bind(&ret.ctx_udp, cast(sockaddr*)&addrstorage, 0) != 0) {
+		if (libuv.uv_udp_bind(&ret.ctx_udp, cast(sockaddr*)&addrstorage, 0) != 0) {
 			alloc.dispose(ret);
 			return managed!ISocket_UDPLocalPoint.init;
 		}
 
-		if (uv_udp_recv_start(&ret.ctx_udp, &streamUDPAllocCB, &streamUDPReadCB) != 0) {
+		if (libuv.uv_udp_recv_start(&ret.ctx_udp, &streamUDPAllocCB, &streamUDPReadCB) != 0) {
 			alloc.dispose(ret);
 			return managed!ISocket_UDPLocalPoint.init;
 		}
@@ -170,7 +170,7 @@ class LibUVUDPLocalPoint : AnUDPLocalPoint {
 		sockaddr_storage addr;
 		int alen = sockaddr_storage.sizeof;
 
-		if (!isOpen || uv_udp_getsockname(&ctx_udp, cast(sockaddr*)&addr, &alen) != 0) {
+		if (!isOpen || libuv.uv_udp_getsockname(&ctx_udp, cast(sockaddr*)&addr, &alen) != 0) {
 		} else if (addr.ss_family == AF_INET) {
 			return cast(managed!Address)managed!InternetAddress(alloc.make!InternetAddress(*cast(sockaddr_in*)&addr), managers(), alloc);
 		} else if (addr.ss_family == AF_INET6) {
@@ -198,8 +198,8 @@ class LibUVUDPLocalPoint : AnUDPLocalPoint {
 	void close()  {
 		if (!isOpen) return;
 		
-		uv_read_stop(&ctx_stream);
-		uv_close(&ctx_handle, &streamUDPCloseCB);
+		libuv.uv_read_stop(&ctx_stream);
+		libuv.uv_close(&ctx_handle, &streamUDPCloseCB);
 	}
 }
 
@@ -221,12 +221,12 @@ class LibUVUDPEndPoint : AnUDPEndPoint {
 	@property {
 		void blocking(bool v) {
 			if (!isOpen) return;
-			uv_stream_set_blocking(&localPoint_.ctx_stream, v ? 1 : 0);
+			libuv.uv_stream_set_blocking(&localPoint_.ctx_stream, v ? 1 : 0);
 		}
 
 		bool writable() {
 			if (!isOpen) return false;
-			return uv_is_writable(&localPoint_.ctx_stream) == 1;
+			return libuv.uv_is_writable(&localPoint_.ctx_stream) == 1;
 		}
 
 		bool isOpen() { return localPoint_.isOpen; }
@@ -248,8 +248,8 @@ class LibUVUDPEndPoint : AnUDPEndPoint {
 		buffer[0 .. data.length] = cast(char[])data[];
 		
 		assert(data.length < uint.max, "Too big of data to write, limit uint.max");
-		writebuf.buf = uv_buf_init(buffer, cast(uint)data.length);
-		uv_write(&writebuf.req, &localPoint_.ctx_stream, cast(const)&writebuf.buf, 1, &streamUDPWriteCB);
+		writebuf.buf = libuv.uv_buf_init(buffer, cast(uint)data.length);
+		libuv.uv_write(&writebuf.req, &localPoint_.ctx_stream, cast(const)&writebuf.buf, 1, &streamUDPWriteCB);
 	}
 
 	managed!Address remoteAddress(IAllocator alloc=theAllocator()) {
@@ -282,7 +282,7 @@ extern(C) {
 		writebuf.alloc.dispose(writebuf);
 	}
 
-	void streamUDPCloseCB(uv_handle_t* handle, int status) {
+	void streamUDPCloseCB(uv_handle_t* handle) {
 		if (handle.data is null) return;
 		auto self = *cast(LibUVUDPLocalPoint*)handle.data;
 		

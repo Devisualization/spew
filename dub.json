@@ -26,6 +26,7 @@
 			"dependencies": {
 				"de_image:base": "~>1.0.0",
 				"emsi_containers": "~>0.5.3",
+				"de_bindings:libuv": "~>0.3.0",
 				"spew:utils": "*"
 			}
 		},
@@ -40,7 +41,6 @@
 			"libs-windows": ["gdi32", "user32", "ole32"],
 			"dependencies": {
 				"spew:base": "*",
-				"de_bindings:libuv": "~>0.2.1",
 				"derelict-util": "*",
 				"spew:utils": "*"
 			}

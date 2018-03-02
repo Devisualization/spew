@@ -185,12 +185,12 @@ int main() {
 
 		static if (Enable_Test_TCP) {
 			writeln;
-			writeln("TCP client:");
-			aSocketTCPClientCreate();
-
-			writeln;
 			writeln("TCP server:");
 			aSocketTCPServerCreate();
+		
+			writeln;
+			writeln("TCP client:");
+			aSocketTCPClientCreate();
 		}
 
 		static if (Enable_Test_UDP) {

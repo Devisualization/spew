@@ -7,7 +7,7 @@ import cf.spew.implementation.streams.base;
 import cf.spew.streams.defs;
 import cf.spew.streams.tcp;
 import devisualization.util.core.memory.managed;
-import devisualization.bindings.libuv.uv;
+import devisualization.bindings.libuv;
 import std.experimental.allocator : IAllocator, theAllocator, make, dispose, makeArray;
 import std.socket : Address, AddressFamily, sockaddr, InternetAddress, Internet6Address;
 import core.time : Duration;
@@ -31,33 +31,33 @@ class LibUVTCPSocket : AnTCPSocket {
 		void blocking(bool v) {
 			if (!isOpen) return;
 
-			uv_stream_set_blocking(&ctx_stream, v ? 1 : 0);
+			libuv.uv_stream_set_blocking(&ctx_stream, v ? 1 : 0);
 		}
 
 		void noDelay(bool v) {
 			if (!isOpen) return;
 
-			uv_tcp_nodelay(&ctx_tcp, v ? 1 : 0);
+			libuv.uv_tcp_nodelay(&ctx_tcp, v ? 1 : 0);
 		}
 		
 		void keepAliveTimeout(Duration duration) {
 			if (!isOpen) return;
 
 			auto seconds = duration.total!"seconds";
-			if (seconds > 0) uv_tcp_keepalive(&ctx_tcp, 1, cast(uint)seconds);
-			else uv_tcp_keepalive(&ctx_tcp, 0, 0);
+			if (seconds > 0) libuv.uv_tcp_keepalive(&ctx_tcp, 1, cast(uint)seconds);
+			else libuv.uv_tcp_keepalive(&ctx_tcp, 0, 0);
 		}
 
 		bool isOpen() { return !hasBeenClosed; }
 
 		bool writable() {
 			if (!isOpen) return false;
-			return uv_is_writable(&ctx_stream) == 1;
+			return libuv.uv_is_writable(&ctx_stream) == 1;
 		}
 
 		bool readable() {
 			if (!isOpen) return false;
-			return uv_is_readable(&ctx_stream) == 1;
+			return libuv.uv_is_readable(&ctx_stream) == 1;
 		}
 	}
 
@@ -68,7 +68,7 @@ class LibUVTCPSocket : AnTCPSocket {
 		this.server_ = server;
 		self = this;
 
-		uv_tcp_init(getThreadLoop_UV(), &ctx_tcp);
+		libuv.uv_tcp_init(getThreadLoop_UV(), &ctx_tcp);
 		ctx_tcp.data = &self;
 	}
 
@@ -93,7 +93,7 @@ class LibUVTCPSocket : AnTCPSocket {
 
 		void startAccept() {
 			if (!isOpen) return;
-			uv_read_start(&ctx_stream, &streamTCPAllocCB, &streamTCPReadCB);
+			libuv.uv_read_start(&ctx_stream, &streamTCPAllocCB, &streamTCPReadCB);
 		}
 	}
 
@@ -107,7 +107,7 @@ class LibUVTCPSocket : AnTCPSocket {
 			(*cast(sockaddr_in6*)&ret.addrstorage) = *cast(sockaddr_in6*)address.name();
 		} else assert(0, "Unknown address format");
 
-		if (uv_tcp_connect(&ret.uv_connect, &ret.ctx_tcp, cast(sockaddr*)&ret.addrstorage, &streamTCPCreateCB) != 0) {
+		if (libuv.uv_tcp_connect(&ret.uv_connect, &ret.ctx_tcp, cast(sockaddr*)&ret.addrstorage, &streamTCPCreateCB) != 0) {
 			alloc.dispose(ret);
 			return managed!ISocket_TCP.init;
 		}
@@ -131,15 +131,15 @@ class LibUVTCPSocket : AnTCPSocket {
 		buffer[0 .. data.length] = cast(char[])data[];
 
 		assert(data.length < uint.max, "Too big of data to write, limit uint.max");
-		writebuf.buf = uv_buf_init(buffer, cast(uint)data.length);
-		uv_write(&writebuf.req, &ctx_stream, cast(const)&writebuf.buf, 1, &streamTCPWriteCB);
+		writebuf.buf = libuv.uv_buf_init(buffer, cast(uint)data.length);
+		libuv.uv_write(&writebuf.req, &ctx_stream, cast(const)&writebuf.buf, 1, &streamTCPWriteCB);
 	}
 
 	managed!Address localAddress(IAllocator alloc=theAllocator()) {
 		sockaddr_storage addr;
 		int alen = sockaddr_storage.sizeof;
 
-		if (!isOpen || uv_tcp_getsockname(&ctx_tcp, cast(sockaddr*)&addr, &alen) != 0) {
+		if (!isOpen || libuv.uv_tcp_getsockname(&ctx_tcp, cast(sockaddr*)&addr, &alen) != 0) {
 		} else if (addr.ss_family == AF_INET) {
 			return cast(managed!Address)managed!InternetAddress(alloc.make!InternetAddress(*cast(sockaddr_in*)&addr), managers(), alloc);
 		} else if (addr.ss_family == AF_INET6) {
@@ -153,7 +153,7 @@ class LibUVTCPSocket : AnTCPSocket {
 		sockaddr_storage addr;
 		int alen = sockaddr_storage.sizeof;
 
-		if (!isOpen || uv_tcp_getpeername(&ctx_tcp, cast(sockaddr*)&addr, &alen) != 0) {
+		if (!isOpen || libuv.uv_tcp_getpeername(&ctx_tcp, cast(sockaddr*)&addr, &alen) != 0) {
 		} else if (addr.ss_family == AF_INET) {
 			return cast(managed!Address)managed!InternetAddress(alloc.make!InternetAddress(*cast(sockaddr_in*)&addr), managers(), alloc);
 		} else if (addr.ss_family == AF_INET6) {
@@ -166,8 +166,8 @@ class LibUVTCPSocket : AnTCPSocket {
 	void close() {
 		if (!isOpen) return;
 
-		uv_read_stop(&ctx_stream);
-		uv_close(&ctx_handle, &streamTCPCloseCB);
+		libuv.uv_read_stop(&ctx_stream);
+		libuv.uv_close(&ctx_handle, &streamTCPCloseCB);
 	}
 }
 
@@ -188,7 +188,7 @@ extern(C) {
 			ctx.onStreamConnectedDel(ctx);
 	}
 
-	void streamTCPCloseCB(uv_handle_t* handle, int status) {
+	void streamTCPCloseCB(uv_handle_t* handle) {
 		if (handle.data is null) return;
 		auto self = *cast(LibUVTCPSocket*)handle.data;
 		

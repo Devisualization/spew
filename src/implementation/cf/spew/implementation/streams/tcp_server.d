@@ -7,7 +7,7 @@ import cf.spew.implementation.streams.tcp;
 import cf.spew.implementation.streams.base;
 import cf.spew.streams.defs;
 import cf.spew.streams.tcp;
-import devisualization.bindings.libuv.uv;
+import devisualization.bindings.libuv;
 import devisualization.util.core.memory.managed;
 import std.experimental.allocator : IAllocator, theAllocator, make, dispose;
 import std.socket : Address, AddressFamily, sockaddr, InternetAddress, Internet6Address;
@@ -37,7 +37,7 @@ class LibUVTCPServer : AnTCPServer {
 		self = this;
 		this.alloc = alloc;
 
-		uv_tcp_init(getThreadLoop_UV(), &ctx_tcp);
+		libuv.uv_tcp_init(getThreadLoop_UV(), &ctx_tcp);
 		ctx_tcp.data = &self;
 	}
 
@@ -48,12 +48,12 @@ class LibUVTCPServer : AnTCPServer {
 	@property {
 		void blocking(bool v) {
 			if (!isOpen) return;
-			uv_stream_set_blocking(&ctx_stream, v ? 1 : 0);
+			libuv.uv_stream_set_blocking(&ctx_stream, v ? 1 : 0);
 		}
 
 		void simultaneousAccepts(bool v) {
 			if (!isOpen) return;
-			uv_tcp_simultaneous_accepts(&ctx_tcp, v ? 1 : 0);
+			libuv.uv_tcp_simultaneous_accepts(&ctx_tcp, v ? 1 : 0);
 		}
 
 		bool isOpen() { return !hasBeenClosed; }
@@ -69,12 +69,12 @@ class LibUVTCPServer : AnTCPServer {
 			(*cast(sockaddr_in6*)&ret.addrstorage) = *cast(sockaddr_in6*)address.name();
 		} else assert(0, "Unknown address format");
 
-		if (uv_tcp_bind(&ret.ctx_tcp, cast(sockaddr*)&ret.addrstorage, 0) != 0) {
+		if (libuv.uv_tcp_bind(&ret.ctx_tcp, cast(sockaddr*)&ret.addrstorage, 0) != 0) {
 			alloc.dispose(ret);
 			return managed!ISocket_TCPServer.init;
 		}
 
-		if (uv_listen(&ret.ctx_stream, ret.listBacklogAmount_, &onStreamServerConnectCB) != 0) {
+		if (libuv.uv_listen(&ret.ctx_stream, ret.listBacklogAmount_, &onStreamServerConnectCB) != 0) {
 			alloc.dispose(ret);
 			return managed!ISocket_TCPServer.init;
 		}
@@ -85,7 +85,7 @@ class LibUVTCPServer : AnTCPServer {
 
 	void close()  {
 		if (!isOpen) return;
-		uv_close(&ctx_handle, &onStreamServerCloseCB);
+		libuv.uv_close(&ctx_handle, &onStreamServerCloseCB);
 	}
 }
 
@@ -99,7 +99,7 @@ extern(C) {
 		LibUVTCPServer serverSelf = *cast(LibUVTCPServer*)server.data;
 		LibUVTCPSocket endpoint = serverSelf.alloc.make!LibUVTCPSocket(serverSelf, serverSelf.alloc);
 
-		if (uv_accept(server, &endpoint.ctx_stream) == 0) {
+		if (libuv.uv_accept(server, &endpoint.ctx_stream) == 0) {
 			endpoint.startAccept();
 
 			if (endpoint.isOpen) {
@@ -114,7 +114,7 @@ extern(C) {
 		}
 	}
 
-	void onStreamServerCloseCB(uv_handle_t* handle, int status) {
+	void onStreamServerCloseCB(uv_handle_t* handle) {
 		if (handle.data is null) return;
 		LibUVTCPServer self = *cast(LibUVTCPServer*)handle.data;
 

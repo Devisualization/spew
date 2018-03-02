@@ -474,14 +474,14 @@ class StreamsInstance_LibUV : StreamsInstance {
 	}
 	
 	managed!(managed!Address[]) allLocalAddress(IAllocator alloc=theAllocator()) shared {
-		import devisualization.bindings.libuv.uv;
+		import devisualization.bindings.libuv;
 		if (alloc is null) return managed!(managed!Address[]).init;
 
 		managed!Address[] ret;
 
 		int count;
 		uv_interface_address_t* addresses;
-		uv_interface_addresses(&addresses, &count);
+		libuv.uv_interface_addresses(&addresses, &count);
 
 		ret = cast(managed!Address[])alloc.makeArray!(ubyte)(count * managed!Address.sizeof);
 		foreach(i, v; addresses[0 .. count]) {
@@ -494,7 +494,7 @@ class StreamsInstance_LibUV : StreamsInstance {
 			}
 		}
 
-		uv_free_interface_addresses(addresses, count);
+		libuv.uv_free_interface_addresses(addresses, count);
 		return managed!(managed!Address[])(ret, managers(), alloc);
 	}
 }

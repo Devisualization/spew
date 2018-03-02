@@ -1,7 +1,7 @@
 ﻿module cf.spew.implementation.misc.timer;
 import cf.spew.miscellaneous.timer;
 import cf.spew.implementation.instance;
-import devisualization.bindings.libuv.uv;
+import devisualization.bindings.libuv;
 import core.time : Duration;
 
 abstract class TimerImpl : ITimer {
@@ -41,19 +41,19 @@ class LibUVTimer : TimerImpl {
 		import cf.spew.event_loop.wells.libuv;
 		super(duration);
 
-		uv_timer_init(getThreadLoop_UV(), &ctx);
+		libuv.uv_timer_init(getThreadLoop_UV(), &ctx);
 		self = this;
 		ctx.data = cast(void*)&self;
 
 		ulong timeout = cast(ulong)duration.total!"msecs";
-		uv_timer_start(&ctx, &libuvTimerCB, timeout, timeout);
+		libuv.uv_timer_start(&ctx, &libuvTimerCB, timeout, timeout);
 	}
 
 	void stop() {
 		if (!isStopped) {
 			isStopped = true;
-			uv_timer_stop(&ctx);
-			uv_close(cast(uv_handle_t*)&ctx, null);
+			libuv.uv_timer_stop(&ctx);
+			libuv.uv_close(cast(uv_handle_t*)&ctx, null);
 
 			if (onStoppedDel !is null)
 				onStoppedDel(this);
