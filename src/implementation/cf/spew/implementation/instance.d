@@ -96,6 +96,8 @@ final class DefaultImplementation : Instance {
 			_mainEventConsumer_ = allocator.make!(shared(EventLoopConsumerImpl_WinAPI))(this);
 			_eventLoop.manager.addConsumers(_mainEventConsumer_);
 		}
+
+
 	}
 }
 
