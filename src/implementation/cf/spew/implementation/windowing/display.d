@@ -138,6 +138,7 @@ final class DisplayImpl_X11 : DisplayImpl, Feature_Display_ScreenShot, Have_Disp
 	import devisualization.bindings.x11;
 
 	Screen* screen;
+	RROutput rrOutput;
 
 	this(Screen* screen, XRRMonitorInfo* monitor, IAllocator alloc, shared(UIInstance) uiInstance) {
 		import core.stdc.string : strlen;
@@ -159,6 +160,9 @@ final class DisplayImpl_X11 : DisplayImpl, Feature_Display_ScreenShot, Have_Disp
 		x11.XFree(name);
 
 		primaryDisplay_ = monitor.primary == 1;
+
+		if (monitor.noutput >= 1)
+			rrOutput = monitor.outputs[0];
 	}
 
 	@property {
@@ -171,16 +175,15 @@ final class DisplayImpl_X11 : DisplayImpl, Feature_Display_ScreenShot, Have_Disp
 				backlightAtom = backlightAtomOld;
 			}
 
-			if (backlightAtom > 0) {
+			if (backlightAtom > 0 && rrOutput > 0) {
 				auto root = x11.XRootWindowOfScreen(screen);
 
-				RROutput output;
 				Atom actualType;
 				int actualFormat;
 				ulong nitems, bytesAfter;
 				ubyte* prop;
 
-				x11.XRRGetOutputProperty(x11Display(), output, backlightAtom,
+				x11.XRRGetOutputProperty(x11Display(), rrOutput, backlightAtom,
 			      0, 4, false, false, None,
 			      &actualType, &actualFormat,
 			      &nitems, &bytesAfter, &prop);
@@ -190,6 +193,7 @@ final class DisplayImpl_X11 : DisplayImpl, Feature_Display_ScreenShot, Have_Disp
 						x11.XFree(prop);
 					return 10;
 				} else {
+					import core.stdc.config : c_long;
 					c_long ret = *cast(c_long*)prop;
 					x11.XFree(prop);
 					return cast(uint)ret;

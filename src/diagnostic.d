@@ -18,16 +18,16 @@ import cf.spew.ui.features.clipboard;
 import cf.spew.miscellaneous;
 
 enum : bool {
-	Enable_Test_Window = false,
+	Enable_Test_Window = true,
 	Enable_Test_TCP = true,
 	Enable_Test_UDP = true,
 	Enable_Test_FileSystemWatch = true,
 
 	Enable_Kill_Window = true,
-	Enable_Kill_TCP_Client = true,
+	Enable_Kill_TCP_Client = false,
 	Enable_Kill_TCP_Server = false,
-	Enable_Kill_UDP = true,
-	Enable_Kill_FileSystemWatch = true,
+	Enable_Kill_UDP = false,
+	Enable_Kill_FileSystemWatch = false,
 
 	Enable_Window_GL = true,
 	Enable_Force_Kill_Window = false,
@@ -129,12 +129,6 @@ int main() {
 			writeln("Because this is a diagnostic, I am going to assume this is a problem.");
 			return -5;
 		}
-
-        writeln(Instance.current.ui.primaryDisplay().size);
-        foreach(display; Instance.current.ui.displays) {
-			string name = display.name;
-            writeln(name, ": ", display.size, " ", display.isPrimary, " ", display.refreshRate());
-        }
 
 		if (Instance.current.streams is null) {
 			writeln;
