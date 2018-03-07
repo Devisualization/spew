@@ -140,6 +140,9 @@ final class DisplayImpl_X11 : DisplayImpl, Feature_Display_ScreenShot, Have_Disp
 	Screen* screen;
 	RROutput rrOutput;
 
+	int x, y;
+	int width, height;
+
 	this(Screen* screen, XRRMonitorInfo* monitor, IAllocator alloc, shared(UIInstance) uiInstance) {
 		import core.stdc.string : strlen;
 		this.screen = screen;
@@ -149,6 +152,12 @@ final class DisplayImpl_X11 : DisplayImpl, Feature_Display_ScreenShot, Have_Disp
 		auto root = x11.XRootWindowOfScreen(screen);
 		XRRScreenConfiguration* screenConfig = x11.XRRGetScreenInfo(x11Display(), root);
 		refreshRate_ = x11.XRRConfigCurrentRate(screenConfig);
+
+		// we need this to dectect windows.
+		x = monitor.x;
+		y = monitor.y;
+		width = monitor.width;
+		height = monitor.height;
 
 		size_.x = cast(ushort)monitor.width;
 		size_.y = cast(ushort)monitor.height;
