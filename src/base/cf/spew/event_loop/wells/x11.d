@@ -8,6 +8,13 @@ import cf.spew.events.defs;
 import std.experimental.allocator : ISharedAllocator, make;
 import devisualization.bindings.x11;
 
+Display* x11Display() {
+    if (display is null)
+        performInit();
+    assert(display !is null);
+    return display;
+}
+
 private {
     Display* display;
     shared X11EventLoopSource instanceloopSource = new shared X11EventLoopSource;
@@ -53,9 +60,7 @@ final class X11EventLoopSource : EventLoopSource {
 
 final class X11EventLoopSourceRetrieve : EventLoopSourceRetriever {
     import cf.spew.event_loop.known_implementations;
-    import core.time : dur;
-
-    Duration timeout = dur!"seconds"(1);
+    import core.time : dur, Duration;
 
     bool nextEvent(ref Event event) shared {
         event.source = EventSources.X11;
@@ -75,8 +80,7 @@ final class X11EventLoopSourceRetrieve : EventLoopSourceRetriever {
     void handledEvent(ref Event event) shared {}
     void unhandledEvent(ref Event event) shared {}
     void handledErrorEvent(ref Event event) shared {}
-    // unsupported, but that is ok, we don't block if we don't get an event!
-    void hintTimeout(Duration timeout) shared { this.timeout = timeout; }
+    void hintTimeout(Duration timeout) shared {}
 }
 
 private {

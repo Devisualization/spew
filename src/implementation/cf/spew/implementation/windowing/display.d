@@ -132,3 +132,97 @@ version(Windows) {
 		}
 	}
 }
+
+final class DisplayImpl_X11 : DisplayImpl, Feature_Display_ScreenShot, Have_Display_ScreenShot {
+	import cf.spew.event_loop.wells.x11;
+	import devisualization.bindings.x11;
+
+	Screen* screen;
+
+	this(Screen* screen, XRRMonitorInfo* monitor, IAllocator alloc, shared(UIInstance) uiInstance) {
+		import core.stdc.string : strlen;
+		this.screen = screen;
+		this.alloc = alloc;
+		this.uiInstance = uiInstance;
+
+		auto root = x11.XRootWindowOfScreen(screen);
+		XRRScreenConfiguration* screenConfig = x11.XRRGetScreenInfo(x11Display(), root);
+		refreshRate_ = x11.XRRConfigCurrentRate(screenConfig);
+
+		size_.x = cast(ushort)monitor.width;
+		size_.y = cast(ushort)monitor.height;
+
+		char* name = x11.XGetAtomName(x11Display(), monitor.name);
+		char[] dupedName = alloc.makeArray!char(strlen(name));
+		dupedName[] = name[0 .. dupedName.length];
+		name_ = managed!string(cast(string)dupedName, managers(ReferenceCountedManager()), alloc);
+		x11.XFree(name);
+
+		primaryDisplay_ = monitor.primary == 1;
+	}
+
+	@property {
+		uint luminosity() {
+			Atom XA_INTEGER = x11.XInternAtom(x11Display(), "INTEGER", false);
+			Atom backlightAtom = x11.XInternAtom(x11Display(), "Backlight", true);
+			Atom backlightAtomOld = x11.XInternAtom(x11Display(), "BACKLIGHT", true);
+
+			if (backlightAtom <= 0) {
+				backlightAtom = backlightAtomOld;
+			}
+
+			if (backlightAtom > 0) {
+				auto root = x11.XRootWindowOfScreen(screen);
+
+				RROutput output;
+				Atom actualType;
+				int actualFormat;
+				ulong nitems, bytesAfter;
+				ubyte* prop;
+
+				x11.XRRGetOutputProperty(x11Display(), output, backlightAtom,
+			      0, 4, false, false, None,
+			      &actualType, &actualFormat,
+			      &nitems, &bytesAfter, &prop);
+
+				if (actualType != XA_INTEGER || nitems != 1 || actualFormat != 32) {
+					if (prop !is null)
+						x11.XFree(prop);
+					return 10;
+				} else {
+					c_long ret = *cast(c_long*)prop;
+					x11.XFree(prop);
+					return cast(uint)ret;
+				}
+			}
+
+			return 10;
+		}
+
+		managed!(IWindow[]) windows() {
+			assert(0);
+			//return managed!(IWindow[])(ctx.windows, managers(), alloc);
+		}
+
+		void* __handle() {
+			return screen;
+		}
+	}
+
+	Feature_Display_ScreenShot __getFeatureScreenShot() {
+		return null;
+	}
+
+	ImageStorage!RGB8 screenshot(IAllocator alloc = null) {
+		if (alloc is null)
+			alloc = this.alloc;
+
+		assert(0);
+	}
+
+	IDisplay dup(IAllocator alloc) {
+		assert(0);
+		//return alloc.make!DisplayImpl_X11(hMonitor, alloc, uiInstance);
+	}
+}
+
