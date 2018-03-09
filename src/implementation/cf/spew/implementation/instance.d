@@ -97,21 +97,21 @@ final class DefaultImplementation : Instance {
 			_eventLoop.manager.addConsumers(_mainEventConsumer_);
 		}
 
-        if (_userInterface is null) {
-            if (__checkForX11()) {
-                import cf.spew.event_loop.wells.x11;
-                _userInterface = allocator.make!(shared(UIInstance_X11))(allocator);
-                _eventLoop.manager.addSources(X11EventLoopSource.instance);
-            }
-        }
+		if (_userInterface is null) {
+			if (__checkForX11()) {
+				import cf.spew.event_loop.wells.x11;
+				_userInterface = allocator.make!(shared(UIInstance_X11))(allocator);
+				_eventLoop.manager.addSources(X11EventLoopSource.instance);
+			}
+		}
 	}
 
-    bool __checkForX11() shared {
-        import devisualization.bindings.x11;
-        import cf.spew.event_loop.wells.x11;
-        return x11Display() !is null &&
-            x11.XScreenNumberOfScreen !is null;
-    }
+	bool __checkForX11() shared {
+		import devisualization.bindings.x11;
+		import cf.spew.event_loop.wells.x11;
+		return x11Display() !is null &&
+			x11.XScreenNumberOfScreen !is null;
+	}
 }
 
 final class EventLoopWrapper : Management_EventLoop {
@@ -450,32 +450,32 @@ version(Windows) {
 }
 
 final class UIInstance_X11 : UIInstance, Feature_Notification, Feature_Management_Clipboard {
-    //import cf.spew.implementation.windowing.window_creator : WindowCreatorImpl_X11;
-    import cf.spew.implementation.windowing.display : DisplayImpl_X11;
-    import cf.spew.implementation.windowing.misc;
-    import cf.spew.event_loop.wells.x11;
-    import devisualization.bindings.x11;
-    import devisualization.image.storage.base : ImageStorageHorizontal;
-    import devisualization.image.interfaces : imageObjectFrom;
-    import std.typecons : tuple;
+	//import cf.spew.implementation.windowing.window_creator : WindowCreatorImpl_X11;
+	import cf.spew.implementation.windowing.display : DisplayImpl_X11;
+	import cf.spew.implementation.windowing.misc;
+	import cf.spew.event_loop.wells.x11;
+	import devisualization.bindings.x11;
+	import devisualization.image.storage.base : ImageStorageHorizontal;
+	import devisualization.image.interfaces : imageObjectFrom;
+	import std.typecons : tuple;
 
-    size_t maxClipboardSizeV = size_t.max;
+	size_t maxClipboardSizeV = size_t.max;
 
-    this(shared(ISharedAllocator) allocator) shared {
-        super(allocator);
-    }
+	this(shared(ISharedAllocator) allocator) shared {
+		super(allocator);
+	}
 
-    ~this() {
-    }
+	~this() {
+	}
 
-    override {
-        managed!IWindowCreator createWindow(IAllocator alloc = theAllocator()) shared {
-            assert(0);
-            //return cast(managed!IWindowCreator)managed!WindowCreatorImpl_WinAPI(managers(), tuple(this, alloc), alloc);
-        }
+	override {
+		managed!IWindowCreator createWindow(IAllocator alloc = theAllocator()) shared {
+			assert(0);
+			//return cast(managed!IWindowCreator)managed!WindowCreatorImpl_WinAPI(managers(), tuple(this, alloc), alloc);
+		}
 
-        @property {
-            managed!IDisplay primaryDisplay(IAllocator alloc = theAllocator()) shared {
+		@property {
+			managed!IDisplay primaryDisplay(IAllocator alloc = theAllocator()) shared {
 				auto screenNumber = x11.XDefaultScreen(x11Display());
 				Screen* theScreen = x11.XScreenOfDisplay(x11Display(), screenNumber);
 				Window rootWindow = x11.XRootWindowOfScreen(theScreen);
@@ -492,13 +492,13 @@ final class UIInstance_X11 : UIInstance, Feature_Notification, Feature_Managemen
 				}
 
 				x11.XRRFreeMonitors(monitors);
-                if (theDisplay is null)
-                    return managed!IDisplay.init;
-                else
-                    return managed!IDisplay(theDisplay, managers(ReferenceCountedManager()), alloc);
-            }
+				if (theDisplay is null)
+					return managed!IDisplay.init;
+				else
+					return managed!IDisplay(theDisplay, managers(ReferenceCountedManager()), alloc);
+			}
 
-            managed!(IDisplay[]) displays(IAllocator alloc = theAllocator()) shared {
+			managed!(IDisplay[]) displays(IAllocator alloc = theAllocator()) shared {
 				auto screenNumber = x11.XDefaultScreen(x11Display());
 				Screen* theScreen = x11.XScreenOfDisplay(x11Display(), screenNumber);
 				Window rootWindow = x11.XRootWindowOfScreen(theScreen);
@@ -508,7 +508,7 @@ final class UIInstance_X11 : UIInstance, Feature_Notification, Feature_Managemen
 				XRRMonitorInfo* monitors = x11.XRRGetMonitors(x11Display(), rootWindow, true, &numMonitors);
 
 				if (numMonitors == -1)
-                    return managed!(IDisplay[]).init;
+					return managed!(IDisplay[]).init;
 
 				IDisplay[] ret = alloc.makeArray!IDisplay(cast(size_t)numMonitors);
 				foreach(i; 0 .. numMonitors) {
@@ -517,45 +517,45 @@ final class UIInstance_X11 : UIInstance, Feature_Notification, Feature_Managemen
 
 				x11.XRRFreeMonitors(monitors);
 				return managed!(IDisplay[])(ret, managers(ReferenceCountedManager()), alloc);
-            }
+			}
 
-            managed!(IWindow[]) windows(IAllocator alloc = theAllocator()) shared {
+			managed!(IWindow[]) windows(IAllocator alloc = theAllocator()) shared {
 				GetWindows_X11 ctx;
-			    ctx.alloc = alloc;
+				ctx.alloc = alloc;
 				ctx.uiInstance = this;
-			    ctx.call;
+				ctx.call;
 
-                return managed!(IWindow[])(ctx.windows, managers(ReferenceCountedManager()), alloc);
-            }
-        }
+				return managed!(IWindow[])(ctx.windows, managers(ReferenceCountedManager()), alloc);
+			}
+		}
 
-        // notifications
-        @property {
-            shared(ImageStorage!RGBA8) getNotificationIcon(shared(ISharedAllocator) alloc) shared { assert(0); }
-            void setNotificationIcon(shared(ImageStorage!RGBA8) icon, shared(ISharedAllocator) alloc) shared { assert(0); }
-        }
+		// notifications
+		@property {
+			shared(ImageStorage!RGBA8) getNotificationIcon(shared(ISharedAllocator) alloc) shared { assert(0); }
+			void setNotificationIcon(shared(ImageStorage!RGBA8) icon, shared(ISharedAllocator) alloc) shared { assert(0); }
+		}
 
-        void notify(shared(ImageStorage!RGBA8) icon, shared(dstring) title, shared(dstring) text, shared(ISharedAllocator) alloc) shared { assert(0); }
-        void clearNotifications() shared { assert(0); }
+		void notify(shared(ImageStorage!RGBA8) icon, shared(dstring) title, shared(dstring) text, shared(ISharedAllocator) alloc) shared { assert(0); }
+		void clearNotifications() shared { assert(0); }
 
-        // clipboard
+		// clipboard
 
-        shared(Feature_Management_Clipboard) __getFeatureClipboard() shared {
-            return null;
-        }
+		shared(Feature_Management_Clipboard) __getFeatureClipboard() shared {
+			return null;
+		}
 
-        @property {
-            void maxClipboardDataSize(size_t amount) shared { maxClipboardSizeV = amount; }
+		@property {
+			void maxClipboardDataSize(size_t amount) shared { maxClipboardSizeV = amount; }
 
-            size_t maxClipboardDataSize() shared { return maxClipboardSizeV; }
+			size_t maxClipboardDataSize() shared { return maxClipboardSizeV; }
 
-            managed!string clipboardText(IAllocator alloc) shared {
-                return managed!string.init;
-            }
+			managed!string clipboardText(IAllocator alloc) shared {
+				return managed!string.init;
+			}
 
-            void clipboardText(scope string text) shared {}
-        }
-    }
+			void clipboardText(scope string text) shared {}
+		}
+	}
 }
 
 abstract class StreamsInstance : Management_Streams {

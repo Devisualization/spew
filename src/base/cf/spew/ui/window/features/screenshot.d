@@ -20,7 +20,7 @@ interface Feature_Window_ScreenShot {
 }
 
 @property {
-    /// Takes a screenshot or null if not possible
+	/// Takes a screenshot or null if not possible
 	managed!(ImageStorage!RGB8) screenshot(managed!IWindow self, IAllocator alloc=theAllocator()) {
 		if (!self.capableOfScreenShot)
 			return (managed!(ImageStorage!RGB8)).init;
@@ -28,7 +28,7 @@ interface Feature_Window_ScreenShot {
 			auto ret = (cast(managed!Have_Window_ScreenShot)self).__getFeatureScreenShot().screenshot;
 			return managed!(ImageStorage!RGB8)(ret, managers(), alloc);
 		}
-    }
+	}
 
 	/**
 	 * Can a screenshot be taken of window/display/platform?

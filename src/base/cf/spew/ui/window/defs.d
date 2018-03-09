@@ -15,25 +15,25 @@ import devisualization.util.core.memory.managed;
 
 ///
 interface IWindow : IRenderPoint {
-    @property {
-        /// The title of the window
-        managed!(dstring) title();
-        
-        /// Sets the title of the window (if possible)
-        void title(string);
+	@property {
+		/// The title of the window
+		managed!(dstring) title();
+		
+		/// Sets the title of the window (if possible)
+		void title(string);
 
-        /// Ditto
-        void title(wstring);
-        
-        /// Ditto
-        void title(dstring);
-        
-        /// Moves the window on its display
+		/// Ditto
+		void title(wstring);
+		
+		/// Ditto
+		void title(dstring);
+		
+		/// Moves the window on its display
 		void location(vec2!int);
 
-        /// Gets the window location relative to its display
+		/// Gets the window location relative to its display
 		vec2!int location();
-        
+		
 		/**
 		 * The size of the render area.
 		 * 
@@ -44,36 +44,36 @@ interface IWindow : IRenderPoint {
 		 */
 		vec2!uint size();
 
-        /// Sets the size of the window (user area)
+		/// Sets the size of the window (user area)
 		void size(vec2!uint);
 
-        /// Is the window currently being displayed?
-        bool visible();
+		/// Is the window currently being displayed?
+		bool visible();
 
 		/// Windowing specific events (extends events provided for render point)
 		IWindowEvents windowEvents();
-    }
+	}
 
-    ///
-    void hide();
-    
-    ///
-    void show();
+	///
+	void hide();
+	
+	///
+	void show();
 }
 
 ///
 interface IWindowCreator : IRenderPointCreator {
-    @property {
-        /// Sets a size for a window to be created in (user area)
+	@property {
+		/// Sets a size for a window to be created in (user area)
 		void size(vec2!ushort);
-        
-        /// The location for a window to try and spawn in
+		
+		/// The location for a window to try and spawn in
 		void location(vec2!short);
-    }
-    
+	}
+	
 	/// The parent window to act as a child of, pretty much always supported, if not is ignored.
 	void parentWindow(IWindow);
 
 	/// Creates the window
-    managed!IWindow createWindow();
+	managed!IWindow createWindow();
 }

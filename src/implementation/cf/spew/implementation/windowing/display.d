@@ -209,9 +209,9 @@ final class DisplayImpl_X11 : DisplayImpl, Feature_Display_ScreenShot, Have_Disp
 				ubyte* prop;
 
 				x11.XRRGetOutputProperty(x11Display(), rrOutput, backlightAtom,
-			      0, 4, false, false, None,
-			      &actualType, &actualFormat,
-			      &nitems, &bytesAfter, &prop);
+				  0, 4, false, false, None,
+				  &actualType, &actualFormat,
+				  &nitems, &bytesAfter, &prop);
 
 				if (actualType != XA_INTEGER || nitems != 1 || actualFormat != 32) {
 					if (prop !is null)
