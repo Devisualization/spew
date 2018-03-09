@@ -2,7 +2,7 @@ module diagnostic;
 
 import core.time : Duration, dur;
 import std.datetime : msecs;
-import std.experimental.allocator;
+import stdx.allocator;
 
 import devisualization.util.core.memory.managed;
 import devisualization.bindings.opengl;

@@ -1,0 +1,9 @@
+.dub/
+*.a
+*.so
+*.exe
+*.dll
+/spew
+/*-test-*
+dub.selections.json
+/include

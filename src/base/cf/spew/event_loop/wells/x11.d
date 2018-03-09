@@ -5,7 +5,7 @@
 module cf.spew.event_loop.wells.x11;
 import cf.spew.event_loop.defs;
 import cf.spew.events.defs;
-import std.experimental.allocator : ISharedAllocator, make;
+import stdx.allocator : ISharedAllocator, make;
 import devisualization.bindings.x11;
 
 Display* x11Display() {

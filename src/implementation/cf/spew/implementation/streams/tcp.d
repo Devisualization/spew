@@ -8,7 +8,7 @@ import cf.spew.streams.defs;
 import cf.spew.streams.tcp;
 import devisualization.util.core.memory.managed;
 import devisualization.bindings.libuv;
-import std.experimental.allocator : IAllocator, theAllocator, make, dispose, makeArray;
+import stdx.allocator : IAllocator, theAllocator, make, dispose, makeArray;
 import std.socket : Address, AddressFamily, sockaddr, InternetAddress, Internet6Address;
 import core.time : Duration;
 

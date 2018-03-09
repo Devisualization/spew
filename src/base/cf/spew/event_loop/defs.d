@@ -4,7 +4,7 @@
  */
 module cf.spew.event_loop.defs;
 import cf.spew.events.defs : EventSource, Event, EventType;
-import std.experimental.allocator : ISharedAllocator;
+import stdx.allocator : ISharedAllocator;
 import core.time : Duration, seconds;
 import core.thread : ThreadID, Thread;
 

@@ -5,7 +5,7 @@
 module cf.spew.event_loop.wells.libuv;
 import cf.spew.event_loop.defs;
 import cf.spew.events.defs;
-import std.experimental.allocator : ISharedAllocator, make;
+import stdx.allocator : ISharedAllocator, make;
 import devisualization.bindings.libuv;
 import core.time;
 import core.atomic;

@@ -10,7 +10,7 @@ import std.experimental.color.rgb : RGB8, RGBA8;
 import cf.spew.ui.rendering;
 import cf.spew.ui.window.events : IWindowEvents;
 //import std.experimental.math.linearalgebra.vector : vec2;
-import std.experimental.allocator : IAllocator;
+import stdx.allocator : IAllocator;
 import devisualization.util.core.memory.managed;
 
 ///

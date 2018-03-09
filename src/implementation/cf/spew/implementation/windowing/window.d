@@ -9,7 +9,7 @@ import cf.spew.implementation.windowing.display;
 import cf.spew.implementation.windowing.menu;
 import cf.spew.ui;
 import cf.spew.events.windowing;
-import std.experimental.allocator : IAllocator, make, makeArray, dispose;
+import stdx.allocator : IAllocator, make, makeArray, dispose;
 import devisualization.util.core.memory.managed;
 import devisualization.image : ImageStorage;
 import std.experimental.color : RGBA8, RGB8;

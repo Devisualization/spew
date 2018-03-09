@@ -7,7 +7,7 @@
 module cf.spew.ui.features.screenshot;
 import cf.spew.instance;
 import devisualization.image : ImageStorage;
-import std.experimental.allocator : IAllocator, theAllocator;
+import stdx.allocator : IAllocator, theAllocator;
 import std.experimental.color : RGB8;
 import devisualization.util.core.memory.managed;
 

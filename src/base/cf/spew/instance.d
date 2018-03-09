@@ -80,7 +80,7 @@ interface Management_EventLoop {
 ///
 interface Management_UserInterface {
 	import cf.spew.ui : IWindow, IDisplay, IWindowCreator, IRenderPoint, IRenderPointCreator;
-	import std.experimental.allocator : IAllocator, theAllocator;
+	import stdx.allocator : IAllocator, theAllocator;
 
 	///
 	managed!IRenderPointCreator createRenderPoint(IAllocator alloc = theAllocator()) shared;
@@ -110,7 +110,7 @@ interface Management_UserInterface {
 interface Management_Streams {
 	import cf.spew.streams;
 	import std.socket : Address;
-	import std.experimental.allocator : IAllocator, theAllocator;
+	import stdx.allocator : IAllocator, theAllocator;
 
 	/// A TCP server
 	managed!ISocket_TCPServer tcpServer(Address address, ushort listBacklogAmount=64, IAllocator alloc=theAllocator()) shared;
@@ -128,7 +128,7 @@ interface Management_Streams {
 
 /// Beware, thread-local!
 interface Management_Miscellaneous {
-	import std.experimental.allocator : IAllocator, theAllocator;
+	import stdx.allocator : IAllocator, theAllocator;
 	import cf.spew.miscellaneous;
 	import core.time : Duration;
 
