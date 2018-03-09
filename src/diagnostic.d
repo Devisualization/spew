@@ -384,6 +384,11 @@ void aWindowTest() {
 	import cf.spew.instance;
 	import std.stdio : writeln, stdout;
 
+	foreach(window; Instance.current.ui.windows) {
+		writeln(window);
+		writeln(window.title);
+	}
+
 	auto creator = Instance.current.ui.createWindow();
 	//creator.style = WindowStyle.Fullscreen;
 	//creator.size = vec2!ushort(cast(short)800, cast(short)600);
