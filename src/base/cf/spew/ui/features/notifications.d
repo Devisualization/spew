@@ -10,7 +10,7 @@ import cf.spew.instance;
 import devisualization.image : ImageStorage;
 import std.experimental.color : RGBA8;
 import devisualization.util.core.memory.managed;
-import std.experimental.allocator : ISharedAllocator, processAllocator;
+import stdx.allocator : ISharedAllocator, processAllocator;
 import std.traits : isSomeString;
 
 interface Have_Notification {
@@ -86,7 +86,7 @@ void notify(S1, S2)(shared(Management_UserInterface) self, shared(ImageStorage!R
         return;
 	if (shared(Have_Notification) ss = cast(shared(Have_Notification))self) {
 		import std.utf : byDchar, codeLength;
-		import std.experimental.allocator : makeArray, dispose;
+		import stdx.allocator : makeArray, dispose;
 
 		auto fss = ss.__getFeatureNotification();
 

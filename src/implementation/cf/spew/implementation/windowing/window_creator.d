@@ -10,7 +10,7 @@ import cf.spew.ui.context.features.custom;
 import devisualization.image : ImageStorage;
 import std.experimental.color : RGBA8;
 import devisualization.util.core.memory.managed;
-import std.experimental.allocator : IAllocator, make;
+import stdx.allocator : IAllocator, make;
 
 abstract class WindowCreatorImpl : IWindowCreator, Have_CustomCtx { 
 	package(cf.spew) {

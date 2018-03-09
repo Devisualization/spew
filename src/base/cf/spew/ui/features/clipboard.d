@@ -7,7 +7,7 @@
 module cf.spew.ui.features.clipboard;
 import cf.spew.instance;
 import devisualization.util.core.memory.managed;
-import std.experimental.allocator : IAllocator, theAllocator;
+import stdx.allocator : IAllocator, theAllocator;
 
 interface Have_Management_Clipboard {
 	shared(Feature_Management_Clipboard) __getFeatureClipboard() shared;

@@ -10,7 +10,7 @@ import cf.spew.ui.rendering : vec2;
 import devisualization.image : ImageStorage;
 import std.experimental.color : RGB8;
 import devisualization.util.core.memory.managed;
-import std.experimental.allocator : IAllocator, make, makeArray;
+import stdx.allocator : IAllocator, make, makeArray;
 
 abstract class DisplayImpl : IDisplay {
 	package(cf.spew) {

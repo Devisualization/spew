@@ -4,7 +4,7 @@
  */
 module cf.spew.streams.defs;
 import devisualization.util.core.memory.managed;
-import std.experimental.allocator : IAllocator, theAllocator;
+import stdx.allocator : IAllocator, theAllocator;
 import std.socket : Address;
 
 /**

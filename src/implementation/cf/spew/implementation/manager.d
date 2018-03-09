@@ -7,7 +7,7 @@ import cf.spew.event_loop.defs;
 import cf.spew.event_loop.base;
 import cf.spew.events.defs;
 import devisualization.util.core.memory.managed;
-import std.experimental.allocator;
+import stdx.allocator;
 import core.thread : ThreadID, Thread;
 import core.time : Duration, seconds;
 

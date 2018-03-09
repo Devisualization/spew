@@ -11,7 +11,7 @@ import devisualization.image : ImageStorage;
 import std.experimental.color : RGB8, RGBA8;
 import std.experimental.containers.list;
 import std.experimental.containers.map;
-import std.experimental.allocator : IAllocator, ISharedAllocator, processAllocator, theAllocator, dispose, make, makeArray, expandArray, shrinkArray;
+import stdx.allocator : IAllocator, ISharedAllocator, processAllocator, theAllocator, dispose, make, makeArray, expandArray, shrinkArray;
 import devisualization.util.core.memory.managed;
 import derelict.util.sharedlib;
 

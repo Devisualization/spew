@@ -10,7 +10,7 @@ import cf.spew.event_loop.known_implementations;
 import cf.spew.events.defs;
 import cf.spew.events.winapi;
 import cf.spew.events.windowing;
-import std.experimental.allocator : ISharedAllocator, make;
+import stdx.allocator : ISharedAllocator, make;
 import core.sys.windows.windows : LRESULT, WPARAM, LPARAM, HWND, WM_USER, MSG;
 import core.time : Duration;
 

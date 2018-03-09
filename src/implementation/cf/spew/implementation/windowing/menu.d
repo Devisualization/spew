@@ -8,7 +8,7 @@ import cf.spew.implementation.instance;
 import cf.spew.ui.window.features.menu;
 import cf.spew.ui.rendering : vec2;
 import devisualization.util.core.memory.managed;
-import std.experimental.allocator : IAllocator, make, makeArray, expandArray, dispose;
+import stdx.allocator : IAllocator, make, makeArray, expandArray, dispose;
 import devisualization.image : ImageStorage;
 import std.experimental.color : RGB8, RGBA8;
 

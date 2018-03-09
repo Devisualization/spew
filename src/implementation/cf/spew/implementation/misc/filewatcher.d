@@ -1,7 +1,7 @@
 ﻿module cf.spew.implementation.misc.filewatcher;
 import cf.spew.miscellaneous.filewatcher;
 import devisualization.bindings.libuv;
-import std.experimental.allocator : IAllocator, makeArray, dispose;
+import stdx.allocator : IAllocator, makeArray, dispose;
 
 abstract class FileSystemWatcherImpl : IFileSystemWatcher {
 	package(cf.spew.implementation) {

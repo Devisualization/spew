@@ -7,7 +7,7 @@ import cf.spew.ui.context.defs;
 import cf.spew.ui.context.features.vram;
 import devisualization.image : ImageStorage;
 import std.experimental.color : RGB8, RGBA8;
-import std.experimental.allocator : IAllocator, make, dispose;
+import stdx.allocator : IAllocator, make, dispose;
 
 class VRAMContextImpl : IContext, Have_VRam, Feature_VRam {
 	Feature_VRam __getFeatureVRam() {

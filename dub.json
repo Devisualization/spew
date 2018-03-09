@@ -11,6 +11,7 @@
 	"mainSourceFile": "src/diagnostic.d",
 	"targetType": "executable",
 	"dependencies": {
+		"stdx-allocator": "~>2.77.0",
 		"de_bindings:opengl": "*",
 		"spew:implementation": "*"
 	},

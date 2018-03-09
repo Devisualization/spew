@@ -11,7 +11,7 @@ public import devisualization.image : ImageStorage;
 public import std.experimental.color : RGB8, RGBA8;
 public import std.experimental.containers.list;
 public import std.experimental.containers.map;
-public import std.experimental.allocator : IAllocator, processAllocator, theAllocator, dispose, make, makeArray, expandArray, shrinkArray;
+public import stdx.allocator : IAllocator, processAllocator, theAllocator, dispose, make, makeArray, expandArray, shrinkArray;
 public import devisualization.util.core.memory.managed;
 
 abstract class EventLoopConsumerImpl : EventLoopConsumer {

@@ -1,5 +1,5 @@
 module std.experimental.containers.map;
-import std.experimental.allocator : IAllocator, ISharedAllocator, theAllocator, processAllocator, make, dispose, makeArray, shrinkArray, expandArray;
+import stdx.allocator : IAllocator, ISharedAllocator, theAllocator, processAllocator, make, dispose, makeArray, shrinkArray, expandArray;
 import devisualization.util.core.memory.managed;
 import std.traits : isArray, isPointer;
 import core.atomic : atomicOp, atomicLoad;

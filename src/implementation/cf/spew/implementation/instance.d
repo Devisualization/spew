@@ -5,7 +5,7 @@
 module cf.spew.implementation.instance;
 import cf.spew.instance;
 import cf.spew.ui.features;
-import std.experimental.allocator : IAllocator, ISharedAllocator, make, dispose, processAllocator, theAllocator, makeArray;
+import stdx.allocator : IAllocator, ISharedAllocator, make, dispose, processAllocator, theAllocator, makeArray;
 import devisualization.image : ImageStorage;
 import std.experimental.color : RGBA8;
 import devisualization.util.core.memory.managed;
@@ -141,7 +141,7 @@ final class EventLoopWrapper : Management_EventLoop {
 
 abstract class UIInstance : Management_UserInterface, Have_Notification, Have_Management_Clipboard {
 	import cf.spew.ui : IWindow, IDisplay, IWindowCreator, IRenderPoint, IRenderPointCreator;
-	import std.experimental.allocator : IAllocator, processAllocator;
+	import stdx.allocator : IAllocator, processAllocator;
 	import devisualization.util.core.memory.managed;
 	import std.experimental.containers.map;
 
@@ -561,7 +561,7 @@ final class UIInstance_X11 : UIInstance, Feature_Notification, Feature_Managemen
 abstract class StreamsInstance : Management_Streams {
 	import cf.spew.streams;
 	import std.socket : Address;
-	import std.experimental.allocator : ISharedAllocator, processAllocator;
+	import stdx.allocator : ISharedAllocator, processAllocator;
 
 	shared(ISharedAllocator) allocator;
 

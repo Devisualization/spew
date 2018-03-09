@@ -10,7 +10,7 @@ import cf.spew.ui.events;
 import cf.spew.ui.display;
 import cf.spew.ui.context.defs : IContext;
 import devisualization.util.core.memory.managed;
-import std.experimental.allocator : IAllocator;
+import stdx.allocator : IAllocator;
 //import std.experimental.math.linearalgebra.vector : vec2;
 
 struct vec2(T) {
