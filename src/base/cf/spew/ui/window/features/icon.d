@@ -11,29 +11,29 @@ import std.experimental.color : RGBA8;
 import devisualization.util.core.memory.managed;
 
 interface Have_Icon {
-    Feature_Icon __getFeatureIcon();
+	Feature_Icon __getFeatureIcon();
 }
 
 interface Feature_Icon {
-    @property {
-        ImageStorage!RGBA8 getIcon();
-        void setIcon(ImageStorage!RGBA8);
-    }
+	@property {
+		ImageStorage!RGBA8 getIcon();
+		void setIcon(ImageStorage!RGBA8);
+	}
 }
 
 @property {
-    /// Sets the icon on a window[creator] if capable
+	/// Sets the icon on a window[creator] if capable
 	void icon(T)(managed!T self, ImageStorage!RGBA8 to) if (is(T : IWindow) || is(T : IWindowCreator)) {
 		if (self.capableOfWindowIcon) {
 			(cast(managed!Have_Icon)self).__getFeatureIcon().setIcon(to);
 		}
-    }
+	}
 
 	void icon(T)(managed!T self, ImageStorage!RGBA8 to) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
-        static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or IWindowCreator.");
-    }
+		static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or IWindowCreator.");
+	}
 
-    /// Retrives the window icon if capable or null if not
+	/// Retrives the window icon if capable or null if not
 	managed!(ImageStorage!RGBA8) icon(T)(managed!T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
 		if (!self.capableOfWindowIcon)
 			return (managed!(ImageStorage!RGBA8)).init;
@@ -41,11 +41,11 @@ interface Feature_Icon {
 			auto ret = (cast(managed!Have_Icon)self).__getFeatureIcon().getIcon();
 			return managed!(ImageStorage!RGBA8)(ret, managers(), Ownership.Secondary, self.allocator);
 		}
-    }
+	}
 
 	managed!(ImageStorage!RGBA8) icon(T)(managed!T self) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
-        static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or IWindowCreator.");
-    }
+		static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or IWindowCreator.");
+	}
 
 	/**
 	 * Does the given window[creator] support icons?

@@ -138,7 +138,7 @@ interface Management_Miscellaneous {
 	 * Params:
 	 *     timeout = Timeout till callback is called.
 	 *     hintSystemWait = If possible an event loop able thread stopper implementation will be used,
-	 *                                Otherwise a constantly checking one (costly) will be used.
+	 *                      Otherwise a constantly checking one (costly) will be used.
 	 * 
 	 * Returns:
 	 *     A timer

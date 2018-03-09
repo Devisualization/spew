@@ -25,27 +25,27 @@ enum WindowStyle {
 	NoDecorations,
 
 	/**
-     * The default style of any window.
-     * Close/Minimize/Maximize, resizable, moveable
-     */
+	 * The default style of any window.
+	 * Close/Minimize/Maximize, resizable, moveable
+	 */
 	Dialog,
 	
 	/**
-     * Useful for tool boxes and such
-     * Close/Minimize, non-resizable, moveable
-     */
+	 * Useful for tool boxes and such
+	 * Close/Minimize, non-resizable, moveable
+	 */
 	Borderless,
 	
 	/**
-     * Useful for e.g. message/input boxes
-     * Close/Minimize, non-resizable, moveable, top most window
-     */
+	 * Useful for e.g. message/input boxes
+	 * Close/Minimize, non-resizable, moveable, top most window
+	 */
 	Popup,
 	
 	/**
-     * Useful for e.g. 3d games
-     * No top bar, non-resiable, non-moveable
-     */
+	 * Useful for e.g. 3d games
+	 * No top bar, non-resiable, non-moveable
+	 */
 	Fullscreen
 }
 
@@ -60,14 +60,14 @@ interface Feature_Style {
 
 @property {
 	/**
-     * Gets the style of the window
-     *
-     * Params:
+	 * Gets the style of the window
+	 *
+	 * Params:
 	 * 		self	=	The window[creator] instance
-     *
-     * Returns:
-     *      The window style or unknown
-     */
+	 *
+	 * Returns:
+	 *      The window style or unknown
+	 */
 	WindowStyle style(T)(T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
 		if (self is null)
 			return WindowStyle.Unknown;
@@ -82,12 +82,12 @@ interface Feature_Style {
 	}
 	
 	/**
-     * Sets the window[creator] style
-     * 
-     * Params:
+	 * Sets the window[creator] style
+	 * 
+	 * Params:
 	 * 		self	=	The window[creator] instance
 	 * 		to		=	The style to set to
-     */
+	 */
 	void style(T)(T self, WindowStyle to) if (is(T : IWindow) || is(T : IWindowCreator)) {
 		if (self is null)
 			return;

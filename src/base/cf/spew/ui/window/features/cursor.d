@@ -14,132 +14,132 @@ import devisualization.util.core.memory.managed;
  * What the cursor will be displayed to the user
  */
 enum WindowCursorStyle {
-    /**
-     * The standard arrow cursor
-     */
-    Standard,
-    
-    /**
-     * The cursor for use when e.g. "clicking" on a link
-     */
-    Hand,
-    
-    /**
-     * When attempting to resize something vertically
-     */
-    ResizeVertical,
-    
-    /**
-     * When attempting to resize something horizontally
-     */
-    ResizeHorizontal,
-    
-    /**
-     * Resizing from the left corner of a rectangle
-     */
-    ResizeCornerLeft,
-    
-    /**
-     * Resizing from the right corner of a rectangle
-     */
-    ResizeCornerRight,
+	/**
+	 * The standard arrow cursor
+	 */
+	Standard,
+	
+	/**
+	 * The cursor for use when e.g. "clicking" on a link
+	 */
+	Hand,
+	
+	/**
+	 * When attempting to resize something vertically
+	 */
+	ResizeVertical,
+	
+	/**
+	 * When attempting to resize something horizontally
+	 */
+	ResizeHorizontal,
+	
+	/**
+	 * Resizing from the left corner of a rectangle
+	 */
+	ResizeCornerLeft,
+	
+	/**
+	 * Resizing from the right corner of a rectangle
+	 */
+	ResizeCornerRight,
 
-    /**
-     * It is not possible to act e.g. circle around an X
-     */
-    NoAction,
+	/**
+	 * It is not possible to act e.g. circle around an X
+	 */
+	NoAction,
 
-    /**
-     * Process is currently busy relating to e.g. a control, usually displayed as an hour glass
-     */
-    Busy,
-    
-    /**
-     * A custom cursor
-     */
-    Custom,
-    
-    /**
-     * Removes the cursor for display
-     */
-    None,
+	/**
+	 * Process is currently busy relating to e.g. a control, usually displayed as an hour glass
+	 */
+	Busy,
+	
+	/**
+	 * A custom cursor
+	 */
+	Custom,
+	
+	/**
+	 * Removes the cursor for display
+	 */
+	None,
 
-    /**
-     * Unknown, may not be owned by current process.
-     * If the cursor style is set as this, then expect errors to try and modify the cursor.
-     */
-    Underterminate
+	/**
+	 * Unknown, may not be owned by current process.
+	 * If the cursor style is set as this, then expect errors to try and modify the cursor.
+	 */
+	Underterminate
 }
 
 interface Have_Cursor {
-    Feature_Cursor __getFeatureCursor();
+	Feature_Cursor __getFeatureCursor();
 }
 
 interface Feature_Cursor {
-    void setCursor(WindowCursorStyle);
-    WindowCursorStyle getCursor();
-    void setCustomCursor(ImageStorage!RGBA8);
-    ImageStorage!RGBA8 getCursorIcon();
+	void setCursor(WindowCursorStyle);
+	WindowCursorStyle getCursor();
+	void setCustomCursor(ImageStorage!RGBA8);
+	ImageStorage!RGBA8 getCursorIcon();
 
 	bool lockCursorToWindow();
 	void unlockCursorFromWindow();
 }
 
 @property {
-    /**
-     * Assigns a cursor to a window[creator] if capable
-     * 
-     * Do not pass in Custom as cursor style.
-     * 
-     * Params:
-     * 		self	=	Window or window creator instance
-     * 		to		=	Style of cursor to set
-     */
+	/**
+	 * Assigns a cursor to a window[creator] if capable
+	 * 
+	 * Do not pass in Custom as cursor style.
+	 * 
+	 * Params:
+	 * 		self	=	Window or window creator instance
+	 * 		to		=	Style of cursor to set
+	 */
 	void cursor(T)(managed!T self, WindowCursorStyle to) if (is(T : IWindow) || is(T : IWindowCreator)) {
 		if (self.capableOfCursors) {
 			(cast(managed!Have_Cursor)self).__getFeatureCursor().setCursor(to);
 		}
-    }
-    
+	}
+	
 	void cursor(T)(managed!T self, WindowCursorStyle to) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
-        static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or IWindowCreator.");
-    }
+		static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or IWindowCreator.");
+	}
 
-    /// Retrives the cursor style or Invalid if not capable
+	/// Retrives the cursor style or Invalid if not capable
 	WindowCursorStyle cursor(T)(managed!T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
 		if (!self.capableOfCursors)
 			return WindowCursorStyle.Invalid;
 		else {
 			return (cast(managed!Have_Cursor)self).__getFeatureCursor().getCursor();
 		}
-    }
-    
+	}
+	
 	WindowCursorStyle cursor(T)(managed!T self) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
-        static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or IWindowCreator.");
-    }
+		static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or IWindowCreator.");
+	}
 
-    /**
-     * Sets the cursor icon to the specified image if capable
-     * 
-     * Automatically set the cursor style to Custom.
-     * 
-     * Params:
-     * 		self	=	The window or window creator to assign to
-     * 		to		=	Image to use as cursor icon
-     */
+	/**
+	 * Sets the cursor icon to the specified image if capable
+	 * 
+	 * Automatically set the cursor style to Custom.
+	 * 
+	 * Params:
+	 * 		self	=	The window or window creator to assign to
+	 * 		to		=	Image to use as cursor icon
+	 */
 	void cursorIcon(T)(managed!T self, ImageStorage!RGBA8 to) if (is(T : IWindow) || is(T : IWindowCreator)) {
 		if (self.capableOfCursors) {
 			(cast(managed!Have_Cursor)self).__getFeatureCursor().setCustomCursor(to);
 		}
-    }
+	}
 
 	void cursorIcon(T)(managed!T self, ImageStorage!RGBA8 to)  if (!(is(T : IWindow) || is(T : IWindowCreator))) {
-        static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or IWindowCreator.");
-    }
-    
-    /**
-     * Gets a copy of the cursor if it is assigned as custom or null if not possible or not currently set as custom
-     */
+		static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or IWindowCreator.");
+	}
+	
+	/**
+	 * Gets a copy of the cursor if it is assigned as custom or null if not possible or not currently set as custom
+	 */
 	managed!(ImageStorage!RGBA8) cursorIcon(T)(managed!T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
 		if (!self.capableOfCursors)
 			return (managed!(ImageStorage!RGBA8)).init;
@@ -151,18 +151,18 @@ interface Feature_Cursor {
 			else
 				return managed!(ImageStorage!RGBA8)(ret, managers(), Ownership.Secondary, self.allocator);
 		}
-    }
-    
+	}
+	
 	managed!(ImageStorage!RGBA8) cursorIcon(T)(managed!T self) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
-        static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or IWindowCreator.");
-    }
+		static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or IWindowCreator.");
+	}
 
 	/**
-     * Locks a cursor to a window[creator] if capable
-     * 
-     * Params:
-     * 		self	=	Window or window creator instance
-     */
+	 * Locks a cursor to a window[creator] if capable
+	 * 
+	 * Params:
+	 * 		self	=	Window or window creator instance
+	 */
 	bool lockCursorToWindow(T)(managed!T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
 		if (self.capableOfCursors) {
 			return (cast(managed!Have_Cursor)self).__getFeatureCursor().lockCursorToWindow();
@@ -175,11 +175,11 @@ interface Feature_Cursor {
 	}
 
 	/**
-     * Unlocks a cursor from a window[creator] if capable
-     * 
-     * Params:
-     * 		self	=	Window or window creator instance
-     */
+	 * Unlocks a cursor from a window[creator] if capable
+	 * 
+	 * Params:
+	 * 		self	=	Window or window creator instance
+	 */
 	void unlockCursorFromWindow(T)(managed!T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
 		if (self.capableOfCursors) {
 			(cast(managed!Have_Cursor)self).__getFeatureCursor().unlockCursorFromWindow();

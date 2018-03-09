@@ -28,48 +28,48 @@ alias Window_MenuCallback = void delegate(Window_MenuItem);
 
 ///
 interface Window_MenuItem {
-    ///
+	///
 	Window_MenuItem addItem();
-    ///
-    void remove();
+	///
+	void remove();
 
-    @property {
-        ///
+	@property {
+		///
 		managed!(Window_MenuItem[]) childItems();
-        
-        ///
-        managed!(ImageStorage!RGB8) image();
-        
-        ///
-        void image(scope ImageStorage!RGB8);
-        
-        ///
-        managed!dstring text();
-        
-        ///
-        void text(dstring);
-        
-        ///
-        void text(wstring);
-        
-        ///
-        void text(string);
+		
+		///
+		managed!(ImageStorage!RGB8) image();
+		
+		///
+		void image(scope ImageStorage!RGB8);
+		
+		///
+		managed!dstring text();
+		
+		///
+		void text(dstring);
+		
+		///
+		void text(wstring);
+		
+		///
+		void text(string);
 
-        ///
-        bool divider();
-        
-        ///
-        void divider(bool);
+		///
+		bool divider();
+		
+		///
+		void divider(bool);
 
-        ///
-        bool disabled();
+		///
+		bool disabled();
 
-        ///
-        void disabled(bool);
+		///
+		void disabled(bool);
 
-        /// Not valid if there are children
-        void callback(Window_MenuCallback);
-    }
+		/// Not valid if there are children
+		void callback(Window_MenuCallback);
+	}
 }
 
 ///
@@ -79,23 +79,23 @@ void assignMenu(managed!IWindowCreator self) {
 }
 
 @property {
-    /// Retrives the menu instance or null if non existant
+	/// Retrives the menu instance or null if non existant
 	Feature_Window_Menu menu(managed!IWindow self) {
 		if (!self.capableOfMenu)
 			return null;
 		else {
 			return (cast(managed!Have_Window_Menu)self).__getFeatureMenu();
 		}
-    }
+	}
 
 	/**
 	 * Does the given window have a menu?
 	 * 
 	 * Params:
-	 * 		self	=	The window instance
+	 *     self	=	The window instance
 	 * 
 	 * Returns:
-	 * 		If the window/platform supports having an icon
+	 *     If the window/platform supports having an icon
 	 */
 	bool capableOfMenu(managed!IWindow self) {
 		if (self is null)

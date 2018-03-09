@@ -102,18 +102,18 @@ struct Windowing_Event_Key {
 ///
 enum CursorEventAction {
 	/**
-     * Triggered when the left mouse button is clicked when backed by a mouse.
-     */
+	 * Triggered when the left mouse button is clicked when backed by a mouse.
+	 */
 	Select,
 	
 	/**
-     * Triggered when the right mouse button is clicked when backed by a mouse.
-     */
+	 * Triggered when the right mouse button is clicked when backed by a mouse.
+	 */
 	Alter,
 	
 	/**
-     * Triggered when the middle mouse button is clicked when backed by a mouse.
-     */
+	 * Triggered when the middle mouse button is clicked when backed by a mouse.
+	 */
 	ViewChange
 }
 

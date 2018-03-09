@@ -14,17 +14,17 @@ import stdx.allocator : ISharedAllocator, processAllocator;
 import std.traits : isSomeString;
 
 interface Have_Notification {
-    shared(Feature_Notification) __getFeatureNotification() shared;
+	shared(Feature_Notification) __getFeatureNotification() shared;
 }
 
 interface Feature_Notification {
-    @property {
+	@property {
 		shared(ImageStorage!RGBA8) getNotificationIcon(shared(ISharedAllocator) alloc) shared;
 		void setNotificationIcon(shared(ImageStorage!RGBA8), shared(ISharedAllocator) alloc) shared;
-    }
+	}
 
 	void notify(shared(ImageStorage!RGBA8), shared(dstring), shared(dstring), shared(ISharedAllocator) alloc) shared;
-    void clearNotifications() shared;
+	void clearNotifications() shared;
 }
 
 /**
@@ -36,14 +36,14 @@ interface Feature_Notification {
  * 		alloc	=	The allocator to use during assignment
  */
 void notificationIcon(shared(Management_UserInterface) self, shared(ImageStorage!RGBA8) to, shared(ISharedAllocator) alloc=processAllocator) {
-    if (self is null)
-        return;
+	if (self is null)
+		return;
 	if (shared(Have_Notification) ss = cast(shared(Have_Notification))self) {
-        auto fss = ss.__getFeatureNotification();
-        if (fss !is null) {
-            fss.setNotificationIcon(to, alloc);
-        }
-    }
+		auto fss = ss.__getFeatureNotification();
+		if (fss !is null) {
+			fss.setNotificationIcon(to, alloc);
+		}
+	}
 }
 
 /**
@@ -57,15 +57,15 @@ void notificationIcon(shared(Management_UserInterface) self, shared(ImageStorage
  * 		The notification icon for the current process (will auto deallocate)
  */
 managed!(shared(ImageStorage!RGBA8)) notificationIcon(shared(Management_UserInterface) self, shared(ISharedAllocator) alloc=processAllocator) {
-    if (self is null)
-        return (managed!(shared(ImageStorage!RGBA8))).init;
+	if (self is null)
+		return (managed!(shared(ImageStorage!RGBA8))).init;
 	if (shared(Have_Notification) ss = cast(shared(Have_Notification))self) {
-        auto fss = ss.__getFeatureNotification();
-        if (fss !is null) {
-            return managed!(shared(ImageStorage!RGBA8))(fss.getNotificationIcon(alloc), managers(ReferenceCountedManager()), alloc);
-        }
-    }
-    return (managed!(shared(ImageStorage!RGBA8))).init;
+		auto fss = ss.__getFeatureNotification();
+		if (fss !is null) {
+			return managed!(shared(ImageStorage!RGBA8))(fss.getNotificationIcon(alloc), managers(ReferenceCountedManager()), alloc);
+		}
+	}
+	return (managed!(shared(ImageStorage!RGBA8))).init;
 }
 
 /**
@@ -82,8 +82,8 @@ managed!(shared(ImageStorage!RGBA8)) notificationIcon(shared(Management_UserInte
  * 		alloc	=	Allocator to allocate and copy resources for while notification is active
  */
 void notify(S1, S2)(shared(Management_UserInterface) self, shared(ImageStorage!RGBA8) image=null, shared(S1) title=null, shared(S2) text=null, shared(ISharedAllocator) alloc=processAllocator) if (isSomeString!S1 && isSomeString!S2) {
-    if (self is null)
-        return;
+	if (self is null)
+		return;
 	if (shared(Have_Notification) ss = cast(shared(Have_Notification))self) {
 		import std.utf : byDchar, codeLength;
 		import stdx.allocator : makeArray, dispose;
@@ -112,15 +112,15 @@ void notify(S1, S2)(shared(Management_UserInterface) self, shared(ImageStorage!R
 			}
 		}
 
-        if (fss !is null) {
+		if (fss !is null) {
 			fss.notify(image, cast(dstring)titleUse, cast(dstring)textUse, alloc);
-        }
+		}
 
 		static if (!is(S1 == dstring))
 			alloc.dispose(titleUse);
 		static if (!is(S2 == dstring))
 			alloc.dispose(textUse);
-    }
+	}
 }
 
 /**
@@ -130,14 +130,14 @@ void notify(S1, S2)(shared(Management_UserInterface) self, shared(ImageStorage!R
  * 		self	=	The platform instance
  */
 void clearNotifications(shared(Management_UserInterface) self) {
-    if (self is null)
-        return;
+	if (self is null)
+		return;
 	if (shared(Have_Notification) ss = cast(shared(Have_Notification))self) {
-        auto fss = ss.__getFeatureNotification();
-        if (fss !is null) {
-            fss.clearNotifications();
-        }
-    }
+		auto fss = ss.__getFeatureNotification();
+		if (fss !is null) {
+			fss.clearNotifications();
+		}
+	}
 }
 
 /**
