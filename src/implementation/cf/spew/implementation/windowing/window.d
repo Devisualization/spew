@@ -696,3 +696,73 @@ version(Windows) {
 		}
 	}
 }
+
+final class WindowImpl_X11 : WindowImpl,
+		Feature_Window_ScreenShot, Feature_Icon, Feature_Window_Menu, Feature_Cursor, Feature_Style,
+		Have_Window_ScreenShot, Have_Icon, Have_Window_Menu, Have_Cursor, Have_Style {
+	import devisualization.bindings.x11;
+	import cf.spew.event_loop.wells.x11;
+
+	@disable this(shared(UIInstance) instance);
+
+	Window whandle;
+
+	this(Window handle, IContext context, IAllocator alloc, shared(UIInstance) uiInstance, bool processOwns=false) {
+		this.whandle = handle;
+		this.alloc = alloc;
+		this.context_ = context;
+
+		super(instance, processOwns);
+
+	}
+
+	@property {
+		vec2!uint size() { assert(0); }
+		managed!IDisplay display() { assert(0); }
+		bool renderable() { assert(0); }
+		void* __handle() { return &whandle; }
+		override void onFileDrop(EventOnFileDropDel del) { assert(0); }
+	}
+
+	void close() { assert(0); }
+
+	@property {
+		managed!dstring title() { assert(0); }
+
+		void title(string text) { setTitle(text); }
+		void title(wstring text) { setTitle(text); }
+		void title(dstring text) { setTitle(text); }
+
+		void setTitle(String)(String text) if (isSomeString!String) { assert(0); }
+
+		void location(vec2!int point) { assert(0); }
+		vec2!int location() { assert(0); }
+		void size(vec2!uint point) { assert(0); }
+	}
+
+	void hide() { assert(0); }
+	void show() { assert(0); }
+
+	Feature_Window_ScreenShot __getFeatureScreenShot() { assert(0); }
+	ImageStorage!RGB8 screenshot(IAllocator alloc=null) { assert(0); }
+	Feature_Icon __getFeatureIcon() { assert(0); }
+	ImageStorage!RGBA8 getIcon() @property { assert(0); }
+	void setIcon(ImageStorage!RGBA8 from) @property { assert(0); }
+
+	Feature_Window_Menu __getFeatureMenu() { assert(0); }
+	Window_MenuItem addItem() { assert(0); }
+	@property managed!(Window_MenuItem[]) items() { assert(0); }
+
+	Feature_Cursor __getFeatureCursor() { assert(0); }
+	void setCursor(WindowCursorStyle style) { assert(0); }
+	WindowCursorStyle getCursor() { assert(0); }
+	void setCustomCursor(ImageStorage!RGBA8 image) { assert(0); }
+	ImageStorage!RGBA8 getCursorIcon() { assert(0); }
+
+	bool lockCursorToWindow() { assert(0); }
+	void unlockCursorFromWindow() { assert(0); }
+
+	Feature_Style __getFeatureStyle() { assert(0); }
+	void setStyle(WindowStyle style) { assert(0); }
+	WindowStyle getStyle() { assert(0); }
+}

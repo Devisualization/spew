@@ -143,6 +143,22 @@ final class DisplayImpl_X11 : DisplayImpl, Feature_Display_ScreenShot, Have_Disp
 	int x, y;
 	int width, height;
 
+	this(DisplayImpl_X11 other) {
+		this.alloc = other.alloc;
+		this.uiInstance = other.uiInstance;
+
+		this.screen = other.screen;
+		this.rrOutput = other.rrOutput;
+		this.x = other.x;
+		this.y = other.y;
+		this.width = other.width;
+		this.height = other.height;
+		this.name_ = other.name_;
+		this.primaryDisplay_ = other.primaryDisplay_;
+		this.size_ = other.size_;
+		this.refreshRate_ = other.refreshRate_;
+	}
+
 	this(Screen* screen, XRRMonitorInfo* monitor, IAllocator alloc, shared(UIInstance) uiInstance) {
 		import core.stdc.string : strlen;
 		this.screen = screen;
@@ -213,8 +229,13 @@ final class DisplayImpl_X11 : DisplayImpl, Feature_Display_ScreenShot, Have_Disp
 		}
 
 		managed!(IWindow[]) windows() {
-			assert(0);
-			//return managed!(IWindow[])(ctx.windows, managers(), alloc);
+			GetWindows_X11 ctx;
+			ctx.display = this;
+			ctx.uiInstance = uiInstance;
+			ctx.alloc = alloc;
+			ctx.call;
+
+			return managed!(IWindow[])(ctx.windows, managers(), alloc);
 		}
 
 		void* __handle() {
@@ -234,8 +255,7 @@ final class DisplayImpl_X11 : DisplayImpl, Feature_Display_ScreenShot, Have_Disp
 	}
 
 	IDisplay dup(IAllocator alloc) {
-		assert(0);
-		//return alloc.make!DisplayImpl_X11(hMonitor, alloc, uiInstance);
+		return alloc.make!DisplayImpl_X11(this);
 	}
 }
 

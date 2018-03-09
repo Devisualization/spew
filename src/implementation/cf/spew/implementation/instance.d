@@ -520,10 +520,12 @@ final class UIInstance_X11 : UIInstance, Feature_Notification, Feature_Managemen
             }
 
             managed!(IWindow[]) windows(IAllocator alloc = theAllocator()) shared {
-                assert(0);
-                /+GetWindows_WinAPI ctx = GetWindows_WinAPI(alloc, this);
-                ctx.call;
-                return managed!(IWindow[])(ctx.windows, managers(ReferenceCountedManager()), alloc);+/
+				GetWindows_X11 ctx;
+			    ctx.alloc = alloc;
+				ctx.uiInstance = this;
+			    ctx.call;
+
+                return managed!(IWindow[])(ctx.windows, managers(ReferenceCountedManager()), alloc);
             }
         }
 

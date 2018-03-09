@@ -6,6 +6,13 @@ module cf.spew.implementation.windowing.misc;
 import cf.spew.ui.display;
 import cf.spew.ui.context.defs;
 import cf.spew.ui.window.defs;
+import cf.spew.ui.rendering : vec2;
+import devisualization.image : ImageStorage;
+import std.experimental.color : RGB8, RGBA8;
+import std.experimental.containers.list;
+import std.experimental.containers.map;
+import std.experimental.allocator : IAllocator, ISharedAllocator, processAllocator, theAllocator, dispose, make, makeArray, expandArray, shrinkArray;
+import devisualization.util.core.memory.managed;
 import derelict.util.sharedlib;
 
 version(Windows) {
@@ -70,14 +77,6 @@ version(Windows) {
 	}
 
 	//
-
-	import cf.spew.ui.rendering : vec2;
-	import devisualization.image : ImageStorage;
-	import std.experimental.color : RGB8, RGBA8;
-	import std.experimental.containers.list;
-	import std.experimental.containers.map;
-	import std.experimental.allocator : IAllocator, ISharedAllocator, processAllocator, theAllocator, dispose, make, makeArray, expandArray, shrinkArray;
-	import devisualization.util.core.memory.managed;
 
 	ImageStorage!RGB8 screenshotImpl_WinAPI(IAllocator alloc, winapi.HDC hFrom, uint width, uint height) {
 		winapi.HDC hMemoryDC = winapi.CreateCompatibleDC(hFrom);
@@ -444,3 +443,54 @@ version(Windows) {
 		}
 	}
 }
+
+struct GetWindows_X11 {
+	import cf.spew.implementation.instance;
+	import cf.spew.implementation.windowing.display;
+	import devisualization.bindings.x11;
+	import cf.spew.event_loop.wells.x11;
+
+	IAllocator alloc;
+	shared(UIInstance) uiInstance;
+	DisplayImpl_X11 display;
+
+	IWindow[] windows;
+
+	void call() {
+		Window rootWindow = x11.XDefaultRootWindow(x11Display());
+		process(rootWindow);
+	}
+
+	private void process(Window rootWindow) {
+		import cf.spew.implementation.windowing.window;
+
+		Window* childWindows;
+		uint childCount;
+
+		x11.XQueryTree(x11Display(), rootWindow, null, null, &childWindows, &childCount);
+
+		foreach(i; 0 .. childCount) {
+			XWindowAttributes attribs;
+			x11.XGetWindowAttributes(x11Display(), childWindows[i],&attribs);
+
+			if (display !is null) {
+				if ((attribs.x >= display.x && attribs.x < display.x + display.width) &&
+					(attribs.y >= display.y && attribs.y < display.y + display.height)) {
+					// is on this display
+				} else
+					continue;
+			}
+
+			WindowImpl_X11 window = alloc.make!WindowImpl_X11(childWindows[i], cast(IContext)null, alloc, uiInstance);
+			alloc.expandArray(windows, 1);
+			windows[$-1] = window;
+
+			process(childWindows[i]);
+		}
+
+		if (childWindows !is null) {
+			x11.XFree(childWindows);
+		}
+	}
+}
+
