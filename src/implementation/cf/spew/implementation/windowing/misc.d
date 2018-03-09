@@ -464,14 +464,15 @@ struct GetWindows_X11 {
 	private void process(Window rootWindow) {
 		import cf.spew.implementation.windowing.window;
 
+		Window unused;
 		Window* childWindows;
 		uint childCount;
 
-		x11.XQueryTree(x11Display(), rootWindow, null, null, &childWindows, &childCount);
+		x11.XQueryTree(x11Display(), rootWindow, &unused, &unused, &childWindows, &childCount);
 
 		foreach(i; 0 .. childCount) {
 			XWindowAttributes attribs;
-			x11.XGetWindowAttributes(x11Display(), childWindows[i],&attribs);
+			x11.XGetWindowAttributes(x11Display(), childWindows[i], &attribs);
 
 			if (display !is null) {
 				if ((attribs.x >= display.x && attribs.x < display.x + display.width) &&
