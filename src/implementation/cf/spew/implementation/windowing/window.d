@@ -702,6 +702,7 @@ final class WindowImpl_X11 : WindowImpl,
 		Have_Window_ScreenShot, Have_Icon, Have_Window_Menu, Have_Cursor, Have_Style {
 	import devisualization.bindings.x11;
 	import cf.spew.event_loop.wells.x11;
+	import std.traits : isSomeString;
 
 	@disable this(shared(UIInstance) instance);
 
@@ -743,8 +744,34 @@ final class WindowImpl_X11 : WindowImpl,
 	void hide() { assert(0); }
 	void show() { assert(0); }
 
-	Feature_Window_ScreenShot __getFeatureScreenShot() { assert(0); }
-	ImageStorage!RGB8 screenshot(IAllocator alloc=null) { assert(0); }
+	Feature_Window_ScreenShot __getFeatureScreenShot() {
+		return this;
+	}
+
+	ImageStorage!RGB8 screenshot(IAllocator alloc=null) {
+		import devisualization.image : ImageStorage;
+		import devisualization.image.storage.base : ImageStorageHorizontal;
+		import devisualization.image.interfaces : imageObject;
+		import std.experimental.color : RGB8, RGBA8;
+
+		if (alloc is null)
+			alloc = this.alloc;
+
+		auto theSize = size();
+		XImage* complete = x11.XGetImage(x11Display(), cast(Drawable)whandle, 0, 0, theSize.x, theSize.y, AllPlanes, ZPixmap);
+		auto storage = imageObject!(ImageStorageHorizontal!RGB8)(theSize.x, theSize.y, alloc);
+
+		foreach(y; 0 .. theSize.y) {
+			foreach(x; 0 .. theSize.x) {
+				auto pix = x11.XGetPixel(complete, x, y);
+				storage[x, y] = RGB8(cast(ubyte)((pix & complete.red_mask) >> 16), cast(ubyte)((pix & complete.green_mask) >> 8), cast(ubyte)(pix & complete.blue_mask));
+			}
+		}
+
+		x11.XFree(complete);
+		return storage;
+	}
+
 	Feature_Icon __getFeatureIcon() { assert(0); }
 	ImageStorage!RGBA8 getIcon() @property { assert(0); }
 	void setIcon(ImageStorage!RGBA8 from) @property { assert(0); }

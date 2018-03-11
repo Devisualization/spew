@@ -257,7 +257,7 @@ final class DisplayImpl_X11 : DisplayImpl, Feature_Display_ScreenShot, Have_Disp
 			alloc = this.alloc;
 
 		Window rootWindow = x11.XDefaultRootWindow(x11Display());
-		XImage* complete = x11.XGetImage(x11Display(), cast(Drawable)x11.XDefaultRootWindow(x11Display()), x, y, width, height, AllPlanes, ZPixmap);
+		XImage* complete = x11.XGetImage(x11Display(), cast(Drawable)rootWindow, x, y, width, height, AllPlanes, ZPixmap);
 		auto storage = imageObject!(ImageStorageHorizontal!RGB8)(size_.x, size_.y, alloc);
 
 		foreach(y; 0 .. height) {
