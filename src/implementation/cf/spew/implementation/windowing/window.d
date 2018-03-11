@@ -702,10 +702,12 @@ final class WindowImpl_X11 : WindowImpl,
 		Have_Window_ScreenShot, Have_Icon, Have_Window_Menu, Have_Cursor, Have_Style {
 	import devisualization.bindings.x11;
 	import cf.spew.event_loop.wells.x11;
-	import std.traits : isSomeString;
+    import std.traits : isSomeString;
+	import std.utf : codeLength, byDchar, byChar;
 
 	@disable this(shared(UIInstance) instance);
 
+	bool isClosed;
 	Window whandle;
 
 	this(Window handle, IContext context, IAllocator alloc, shared(UIInstance) uiInstance, bool processOwns=false) {
@@ -718,37 +720,138 @@ final class WindowImpl_X11 : WindowImpl,
 	}
 
 	@property {
-		vec2!uint size() { assert(0); }
-		managed!IDisplay display() { assert(0); }
-		bool renderable() { assert(0); }
+		vec2!uint size() {
+			if (!visible || isClosed) return vec2!uint.init;
+			auto att = x11WindowAttributes(whandle);
+			return vec2!uint(att.width, att.height);
+		}
+
+		managed!IDisplay display() {
+			import std.algorithm : max, min;
+			IDisplay theDisplay;
+			int numMonitors;
+			XRRMonitorInfo* monitors = x11.XRRGetMonitors(x11Display(), whandle, true, &numMonitors);
+
+			if (numMonitors == -1)
+				return managed!(IDisplay).init;
+
+			XRRMonitorInfo theMonitor;
+			auto att = x11WindowAttributes(whandle);
+			int x2 = att.x + att.width, y2 = att.y + att.height;
+			int lastOverlap;
+
+			foreach(i; 0 .. numMonitors) {
+				int x1 = monitors[i].x + monitors[i].width, y1 = monitors[i].x + monitors[i].y;
+				int xOverlap = max(0, min(x2, x1) - max(att.x, monitors[i].x));
+				int yOverlap = max(0, min(y2, y1) - max(att.y, monitors[i].y));
+				int overlap = xOverlap * yOverlap;
+
+				if (overlap > lastOverlap) {
+					lastOverlap = overlap;
+					theMonitor = monitors[i];
+				}
+			}
+
+			x11.XRRFreeMonitors(monitors);
+			return managed!IDisplay(alloc.make!DisplayImpl_X11(att.screen, &theMonitor, alloc, instance), managers(ReferenceCountedManager()), alloc);
+		}
+
+		bool renderable() {
+			if (isClosed) return false;
+			auto att = x11WindowAttributes(whandle);
+			return (att.map_state & IsViewable) == IsViewable;
+		}
+
 		void* __handle() { return &whandle; }
 		override void onFileDrop(EventOnFileDropDel del) { assert(0); }
 	}
 
-	void close() { assert(0); }
+	void close() {
+		hide();
+		x11.XDestroyWindow(x11Display(), whandle);
+		isClosed = true;
+	}
 
 	@property {
-		managed!dstring title() { assert(0); }
+		managed!dstring title() {
+			import core.stdc.string : strlen;
+
+			char* temp;
+			char[] buffer = temp[0 .. strlen(temp)];
+			x11.XFetchName(x11Display(), whandle, &temp);
+
+			// what is allocated could potentially be _more_ then required
+			dchar[] buffer2 = alloc.makeArray!dchar(codeLength!char(buffer));
+
+			size_t i;
+			foreach(c; buffer.byDchar) {
+				buffer2[i] = c;
+				i++;
+			}
+
+			alloc.dispose(buffer);
+			x11.XFree(temp);
+			return managed!dstring(cast(dstring)buffer2, managers(), alloc);
+		}
 
 		void title(string text) { setTitle(text); }
 		void title(wstring text) { setTitle(text); }
 		void title(dstring text) { setTitle(text); }
 
-		void setTitle(String)(String text) if (isSomeString!String) { assert(0); }
+		void setTitle(String)(String text) if (isSomeString!String) {
+			// if this ends in segfaults, switch to malloc and don't free.
+			// xlib will free.
 
-		void location(vec2!int point) { assert(0); }
-		vec2!int location() { assert(0); }
-		void size(vec2!uint point) { assert(0); }
+			char[] temp = alloc.makeArray!char(codeLength!char(text) + 1);
+			temp[$-1] = 0;
+
+			size_t i;
+			foreach(c; text.byChar) {
+				temp[i] = c;
+				i++;
+			}
+
+			x11.XStoreName(x11Display(), whandle, temp.ptr);
+			alloc.dispose(temp);
+		}
+
+		void location(vec2!int point) {
+			if (!visible || isClosed) return;
+			x11.XMoveWindow(x11Display(), whandle, point.x, point.y);
+			x11.XFlush(x11Display());
+		}
+
+		vec2!int location() {
+			if (!visible || isClosed) return vec2!int.init;
+			auto att = x11WindowAttributes(whandle);
+			return vec2!int(att.x, att.y);
+		}
+
+		void size(vec2!uint point) {
+			if (!visible || isClosed) return;
+			x11.XResizeWindow(x11Display(), whandle, point.x, point.y);
+			x11.XFlush(x11Display());
+		}
 	}
 
-	void hide() { assert(0); }
-	void show() { assert(0); }
+	void hide() {
+		if (!visible || isClosed) return;
+		x11.XMapWindow(x11Display(), whandle);
+	}
+
+	void show() {
+		if (!visible || isClosed) return;
+		x11.XUnmapWindow(x11Display(), whandle);
+	}
 
 	Feature_Window_ScreenShot __getFeatureScreenShot() {
+		if (!visible || isClosed) return null;
 		return this;
 	}
 
 	ImageStorage!RGB8 screenshot(IAllocator alloc=null) {
+		if (!visible || isClosed) return null;
+
 		import devisualization.image : ImageStorage;
 		import devisualization.image.storage.base : ImageStorageHorizontal;
 		import devisualization.image.interfaces : imageObject;

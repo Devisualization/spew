@@ -177,7 +177,7 @@ abstract class UIInstance : Management_UserInterface, Have_Notification, Have_Ma
 		creator.assignVRamContext;
 		return creator.createWindow();
 	}
-	
+
 	@property {
 		managed!IDisplay primaryDisplay(IAllocator alloc = theAllocator()) shared { assert(0); }
 
@@ -264,7 +264,7 @@ version(Windows) {
 							taskbarIconNID = winapi.NOTIFYICONDATAW.init;
 						} else {
 							bool toAdd = cast()taskbarIconNID is winapi.NOTIFYICONDATAW.init;
-							
+
 							if (taskbarIconWindow is null)
 								taskbarIconWindow = cast(shared)winapi.CreateWindow(null, null, 0, 0, 0, 0, 0, null, null, null, null);
 
@@ -272,36 +272,36 @@ version(Windows) {
 							taskbarIconNID.uVersion = NOTIFYICON_VERSION_4;
 							taskbarIconNID.uFlags = winapi.NIF_ICON | winapi.NIF_STATE;
 							taskbarIconNID.hWnd = cast()taskbarIconWindow;
-							
+
 							winapi.HDC hFrom = winapi.GetDC(null);
 							winapi.HDC hMemoryDC = winapi.CreateCompatibleDC(hFrom);
-							
+
 							scope(exit) {
 								winapi.DeleteDC(hMemoryDC);
 								winapi.ReleaseDC(null, hFrom);
 							}
-							
+
 							if (taskbarIconNID.hIcon !is null) {
 								winapi.DeleteObject(cast(void*)taskbarIconNID.hIcon);
 								taskbarCustomIconAllocator.dispose(taskbarCustomIcon);
 							}
-							
+
 							taskbarCustomIconAllocator = alloc;
 							taskbarCustomIcon = imageObjectFrom!(shared(ImageStorageHorizontal!RGBA8))(icon, alloc);
-							
+
 							taskbarIconNID.hIcon = cast(shared)imageToIcon_WinAPI(icon, hMemoryDC, alloc);
-							
+
 							if (toAdd) {
 								winapi.Shell_NotifyIconW(winapi.NIM_ADD, cast(winapi.NOTIFYICONDATAW*)&taskbarIconNID);
 							} else {
 								winapi.Shell_NotifyIconW(winapi.NIM_MODIFY, cast(winapi.NOTIFYICONDATAW*)&taskbarIconNID);
 							}
-							
+
 							winapi.Shell_NotifyIconW(winapishell.NIM_SETVERSION, cast(winapi.NOTIFYICONDATAW*)&taskbarIconNID);
 						}
 					}
 				}
-				
+
 				void notify(shared(ImageStorage!RGBA8) icon, shared(dstring) title, shared(dstring) text, shared(ISharedAllocator) alloc) shared {
 					import std.utf : byUTF;
 					if (taskbarIconWindow is null)
@@ -313,7 +313,7 @@ version(Windows) {
 					nid.uFlags = winapi.NIF_ICON | NIF_SHOWTIP | winapi.NIF_INFO | winapi.NIF_STATE | NIF_REALTIME;
 					nid.uID = 1;
 					nid.hWnd = cast(winapi.HWND)taskbarIconWindow;
-					
+
 					size_t i;
 					foreach(c; byUTF!wchar(title)) {
 						if (i >= nid.szInfoTitle.length - 1) {
@@ -321,12 +321,12 @@ version(Windows) {
 							break;
 						} else
 							nid.szInfoTitle[i] = c;
-						
+
 						i++;
 						if (i == title.length)
 							nid.szInfoTitle[i] = cast(wchar)0;
 					}
-					
+
 					i = 0;
 					foreach(c; byUTF!wchar(text)) {
 						if (i >= nid.szInfo.length - 1) {
@@ -334,25 +334,25 @@ version(Windows) {
 							break;
 						} else
 							nid.szInfo[i] = c;
-						
+
 						i++;
 						if (i == text.length)
 							nid.szInfo[i] = cast(wchar)0;
 					}
-					
+
 					winapi.HDC hFrom = winapi.GetDC(null);
 					winapi.HDC hMemoryDC = winapi.CreateCompatibleDC(hFrom);
-					
+
 					scope(exit) {
 						winapi.DeleteDC(hMemoryDC);
 						winapi.ReleaseDC(null, hFrom);
 					}
-					
+
 					nid.hIcon = imageToIcon_WinAPI(icon, hMemoryDC, alloc);
-					
+
 					winapi.Shell_NotifyIconW(winapi.NIM_ADD, &nid);
 					winapi.Shell_NotifyIconW(winapi.NIM_SETVERSION, &nid);
-					
+
 					winapi.Shell_NotifyIconW(winapi.NIM_DELETE, &nid);
 					winapi.DeleteObject(nid.hIcon);
 				}
@@ -367,7 +367,7 @@ version(Windows) {
 					shared(ImageStorage!RGBA8) getNotificationIcon(shared(ISharedAllocator) alloc) shared { assert(0); }
 					void setNotificationIcon(shared(ImageStorage!RGBA8) icon, shared(ISharedAllocator) alloc) shared { assert(0); }
 				}
-				
+
 				void notify(shared(ImageStorage!RGBA8) icon, shared(dstring) title, shared(dstring) text, shared(ISharedAllocator) alloc) shared { assert(0); }
 				void clearNotifications() shared { assert(0); }
 			}
@@ -503,7 +503,6 @@ final class UIInstance_X11 : UIInstance, Feature_Notification, Feature_Managemen
 				Screen* theScreen = x11.XScreenOfDisplay(x11Display(), screenNumber);
 				Window rootWindow = x11.XRootWindowOfScreen(theScreen);
 
-				IDisplay theDisplay;
 				int numMonitors;
 				XRRMonitorInfo* monitors = x11.XRRGetMonitors(x11Display(), rootWindow, true, &numMonitors);
 
@@ -598,7 +597,7 @@ class StreamsInstance_LibUV : StreamsInstance {
 		import cf.spew.implementation.streams.udp : LibUVUDPLocalPoint;
 		return LibUVUDPLocalPoint.create(address, alloc);
 	}
-	
+
 	managed!(managed!Address[]) allLocalAddress(IAllocator alloc=theAllocator()) shared {
 		import devisualization.bindings.libuv;
 		if (alloc is null) return managed!(managed!Address[]).init;

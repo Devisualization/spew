@@ -13,6 +13,7 @@ import std.experimental.containers.list;
 import std.experimental.containers.map;
 import stdx.allocator : IAllocator, ISharedAllocator, processAllocator, theAllocator, dispose, make, makeArray, expandArray, shrinkArray;
 import devisualization.util.core.memory.managed;
+import x11b = devisualization.bindings.x11;
 import derelict.util.sharedlib;
 
 version(Windows) {
@@ -521,3 +522,20 @@ struct GetWindows_X11 {
 	}
 }
 
+x11b.XWindowAttributes x11WindowAttributes(x11b.Window window) {
+	import devisualization.bindings.x11;
+	import cf.spew.event_loop.wells.x11;
+
+	int x, y;
+	Window unused;
+	XWindowAttributes ret;
+
+	Window rootWindow = x11.XDefaultRootWindow(x11Display());
+	x11.XTranslateCoordinates(x11Display(), window, rootWindow, 0, 0, &x, &y, &unused);
+	x11.XGetWindowAttributes(x11Display(), window, &ret);
+
+	// fixes the coordinates to the correct root instead of parent.
+	ret.x = x - ret.x;
+	ret.y = y - ret.y;
+	return ret;
+}
