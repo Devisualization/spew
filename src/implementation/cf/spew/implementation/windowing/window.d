@@ -719,6 +719,15 @@ final class WindowImpl_X11 : WindowImpl,
 
 	}
 
+
+	~this() {
+		if (!isClosed) {
+			if (context_ !is null)
+				alloc.dispose(context_);
+			close();
+		}
+	}
+
 	@property {
 		vec2!uint size() {
 			if (!visible || isClosed) return vec2!uint.init;
