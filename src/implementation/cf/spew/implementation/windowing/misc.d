@@ -452,10 +452,10 @@ struct HandleAppender(Handle) {
 	void add(Handle handle) {
 		if (toUse == 0) {
 			if (array.length == 0) {
-				array = alloc.makeArray!Handle(64);
+				alloc.makeArray!Handle(64);
 				toUse = 64;
 			} else {
-				array = alloc.expandArray(array, 8);
+				alloc.expandArray(array, 8);
 				toUse = 8;
 			}
 		}

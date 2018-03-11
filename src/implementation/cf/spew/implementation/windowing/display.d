@@ -205,7 +205,7 @@ final class DisplayImpl_X11 : DisplayImpl, Feature_Display_ScreenShot, Have_Disp
 
 				Atom actualType;
 				int actualFormat;
-				ulong nitems, bytesAfter;
+				size_t nitems, bytesAfter;
 				ubyte* prop;
 
 				x11.XRRGetOutputProperty(x11Display(), rrOutput, backlightAtom,
