@@ -539,3 +539,29 @@ x11b.XWindowAttributes x11WindowAttributes(x11b.Window window) {
 	ret.y = y - ret.y;
 	return ret;
 }
+
+struct X11WindowProperty {
+	import core.stdc.config : c_ulong;
+
+	x11b.Atom type;
+	int format;
+	c_ulong numberOfItems;
+	ubyte* data;
+}
+
+X11WindowProperty x11ReadWindowProperty(x11b.Display* display, x11b.Window window, x11b.Atom property) {
+	import core.stdc.config : c_ulong;
+
+	c_ulong readByteCount = 1024;
+	X11WindowProperty ret;
+
+	while(readByteCount > 0)
+	{
+		if (ret.data !is null) x11b.x11.XFree(ret.data);
+		ret.data = null;
+		x11b.x11.XGetWindowProperty(display, window, property, 0, readByteCount, false, x11b.AnyPropertyType, &ret.type,
+			&ret.format, &ret.numberOfItems, &readByteCount, &ret.data);
+	}
+
+	return ret;
+}

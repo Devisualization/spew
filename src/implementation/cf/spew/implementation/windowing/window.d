@@ -698,8 +698,8 @@ version(Windows) {
 }
 
 final class WindowImpl_X11 : WindowImpl,
-		Feature_Window_ScreenShot, Feature_Icon, Feature_Window_Menu, Feature_Cursor, Feature_Style,
-		Have_Window_ScreenShot, Have_Icon, Have_Window_Menu, Have_Cursor, Have_Style {
+		Feature_Window_ScreenShot, Feature_Icon, Feature_Cursor, Feature_Style,
+		Have_Window_ScreenShot, Have_Icon, Have_Cursor, Have_Style {
 	import devisualization.bindings.x11;
 	import cf.spew.event_loop.wells.x11;
     import std.traits : isSomeString;
@@ -884,13 +884,71 @@ final class WindowImpl_X11 : WindowImpl,
 		return storage;
 	}
 
-	Feature_Icon __getFeatureIcon() { assert(0); }
-	ImageStorage!RGBA8 getIcon() @property { assert(0); }
-	void setIcon(ImageStorage!RGBA8 from) @property { assert(0); }
+	Feature_Icon __getFeatureIcon() {
+		if (isClosed) return null;
+		return this;
+	}
 
-	Feature_Window_Menu __getFeatureMenu() { assert(0); }
-	Window_MenuItem addItem() { assert(0); }
-	@property managed!(Window_MenuItem[]) items() { assert(0); }
+	ImageStorage!RGBA8 getIcon() @property {
+		import devisualization.image : ImageStorage;
+		import devisualization.image.storage.base : ImageStorageHorizontal;
+		import devisualization.image.interfaces : imageObject;
+		import std.experimental.color : RGB8, RGBA8;
+
+		Atom net_wm_icon = x11.XInternAtom(x11Display(), "_NET_WM_ICON", false);
+		Atom cardinal = x11.XInternAtom(x11Display(), "CARDINAL", false);
+
+		X11WindowProperty prop = x11ReadWindowProperty(x11Display(), whandle, net_wm_icon);
+		scope(exit) if (prop.data !is null) x11.XFree(prop.data);
+
+		if (prop.format == 32 && prop.type == cardinal && prop.data !is null && prop.numberOfItems > 1) {
+			// great same, we can use this!
+
+			uint* source = cast(uint*)prop.data;
+			ushort width = cast(ushort)source[0], height = cast(ushort)(source[0] >> 16);
+
+			if ((width*height)+1 != prop.numberOfItems)
+				return null;
+
+			auto storage = imageObject!(ImageStorageHorizontal!RGBA8)(width, height, alloc);
+			size_t offset=1;
+
+			foreach(y; 0 .. height) {
+		        foreach(x; 0 .. width) {
+					uint p = source[offset++];
+			        storage[x, y] = RGBA8((cast(ubyte)(p >> 16)), (cast(ubyte)(p >> 8)), (cast(ubyte)p), (cast(ubyte)(p >> 24)));
+		        }
+	        }
+
+
+			return storage;
+		} else
+			return null;
+	}
+
+	void setIcon(ImageStorage!RGBA8 from) @property {
+		import core.stdc.stdlib : malloc;
+
+		assert(from.width <= ushort.max);
+		assert(from.height <= ushort.max);
+
+		int numItems = cast(int)(from.width*from.height)+1;
+		uint[] imageData = (cast(uint*)malloc(4*numItems))[0 .. numItems];
+		size_t offset=1;
+
+		imageData[0] = (cast(ushort)from.height << 16) | cast(ushort)from.width;
+
+		foreach(y; 0 .. from.height) {
+			foreach(x; 0 .. from.width) {
+				auto p = from[x, y];
+				imageData[offset++] = p.b.value | (p.g.value << 8) | (p.r.value << 16) | (p.a.value << 24);
+			}
+		}
+
+		Atom net_wm_icon = x11.XInternAtom(x11Display(), "_NET_WM_ICON", false);
+		Atom cardinal = x11.XInternAtom(x11Display(), "CARDINAL", false);
+		x11.XChangeProperty(x11Display(), whandle, net_wm_icon, cardinal, 32, PropModeReplace, cast(ubyte*)imageData.ptr, numItems);
+	}
 
 	Feature_Cursor __getFeatureCursor() { assert(0); }
 	void setCursor(WindowCursorStyle style) { assert(0); }
@@ -898,8 +956,16 @@ final class WindowImpl_X11 : WindowImpl,
 	void setCustomCursor(ImageStorage!RGBA8 image) { assert(0); }
 	ImageStorage!RGBA8 getCursorIcon() { assert(0); }
 
-	bool lockCursorToWindow() { assert(0); }
-	void unlockCursorFromWindow() { assert(0); }
+	bool lockCursorToWindow() {
+		// if this fails, we'll just have to return false :/
+
+		auto ret = x11.XGrabPointer(x11Display(), whandle, true, uint.max, GrabModeAsync, GrabModeAsync, whandle, None, CurrentTime);
+		return ret == GrabSuccess;
+	}
+
+	void unlockCursorFromWindow() {
+		x11.XUngrabPointer(x11Display(), CurrentTime);
+	}
 
 	Feature_Style __getFeatureStyle() { assert(0); }
 	void setStyle(WindowStyle style) { assert(0); }
