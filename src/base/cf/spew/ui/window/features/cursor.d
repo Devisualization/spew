@@ -27,22 +27,30 @@ enum WindowCursorStyle {
 	/**
 	 * When attempting to resize something vertically
 	 */
-	ResizeVertical,
-	
+	ResizeTopVertical,
+	/// Ditto
+	ResizeBottomVertical,
+
 	/**
 	 * When attempting to resize something horizontally
 	 */
-	ResizeHorizontal,
+	ResizeLeftHorizontal,
+	/// Ditto
+	ResizeRightHorizontal,
 	
 	/**
 	 * Resizing from the left corner of a rectangle
 	 */
-	ResizeCornerLeft,
+	ResizeCornerTopLeft,
+	/// Ditto
+	ResizeCornerBottomLeft,
 	
 	/**
 	 * Resizing from the right corner of a rectangle
 	 */
-	ResizeCornerRight,
+	ResizeCornerTopRight,
+	/// Ditto
+	ResizeCornerBottomRight,
 
 	/**
 	 * It is not possible to act e.g. circle around an X
@@ -53,6 +61,11 @@ enum WindowCursorStyle {
 	 * Process is currently busy relating to e.g. a control, usually displayed as an hour glass
 	 */
 	Busy,
+
+	/**
+	 * When editing text the usual I.
+	 */
+	TextEdit,
 	
 	/**
 	 * A custom cursor

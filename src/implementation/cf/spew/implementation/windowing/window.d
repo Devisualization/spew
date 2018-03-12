@@ -506,18 +506,26 @@ version(Windows) {
 					case WindowCursorStyle.NoAction:
 						hCursor = LoadImageW(null, cast(wchar*)IDC_NO, IMAGE_CURSOR, 0, 0, LR_DEFAULTSIZE | LR_SHARED);
 						break;
-					case WindowCursorStyle.ResizeCornerLeft:
+					case WindowCursorStyle.ResizeCornerTopLeft:
+					case WindowCursorStyle.ResizeCornerBottomRight:
 						hCursor = LoadImageW(null, cast(wchar*)IDC_SIZENESW, IMAGE_CURSOR, 0, 0, LR_DEFAULTSIZE | LR_SHARED);
 						break;
-					case WindowCursorStyle.ResizeCornerRight:
+					case WindowCursorStyle.ResizeCornerTopRight:
+					case WindowCursorStyle.ResizeCornerBottomLeft:
 						hCursor = LoadImageW(null, cast(wchar*)IDC_SIZENWSE, IMAGE_CURSOR, 0, 0, LR_DEFAULTSIZE | LR_SHARED);
 						break;
-					case WindowCursorStyle.ResizeHorizontal:
+					case WindowCursorStyle.ResizeLeftHorizontal:
+					case WindowCursorStyle.ResizeRightHorizontal:
 						hCursor = LoadImageW(null, cast(wchar*)IDC_SIZEWE, IMAGE_CURSOR, 0, 0, LR_DEFAULTSIZE | LR_SHARED);
 						break;
-					case WindowCursorStyle.ResizeVertical:
+					case WindowCursorStyle.ResizeTopVertical:
+					case WindowCursorStyle.ResizeBottomVertical:
 						hCursor = LoadImageW(null, cast(wchar*)IDC_SIZENS, IMAGE_CURSOR, 0, 0, LR_DEFAULTSIZE | LR_SHARED);
 						break;
+					case WindowCursorStyle.TextEdit:
+						hCursor = LoadImageW(null, cast(wchar*)IDC_IBEAM, IMAGE_CURSOR, 0, 0, LR_DEFAULTSIZE | LR_SHARED);
+						break;
+
 					case WindowCursorStyle.None:
 						hCursor = null;
 						break;
@@ -710,6 +718,9 @@ final class WindowImpl_X11 : WindowImpl,
 	bool isClosed;
 	Window whandle;
 
+	Cursor currentCursor = None;
+	WindowCursorStyle cursorStyle;
+
 	this(Window handle, IContext context, IAllocator alloc, shared(UIInstance) uiInstance, bool processOwns=false) {
 		this.whandle = handle;
 		this.alloc = alloc;
@@ -778,6 +789,8 @@ final class WindowImpl_X11 : WindowImpl,
 	void close() {
 		hide();
 		x11.XDestroyWindow(x11Display(), whandle);
+		if (currentCursor != None)
+			x11.XFreeCursor(x11Display(), currentCursor);
 		isClosed = true;
 	}
 
@@ -950,16 +963,88 @@ final class WindowImpl_X11 : WindowImpl,
 		x11.XChangeProperty(x11Display(), whandle, net_wm_icon, cardinal, 32, PropModeReplace, cast(ubyte*)imageData.ptr, numItems);
 	}
 
-	Feature_Cursor __getFeatureCursor() { assert(0); }
-	void setCursor(WindowCursorStyle style) { assert(0); }
-	WindowCursorStyle getCursor() { assert(0); }
+	Feature_Cursor __getFeatureCursor() {
+	    if (isClosed) return null;
+	    return this;
+	}
+
+	void setCursor(WindowCursorStyle style) {
+		if (isClosed) return;
+		assert(cursorStyle != WindowCursorStyle.Underterminate);
+
+        // unload systemy stuff
+        if (currentCursor != None)
+	        x11.XFreeCursor(x11Display(), currentCursor);
+
+		cursorStyle = style;
+
+		if (style != WindowCursorStyle.Custom) {
+			// load up reference to system one
+
+			switch(style) {
+				case WindowCursorStyle.Busy:
+					currentCursor = x11.XCreateFontCursor(x11Display(), XC_watch);
+					break;
+				case WindowCursorStyle.Hand:
+					currentCursor = x11.XCreateFontCursor(x11Display(), XC_hand1);
+					break;
+				case WindowCursorStyle.NoAction:
+					currentCursor = x11.XCreateFontCursor(x11Display(), XC_X_cursor);
+					break;
+				case WindowCursorStyle.ResizeCornerTopLeft:
+					currentCursor = x11.XCreateFontCursor(x11Display(), XC_top_left_corner);
+					break;
+				case WindowCursorStyle.ResizeCornerTopRight:
+					currentCursor = x11.XCreateFontCursor(x11Display(), XC_top_right_corner);
+					break;
+				case WindowCursorStyle.ResizeCornerBottomLeft:
+					currentCursor = x11.XCreateFontCursor(x11Display(), XC_bottom_left_corner);
+					break;
+				case WindowCursorStyle.ResizeCornerBottomRight:
+					currentCursor = x11.XCreateFontCursor(x11Display(), XC_bottom_right_corner);
+					break;
+
+				case WindowCursorStyle.ResizeLeftHorizontal:
+					currentCursor = x11.XCreateFontCursor(x11Display(), XC_left_side);
+					break;
+				case WindowCursorStyle.ResizeTopVertical:
+					currentCursor = x11.XCreateFontCursor(x11Display(), XC_top_side);
+					break;
+				case WindowCursorStyle.ResizeRightHorizontal:
+					currentCursor = x11.XCreateFontCursor(x11Display(), XC_right_side);
+					break;
+				case WindowCursorStyle.ResizeBottomVertical:
+					currentCursor = x11.XCreateFontCursor(x11Display(), XC_bottom_side);
+					break;
+
+				case WindowCursorStyle.TextEdit:
+					currentCursor = x11.XCreateFontCursor(x11Display(), XC_xterm);
+					break;
+
+				case WindowCursorStyle.None:
+					currentCursor = None;
+					break;
+				case WindowCursorStyle.Standard:
+				default:
+					currentCursor = x11.XCreateFontCursor(x11Display(), XC_left_ptr);
+					break;
+			}
+			
+			XSetWindowAttributes attr;
+			attr.cursor = currentCursor;
+			x11.XChangeWindowAttributes(x11Display(), whandle, CWCursor, &attr);
+		}
+	}
+
+	WindowCursorStyle getCursor() { return cursorStyle; }
+	
 	void setCustomCursor(ImageStorage!RGBA8 image) { assert(0); }
 	ImageStorage!RGBA8 getCursorIcon() { assert(0); }
 
 	bool lockCursorToWindow() {
 		// if this fails, we'll just have to return false :/
 
-		auto ret = x11.XGrabPointer(x11Display(), whandle, true, uint.max, GrabModeAsync, GrabModeAsync, whandle, None, CurrentTime);
+		auto ret = x11.XGrabPointer(x11Display(), whandle, true, uint.max, GrabModeAsync, GrabModeAsync, whandle, currentCursor, CurrentTime);
 		return ret == GrabSuccess;
 	}
 

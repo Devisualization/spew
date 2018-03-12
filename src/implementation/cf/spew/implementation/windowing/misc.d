@@ -540,6 +540,22 @@ x11b.XWindowAttributes x11WindowAttributes(x11b.Window window) {
 	return ret;
 }
 
+enum {
+	XC_watch = 150,
+	XC_hand1 = 58,
+	XC_left_ptr = 68,
+	XC_X_cursor = 0,
+	XC_top_left_corner = 134,
+	XC_top_right_corner = 136,
+	XC_left_side = 70,
+	XC_top_side = 138,
+	XC_right_side = 196,
+	XC_bottom_left_corner = 12,
+	XC_bottom_side = 16,
+	XC_bottom_right_corner = 14,
+	XC_xterm = 152
+}
+
 struct X11WindowProperty {
 	import core.stdc.config : c_ulong;
 
