@@ -235,7 +235,7 @@ version(Windows) {
 			if (processOwns)
 				hCursor = LoadImageW(null, cast(wchar*)IDC_APPSTARTING, IMAGE_CURSOR, 0, 0, LR_DEFAULTSIZE | LR_SHARED);
 			else
-				cursorStyle = WindowCursorStyle.Underterminate;
+				cursorStyle = WindowCursorStyle.Indeterminate;
 
 			DragAcceptFiles(hwnd, false);
 		}
@@ -541,11 +541,11 @@ version(Windows) {
 			return cursorStyle;
 		}
 		
-		void setCustomCursor(ImageStorage!RGBA8 image) {
+		void setCustomCursor(scope ImageStorage!RGBA8 image, vec2!ushort hotspot) {
 			import devisualization.image.storage.base : ImageStorageHorizontal;
 			import devisualization.image.interfaces : imageObjectFrom;
 			
-			assert(cursorStyle != WindowCursorStyle.Underterminate);
+			assert(cursorStyle != WindowCursorStyle.Indeterminate);
 			
 			// The comments here specify the preferred way to do this.
 			// Unfortunately at the time of writing, it is not possible to
@@ -561,7 +561,9 @@ version(Windows) {
 			
 			// customCursor must be a set size, as defined by:
 			vec2!size_t toSize = vec2!size_t(GetSystemMetrics(SM_CXCURSOR), GetSystemMetrics(SM_CYCURSOR));
-			
+			hotspot.x *= toSize.x > image.width ? (toSize.x / cast(float)image.width) : (image.width / cast(float)toSize.x);
+			hotspot.y *= toSize.y > image.height ? (toSize.y / cast(float)image.height) : (image.height / cast(float)toSize.y);
+
 			// so customCursor must be resized to the given size
 			
 			// load systemy copy of image
@@ -578,7 +580,7 @@ version(Windows) {
 			
 			// CreateCursor
 			
-			hCursor = CreateCursor(null, ii.xHotspot, ii.yHotspot, cast(int)toSize.x, cast(int)toSize.y, ii.hbmColor, ii.hbmMask);
+			hCursor = CreateCursor(null, cast(DWORD)hotspotx, cast(DWORD)hotspoty, cast(int)toSize.x, cast(int)toSize.y, ii.hbmColor, ii.hbmMask);
 			
 			DeleteObject(hBitmap);
 			DeleteObject(hBitmap2);
@@ -586,8 +588,8 @@ version(Windows) {
 			ReleaseDC(null, hFrom);
 		}
 		
-		ImageStorage!RGBA8 getCursorIcon() {
-			return customCursor;
+		ImageStorage!RGBA8 getCursorIcon(IAllocator alloc) {
+			return imageObjectFrom!(ImageStorageHorizontal!RGBA8)(customCursor, alloc);
 		}
 
 		bool lockCursorToWindow() {
@@ -689,7 +691,7 @@ version(Windows) {
 
 		package(cf.spew) {
 			bool impl_cursorset(LPARAM lParam) nothrow {
-				if (LOWORD(lParam) == HTCLIENT && cursorStyle != WindowCursorStyle.Underterminate) {
+				if (LOWORD(lParam) == HTCLIENT && cursorStyle != WindowCursorStyle.Indeterminate) {
 					SetCursor(hCursor);
 					return true;
 				} else
@@ -720,6 +722,8 @@ final class WindowImpl_X11 : WindowImpl,
 
 	Cursor currentCursor = None;
 	WindowCursorStyle cursorStyle;
+	ImageStorage!RGBA8 customCursor;
+	XcursorImage* customCursorImage;
 
 	this(Window handle, IContext context, IAllocator alloc, shared(UIInstance) uiInstance, bool processOwns=false) {
 		this.whandle = handle;
@@ -791,6 +795,8 @@ final class WindowImpl_X11 : WindowImpl,
 		x11.XDestroyWindow(x11Display(), whandle);
 		if (currentCursor != None)
 			x11.XFreeCursor(x11Display(), currentCursor);
+		if (customCursorImage !is null) // ugh are these needed?
+			x11.XcursorImageDestroy(customCursorImage);
 		isClosed = true;
 	}
 
@@ -975,6 +981,8 @@ final class WindowImpl_X11 : WindowImpl,
         // unload systemy stuff
         if (currentCursor != None)
 	        x11.XFreeCursor(x11Display(), currentCursor);
+		if (customCursorImage !is null) // ugh are these needed?
+			x11.XcursorImageDestroy(customCursorImage);
 
 		cursorStyle = style;
 
@@ -1038,8 +1046,51 @@ final class WindowImpl_X11 : WindowImpl,
 
 	WindowCursorStyle getCursor() { return cursorStyle; }
 	
-	void setCustomCursor(ImageStorage!RGBA8 image) { assert(0); }
-	ImageStorage!RGBA8 getCursorIcon() { assert(0); }
+	void setCustomCursor(scope ImageStorage!RGBA8 image, vec2!ushort hotspot) {
+		import devisualization.image.storage.base : ImageStorageHorizontal;
+		import devisualization.image.interfaces : imageObjectFrom;
+
+		if (image is null) return;
+		assert(cursorStyle != WindowCursorStyle.Indeterminate);
+
+		if (x11.XcursorImageCreate !is null && x11.XcursorImageLoadCursor !is null && x11.XcursorImageDestroy !is null &&
+			x11.XcursorSupportsARGB !is null && x11.XcursorSupportsARGB(x11Display()) == XcursorTrue) {
+
+            if (currentCursor != None)
+	    		x11.XFreeCursor(x11Display(), currentCursor);
+			if (customCursorImage !is null)
+				x11.XcursorImageDestroy(customCursorImage);
+
+		    // The comments here specify the preferred way to do this.
+		    // Unfortunately at the time of writing, it is not possible to
+		    //  use devisualization.image for resizing.
+
+		    setCursor(WindowCursorStyle.Custom);
+
+		    // duplicate image, store
+		    customCursor = imageObjectFrom!(ImageStorageHorizontal!RGBA8)(image, alloc);
+
+			customCursorImage = x11.XcursorImageCreate(cast(int)image.width, cast(int)image.height);
+			customCursorImage.xhot = hotspot.x;
+			customCursorImage.yhot = hotspot.y;
+
+			size_t offset;
+			foreach(y; 0 .. image.height) {
+			    foreach(x; 0 .. image.width) {
+				    auto p = image[x, y];
+				    customCursorImage.pixels[offset++] = p.b.value | (p.g.value << 8) | (p.r.value << 16) | (p.a.value << 24);
+			    }
+		    }
+
+			currentCursor = x11.XcursorImageLoadCursor(x11Display(), customCursorImage);
+		}
+	}
+
+	ImageStorage!RGBA8 getCursorIcon(IAllocator alloc) {
+		import devisualization.image.storage.base : ImageStorageHorizontal;
+		import devisualization.image.interfaces : imageObjectFrom;
+    	return imageObjectFrom!(ImageStorageHorizontal!RGBA8)(customCursor, alloc);
+	}
 
 	bool lockCursorToWindow() {
 		// if this fails, we'll just have to return false :/

@@ -26,7 +26,7 @@
 			"dependencies": {
 				"de_image:base": "~>1.0.3",
 				"emsi_containers": "~>0.5.3",
-				"de_bindings:libuv": "~>0.3.1",
+				"de_bindings:libuv": "~>0.3.2",
 				"de_bindings:x11": "*",
 				"spew:utils": "*",
 				"stdx-allocator": "~>2.77.0"

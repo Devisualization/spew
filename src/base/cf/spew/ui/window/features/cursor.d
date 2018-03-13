@@ -6,9 +6,11 @@
  */
 module cf.spew.ui.window.features.cursor;
 import cf.spew.ui.window.defs;
+import cf.spew.ui.rendering;
 import devisualization.image : ImageStorage;
 import std.experimental.color : RGBA8;
 import devisualization.util.core.memory.managed;
+import stdx.allocator : IAllocator, theAllocator;
 
 /**
  * What the cursor will be displayed to the user
@@ -91,8 +93,8 @@ interface Have_Cursor {
 interface Feature_Cursor {
 	void setCursor(WindowCursorStyle);
 	WindowCursorStyle getCursor();
-	void setCustomCursor(ImageStorage!RGBA8);
-	ImageStorage!RGBA8 getCursorIcon();
+	void setCustomCursor(scope ImageStorage!RGBA8, vec2!ushort);
+	ImageStorage!RGBA8 getCursorIcon(IAllocator alloc);
 
 	bool lockCursorToWindow();
 	void unlockCursorFromWindow();
@@ -139,34 +141,35 @@ interface Feature_Cursor {
 	 * Params:
 	 * 		self	=	The window or window creator to assign to
 	 * 		to		=	Image to use as cursor icon
+	 *		hotspot	=	Hotspot of cursor
 	 */
-	void cursorIcon(T)(managed!T self, ImageStorage!RGBA8 to) if (is(T : IWindow) || is(T : IWindowCreator)) {
+	void cursorIcon(T)(managed!T self, scope ImageStorage!RGBA8 to, vec2!ushort hotspot) if (is(T : IWindow) || is(T : IWindowCreator)) {
 		if (self.capableOfCursors) {
-			(cast(managed!Have_Cursor)self).__getFeatureCursor().setCustomCursor(to);
+			(cast(managed!Have_Cursor)self).__getFeatureCursor().setCustomCursor(to, hotpost);
 		}
 	}
 
-	void cursorIcon(T)(managed!T self, ImageStorage!RGBA8 to)  if (!(is(T : IWindow) || is(T : IWindowCreator))) {
+	void cursorIcon(T)(managed!T self, scope ImageStorage!RGBA8 to, vec2!ushort hotspot) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
 		static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or IWindowCreator.");
 	}
 	
 	/**
 	 * Gets a copy of the cursor if it is assigned as custom or null if not possible or not currently set as custom
 	 */
-	managed!(ImageStorage!RGBA8) cursorIcon(T)(managed!T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
+	managed!(ImageStorage!RGBA8) cursorIcon(T)(managed!T self, IAllocator alloc=theAllocator()) if (is(T : IWindow) || is(T : IWindowCreator)) {
 		if (!self.capableOfCursors)
 			return (managed!(ImageStorage!RGBA8)).init;
 		else {
-			auto ret = (cast(managed!Have_Cursor)self).__getFeatureCursor().getCursorIcon();
+			auto ret = (cast(managed!Have_Cursor)self).__getFeatureCursor().getCursorIcon(alloc);
 
 			if (ret is null)
 				return (managed!(ImageStorage!RGBA8)).init;
 			else
-				return managed!(ImageStorage!RGBA8)(ret, managers(), Ownership.Secondary, self.allocator);
+				return managed!(ImageStorage!RGBA8)(ret, managers(), alloc);
 		}
 	}
 	
-	managed!(ImageStorage!RGBA8) cursorIcon(T)(managed!T self) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
+	managed!(ImageStorage!RGBA8) cursorIcon(T)(managed!T self, IAllocator alloc=theAllocator()) if (!(is(T : IWindow) || is(T : IWindowCreator))) {
 		static assert(0, "I do not know how to handle " ~ T.stringof ~ " I can only use IWindow or IWindowCreator.");
 	}
 
