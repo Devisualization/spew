@@ -483,7 +483,7 @@ version(Windows) {
 		
 		void setCursor(WindowCursorStyle style) {
 			if (isClosed) return;
-			assert(cursorStyle != WindowCursorStyle.Underterminate);
+			assert(cursorStyle != WindowCursorStyle.Indeterminate);
 			
 			if (cursorStyle == WindowCursorStyle.Custom) {
 				// unload systemy stuff
@@ -970,7 +970,7 @@ final class WindowImpl_X11 : WindowImpl,
 
 	void setCursor(WindowCursorStyle style) {
 		if (isClosed) return;
-		assert(cursorStyle != WindowCursorStyle.Underterminate);
+		assert(cursorStyle != WindowCursorStyle.Indeterminate);
 
         // unload systemy stuff
         if (currentCursor != None)

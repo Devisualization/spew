@@ -81,7 +81,7 @@ enum WindowCursorStyle {
 	 * Unknown, may not be owned by current process.
 	 * If the cursor style is set as this, then expect errors to try and modify the cursor.
 	 */
-	Underterminate
+	Indeterminate
 }
 
 interface Have_Cursor {
