@@ -10,7 +10,7 @@ import cf.spew.ui.context.features.custom;
 import devisualization.image : ImageStorage;
 import std.experimental.color : RGBA8;
 import devisualization.util.core.memory.managed;
-import stdx.allocator : IAllocator, make;
+import stdx.allocator : IAllocator, make, dispose;
 
 abstract class WindowCreatorImpl : IWindowCreator, Have_CustomCtx { 
 	package(cf.spew) {
@@ -26,6 +26,7 @@ abstract class WindowCreatorImpl : IWindowCreator, Have_CustomCtx {
 		
 		WindowCursorStyle cursorStyle = WindowCursorStyle.Standard;
 		ImageStorage!RGBA8 cursorIcon;
+		vec2!ushort customIconHotspot;
 
 		WindowStyle windowStyle = WindowStyle.Dialog;
 		
@@ -46,6 +47,11 @@ abstract class WindowCreatorImpl : IWindowCreator, Have_CustomCtx {
 		this.uiInstance = uiInstance;
 		
 		useVRAMContext = true;
+	}
+
+	~this() {
+		if (cursorIcon !is null)
+			alloc.dispose(cursorIcon);
 	}
 
 	@property {
@@ -264,12 +270,23 @@ version(Windows) {
 		void setCursor(WindowCursorStyle v) { cursorStyle = v; }
 		WindowCursorStyle getCursor() { return cursorStyle; }
 		
-		void setCustomCursor(ImageStorage!RGBA8 v) {
+		void setCustomCursor(scope ImageStorage!RGBA8 v, vec2!ushort v2) {
+			import devisualization.image.storage.base : ImageStorageHorizontal;
+		    import devisualization.image.interfaces : imageObjectFrom;
+
+			if (cursorIcon !is null)
+				alloc.dispose(cursorIcon);
+
 			cursorStyle = WindowCursorStyle.Custom;
-			cursorIcon = v;
+			cursorIcon = imageObjectFrom!(ImageStorageHorizontal!RGBA8)(v, alloc);
+			customIconHotspot = v2;
 		}
 		
-		ImageStorage!RGBA8 getCursorIcon() { return cursorIcon; }
+	    ImageStorage!RGBA8 getCursorIcon(IAllocator alloc) {
+		    import devisualization.image.storage.base : ImageStorageHorizontal;
+		    import devisualization.image.interfaces : imageObjectFrom;
+    	    return imageObjectFrom!(ImageStorageHorizontal!RGBA8)(cursorIcon, alloc);
+	    }
 
 		bool lockCursorToWindow() {
 			shouldAutoLockCursor = true;
@@ -309,5 +326,108 @@ version(Windows) {
 		void assignMenu() {
 			this.shouldAssignMenu = true;
 		}
+	}
+}
+
+class WindowCreatorImpl_X11 : WindowCreatorImpl,
+	Have_Icon, Have_Cursor, Have_Style,
+	Have_VRamCtx, Have_OGLCtx,
+	Feature_Icon, Feature_Cursor, Feature_Style {
+
+	import cf.spew.implementation.windowing.misc;
+	import core.sys.windows.windows;
+	import cf.spew.implementation.windowing.window;
+	import cf.spew.implementation.windowing.contexts.vram;
+	import cf.spew.implementation.windowing.contexts.opengl;
+	import cf.spew.implementation.windowing.contexts.custom;
+
+	import cf.spew.event_loop.wells.x11;
+	import devisualization.bindings.x11;
+
+	this(shared(UIInstance) uiInstance, IAllocator alloc) {
+		super(uiInstance, alloc);
+	}
+
+	managed!IWindow createWindow() {
+		WindowImpl_X11 ret;
+
+		Window* parentId;
+		if ((cast(WindowImpl_X11)parentWindow_) !is null && parentWindow_ !is null)
+			parentId = cast(Window*)parentWindow_.handle;
+
+		Window* whandle = x11.XCreateSimpleWindow(x11Display(), *parentId, location.x, location.y, size.x, size.y, 0, 0, x11.XWhitePixel(x11Display(), x11.XDefaultScreen(x11Display())));
+
+
+
+		return managed!IWindow(ret, managers(), alloc);
+	}
+
+	Feature_Icon __getFeatureIcon() {
+		return this;
+	}
+
+	Feature_Cursor __getFeatureCursor() {
+		return this;
+	}
+
+	@property {
+		ImageStorage!RGBA8 getIcon() { return icon; }
+		void setIcon(ImageStorage!RGBA8 v) { icon = v; }
+	}
+
+	void setCursor(WindowCursorStyle v) { cursorStyle = v; }
+	WindowCursorStyle getCursor() { return cursorStyle; }
+
+	void setCustomCursor(scope ImageStorage!RGBA8 v, vec2!ushort v2) {
+		import devisualization.image.storage.base : ImageStorageHorizontal;
+		import devisualization.image.interfaces : imageObjectFrom;
+
+		if (cursorIcon !is null)
+			alloc.dispose(cursorIcon);
+
+		cursorStyle = WindowCursorStyle.Custom;
+		cursorIcon = imageObjectFrom!(ImageStorageHorizontal!RGBA8)(v, alloc);
+		customIconHotspot = v2;
+	}
+
+	ImageStorage!RGBA8 getCursorIcon(IAllocator alloc) {
+		import devisualization.image.storage.base : ImageStorageHorizontal;
+		import devisualization.image.interfaces : imageObjectFrom;
+    	return imageObjectFrom!(ImageStorageHorizontal!RGBA8)(cursorIcon, alloc);
+	}
+
+	bool lockCursorToWindow() {
+		shouldAutoLockCursor = true;
+		return true;
+	}
+
+	void unlockCursorFromWindow() {
+		shouldAutoLockCursor = false;
+	}
+
+	Feature_Style __getFeatureStyle() {
+		return this;
+	}
+
+	void setStyle(WindowStyle style) {
+		windowStyle = style;
+	}
+
+	WindowStyle getStyle() {
+		return windowStyle;
+	}
+
+	void assignVRamContext(bool withAlpha=false) {
+		useVRAMContext = true;
+		useOGLContext = false;
+		vramWithAlpha = withAlpha;
+	}
+
+	void assignOpenGLContext(OpenGLVersion version_, OpenGL_Context_Callbacks* callbacks) {
+		useOGLContext = true;
+		useVRAMContext = false;
+
+		oglVersion = version_;
+		oglCallbacks = callbacks;
 	}
 }

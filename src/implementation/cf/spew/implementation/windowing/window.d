@@ -734,7 +734,6 @@ final class WindowImpl_X11 : WindowImpl,
 
 	}
 
-
 	~this() {
 		if (!isClosed) {
 			if (context_ !is null)
