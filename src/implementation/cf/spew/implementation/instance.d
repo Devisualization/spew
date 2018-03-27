@@ -99,7 +99,10 @@ final class DefaultImplementation : Instance {
 
 		if (_userInterface is null) {
 			if (__checkForX11()) {
+				import devisualization.bindings.x11;
 				import cf.spew.event_loop.wells.x11;
+
+				x11.XkbSetDetectableAutoRepeat(x11Display(), true, null);
 				_userInterface = allocator.make!(shared(UIInstance_X11))(allocator);
 				_eventLoop.manager.addSources(X11EventLoopSource.instance);
 			}
@@ -110,7 +113,8 @@ final class DefaultImplementation : Instance {
 		import devisualization.bindings.x11;
 		import cf.spew.event_loop.wells.x11;
 		return x11Display() !is null &&
-			x11.XScreenNumberOfScreen !is null;
+			x11.XScreenNumberOfScreen !is null &&
+			x11.XkbSetDetectableAutoRepeat !is null;
 	}
 }
 

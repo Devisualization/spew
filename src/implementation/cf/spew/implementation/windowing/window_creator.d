@@ -353,9 +353,12 @@ class WindowCreatorImpl_X11 : WindowCreatorImpl,
 
 		Window* parentId;
 		if ((cast(WindowImpl_X11)parentWindow_) !is null && parentWindow_ !is null)
-			parentId = cast(Window*)parentWindow_.handle;
+			parentId = cast(Window*)parentWindow_.__handle;
 
-		Window* whandle = x11.XCreateSimpleWindow(x11Display(), *parentId, location.x, location.y, size.x, size.y, 0, 0, x11.XWhitePixel(x11Display(), x11.XDefaultScreen(x11Display())));
+		Window whandle = x11.XCreateSimpleWindow(x11Display(),
+		    parentId !is null ? *parentId : 0,
+		    location_.x, location_.y, size_.x, size_.y, 0, 0,
+		    x11.XWhitePixel(x11Display(), x11.XDefaultScreen(x11Display())));
 
 
 
