@@ -241,7 +241,7 @@ version(Windows) {
 				ret.setIcon(icon);
 
 			if (cursorStyle == WindowCursorStyle.Custom)
-				ret.setCustomCursor(cursorIcon);
+				ret.setCustomCursor(cursorIcon, customIconHotspot);
 			else
 				ret.setCursor(cursorStyle);
 
@@ -337,6 +337,7 @@ class WindowCreatorImpl_X11 : WindowCreatorImpl,
 	import cf.spew.implementation.windowing.misc;
 	import core.sys.windows.windows;
 	import cf.spew.implementation.windowing.window;
+	import cf.spew.implementation.windowing.display;
 	import cf.spew.implementation.windowing.contexts.vram;
 	import cf.spew.implementation.windowing.contexts.opengl;
 	import cf.spew.implementation.windowing.contexts.custom;
@@ -350,17 +351,86 @@ class WindowCreatorImpl_X11 : WindowCreatorImpl,
 
 	managed!IWindow createWindow() {
 		WindowImpl_X11 ret;
+		IContext context;
+
+		int screenNum = x11.XDefaultScreen(x11Display());
+		Window parentWindow;
+
+		// get parent window
 
 		Window* parentId;
 		if ((cast(WindowImpl_X11)parentWindow_) !is null && parentWindow_ !is null)
 			parentId = cast(Window*)parentWindow_.__handle;
+		if (parentId is null)
+			parentWindow = x11.XRootWindow(x11Display(), screenNum);
+		else
+			parentWindow = *parentId;
+
+		// where are we putting the window?
+
+		int actualX, actualY;
+		uint actualWidth, actualHeight;
+
+		actualX = location_.x;
+		actualY = location_.y;
+		actualWidth = size_.x;
+		actualHeight = size_.y;
+
+		if (windowStyle == WindowStyle.Fullscreen) {
+			if (display_ !is null) {
+				if (DisplayImpl_X11 display2 = cast(DisplayImpl_X11)display_) {
+			        actualX = location_.x;
+			        actualY = location_.y;
+			        actualWidth = size_.x;
+			        actualHeight = size_.y;
+				}
+			}
+		} else {
+			if (display_ !is null) {
+				if (DisplayImpl_X11 display2 = cast(DisplayImpl_X11)display_) {
+					actualX += display2.x;
+					actualY += display2.y;
+
+					if (actualWidth > display2.width)
+						actualWidth = display2.width;
+					if (actualHeight > display2.height)
+						actualHeight = display2.height;
+				}
+			}
+		}
 
 		Window whandle = x11.XCreateSimpleWindow(x11Display(),
-		    parentId !is null ? *parentId : 0,
-		    location_.x, location_.y, size_.x, size_.y, 0, 0,
-		    x11.XWhitePixel(x11Display(), x11.XDefaultScreen(x11Display())));
+		    parentWindow,
+		    actualX, actualY, actualWidth, actualHeight, 0, 0,
+		    x11.XWhitePixel(x11Display(), screenNum));
 
+		assert(whandle != 0);
 
+		// TODO: create context
+		/+if (useVRAMContext) {
+			context = alloc.make!VRAMContextImpl_WinAPI(hwnd, vramWithAlpha, alloc);
+		} else if (useOGLContext) {
+			context = alloc.make!OpenGLContextImpl_WinAPI(hwnd, oglVersion, oglCallbacks);
+		} else if (customContext !is null) {
+			context = alloc.make!CustomContext(customContext);
+		}+/
+
+		ret = alloc.make!WindowImpl_X11(whandle, context, alloc, uiInstance, true);
+
+		if (customContext !is null)
+			(cast(CustomContext)context).init(ret);
+
+		if (icon !is null)
+			ret.setIcon(icon);
+
+		if (cursorStyle == WindowCursorStyle.Custom)
+			ret.setCustomCursor(cursorIcon, customIconHotspot);
+		else
+			ret.setCursor(cursorStyle);
+
+		if (shouldAutoLockCursor)
+			ret.lockCursorToWindow;
+		ret.setStyle(windowStyle);
 
 		return managed!IWindow(ret, managers(), alloc);
 	}
