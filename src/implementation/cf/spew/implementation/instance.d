@@ -100,10 +100,24 @@ final class DefaultImplementation : Instance {
 		if (_userInterface is null) {
 			if (__checkForX11()) {
 				import devisualization.bindings.x11;
+                import devisualization.bindings.libnotify.loader;
 				import cf.spew.event_loop.wells.x11;
 
 				x11.XkbSetDetectableAutoRepeat(x11Display(), true, null);
-				_userInterface = allocator.make!(shared(UIInstance_X11))(allocator);
+
+                if (libnotifyLoader is LibNotifyLoader.init) {
+                    libnotifyLoader = LibNotifyLoader(null);
+
+                    if (libnotify.gdk_pixbuf_new_from_data !is null &&
+                        libnotify.gdk_pixbuf_unref !is null &&
+                        libnotify.gdk_pixbuf_scale_simple !is null) {
+
+                        _userInterface = allocator.make!(shared(UIInstance_X11_Libnotify))(allocator);
+                    }
+                }
+
+                if (_userInterface is null)
+				    _userInterface = allocator.make!(shared(UIInstance_X11))(allocator);
 				_eventLoop.manager.addSources(X11EventLoopSource.instance);
 			}
 		}
@@ -453,7 +467,7 @@ version(Windows) {
 	}
 }
 
-final class UIInstance_X11 : UIInstance, Feature_Notification, Feature_Management_Clipboard {
+class UIInstance_X11 : UIInstance, Feature_Management_Clipboard {
 	//import cf.spew.implementation.windowing.window_creator : WindowCreatorImpl_X11;
 	import cf.spew.implementation.windowing.display : DisplayImpl_X11;
 	import cf.spew.implementation.windowing.misc;
@@ -532,15 +546,6 @@ final class UIInstance_X11 : UIInstance, Feature_Notification, Feature_Managemen
 			}
 		}
 
-		// notifications
-		@property {
-			shared(ImageStorage!RGBA8) getNotificationIcon(shared(ISharedAllocator) alloc) shared { assert(0); }
-			void setNotificationIcon(shared(ImageStorage!RGBA8) icon, shared(ISharedAllocator) alloc) shared { assert(0); }
-		}
-
-		void notify(shared(ImageStorage!RGBA8) icon, shared(dstring) title, shared(dstring) text, shared(ISharedAllocator) alloc) shared { assert(0); }
-		void clearNotifications() shared { assert(0); }
-
 		// clipboard
 
 		shared(Feature_Management_Clipboard) __getFeatureClipboard() shared {
@@ -559,6 +564,24 @@ final class UIInstance_X11 : UIInstance, Feature_Notification, Feature_Managemen
 			void clipboardText(scope string text) shared {}
 		}
 	}
+}
+
+final class UIInstance_X11_Libnotify : UIInstance_X11, Feature_Notification {
+    this(shared(ISharedAllocator) allocator) shared {
+        super(allocator);
+    }
+
+    ~this() {
+    }
+
+    // notifications
+    @property {
+        shared(ImageStorage!RGBA8) getNotificationIcon(shared(ISharedAllocator) alloc) shared { assert(0); }
+        void setNotificationIcon(shared(ImageStorage!RGBA8) icon, shared(ISharedAllocator) alloc) shared { assert(0); }
+    }
+
+    void notify(shared(ImageStorage!RGBA8) icon, shared(dstring) title, shared(dstring) text, shared(ISharedAllocator) alloc) shared { assert(0); }
+    void clearNotifications() shared { assert(0); }
 }
 
 abstract class StreamsInstance : Management_Streams {
