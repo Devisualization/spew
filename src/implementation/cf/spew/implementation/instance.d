@@ -114,7 +114,8 @@ final class DefaultImplementation : Instance {
                         libnotify.gdk_pixbuf_unref !is null &&
                         libnotify.gdk_pixbuf_scale_simple !is null) {
 
-                        _secondaryEventSource_ = allocator.make!(shared(GlibEventLoopSource));
+                        _secondaryEventSource_ = allocator.make!(shared(GlibEventLoopSource))(GlibEventLoopSource.Bindings(
+                            libnotify.g_main_context_default, libnotify.g_main_context_iteration, libnotify.g_main_context_ref, libnotify.g_main_context_unref));
                         _eventLoop.manager.addSources(_secondaryEventSource_);
                         _userInterface = allocator.make!(shared(UIInstance_X11_Libnotify))(allocator);
                     }
@@ -472,7 +473,7 @@ version(Windows) {
 }
 
 class UIInstance_X11 : UIInstance, Feature_Management_Clipboard {
-	//import cf.spew.implementation.windowing.window_creator : WindowCreatorImpl_X11;
+	import cf.spew.implementation.windowing.window_creator : WindowCreatorImpl_X11;
 	import cf.spew.implementation.windowing.display : DisplayImpl_X11;
 	import cf.spew.implementation.windowing.misc;
 	import cf.spew.event_loop.wells.x11;
@@ -492,8 +493,7 @@ class UIInstance_X11 : UIInstance, Feature_Management_Clipboard {
 
 	override {
 		managed!IWindowCreator createWindow(IAllocator alloc = theAllocator()) shared {
-			assert(0);
-			//return cast(managed!IWindowCreator)managed!WindowCreatorImpl_WinAPI(managers(), tuple(this, alloc), alloc);
+			return cast(managed!IWindowCreator)managed!WindowCreatorImpl_X11(managers(), tuple(this, alloc), alloc);
 		}
 
 		@property {

@@ -14,7 +14,7 @@ final class GlibEventLoopSource : EventLoopSource {
 
     private Bindings bindings;
 
-    this(Bindings bindings) {
+    this(Bindings bindings) shared {
         this.bindings = bindings;
     }
 
