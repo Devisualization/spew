@@ -19,5 +19,8 @@ enum EventSources {
 	///
 	Cocoa = EventSource.from("s_cocoa"),
 
+    ///
 	LibUV = EventSource.from("s_libuv"),
+    ///
+    Glib = EventSource.from("s_glib"),
 }
