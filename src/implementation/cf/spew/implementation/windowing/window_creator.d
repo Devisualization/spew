@@ -430,7 +430,9 @@ class WindowCreatorImpl_X11 : WindowCreatorImpl,
 
 		if (shouldAutoLockCursor)
 			ret.lockCursorToWindow;
-		ret.setStyle(windowStyle);
+
+        if (ret.__getFeatureStyle !is null)
+		    ret.setStyle(windowStyle);
 
 		return managed!IWindow(ret, managers(), alloc);
 	}

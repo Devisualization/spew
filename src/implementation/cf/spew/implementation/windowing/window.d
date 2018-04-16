@@ -730,7 +730,7 @@ final class WindowImpl_X11 : WindowImpl,
 		this.alloc = alloc;
 		this.context_ = context;
 
-		super(instance, processOwns);
+		super(uiInstance, processOwns);
 
 	}
 
@@ -786,7 +786,8 @@ final class WindowImpl_X11 : WindowImpl,
 		}
 
 		void* __handle() { return &whandle; }
-		override void onFileDrop(EventOnFileDropDel del) { assert(0); }
+
+		override void onFileDrop(EventOnFileDropDel del) { onFileDropDel = del; }
 	}
 
 	void close() {
@@ -1102,7 +1103,7 @@ final class WindowImpl_X11 : WindowImpl,
 		x11.XUngrabPointer(x11Display(), CurrentTime);
 	}
 
-	Feature_Style __getFeatureStyle() { assert(0); }
+	Feature_Style __getFeatureStyle() { return null; /+assert(0);+/ }
 	void setStyle(WindowStyle style) { assert(0); }
 	WindowStyle getStyle() { assert(0); }
 }

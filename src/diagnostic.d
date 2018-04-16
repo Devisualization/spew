@@ -567,6 +567,8 @@ void onForcedDraw() {
 	import std.experimental.color : RGBA8;
 
 	writeln("onForcedDraw");stdout.flush;
+    if (window.context is null) return;
+
 	window.context.activate;
 	if (!window.context.readyToBeUsed) {
 		return;
