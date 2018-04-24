@@ -95,7 +95,7 @@ interface IDisplay {
 		managed!(IWindow[]) windows();
 		
 		/// No touchy, very dangerous!
-		void* __handle();
+		size_t __handle();
 	}
 
 	///

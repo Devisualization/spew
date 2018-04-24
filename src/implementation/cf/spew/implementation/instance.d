@@ -14,6 +14,7 @@ import std.socket :  InternetAddress, Internet6Address;
 
 final class DefaultImplementation : Instance {
 	import cf.spew.event_loop.defs : EventLoopSource, EventLoopConsumer;
+    import cf.spew.implementation.consumers;
 	import core.thread : ThreadID, Thread;
 
 	~this() {
@@ -86,7 +87,6 @@ final class DefaultImplementation : Instance {
 
 		version(Windows) {
 			import cf.spew.event_loop.wells.winapi;
-			import cf.spew.implementation.consumers;
 			import core.sys.windows.ole2 : OleInitialize;
 
 			OleInitialize(null);
@@ -123,7 +123,22 @@ final class DefaultImplementation : Instance {
 
                 if (_userInterface is null)
 				    _userInterface = allocator.make!(shared(UIInstance_X11))(allocator);
-				_eventLoop.manager.addSources(X11EventLoopSource.instance);
+
+                // The x11 well doesn't need to know about our abstraction
+                // but it does need to get the XIC for it...
+                _mainEventSource_ = allocator.make!(shared(X11EventLoopSource))(cast(X11GetXICDel)(delegate (whandle) {
+                    import cf.spew.implementation.windowing.window : WindowImpl_X11;
+
+                    auto w = _userInterface.windowToIdMapper[whandle];
+                    if (w is null) return null;
+                    else if (WindowImpl_X11 w2 = cast(WindowImpl_X11)w) {
+                        return w2.xic;
+                    } else return null;
+                }));
+                _eventLoop.manager.addSources(_mainEventSource_);
+
+                _mainEventConsumer_ = allocator.make!(shared(EventLoopConsumerImpl_X11))(this);
+                _eventLoop.manager.addConsumers(_mainEventConsumer_);
 			}
 		}
 	}

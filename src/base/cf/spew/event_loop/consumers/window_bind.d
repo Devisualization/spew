@@ -50,7 +50,7 @@ class WindowBind : EventLoopConsumer {
 	}
 
 	bool processEvent(ref Event event) shared {
-		if (enabled && event.wellData1Ptr is owner.__handle) {
+		if (enabled && cast(size_t)event.wellData1Ptr == owner.__handle) {
 			// ok so it is the owner, yay!
 
 			switch(event.type) {

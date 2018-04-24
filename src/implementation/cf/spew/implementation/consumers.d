@@ -290,3 +290,46 @@ version(Windows) {
 		}
 	}
 }
+
+class EventLoopConsumerImpl_X11 : EventLoopConsumerImpl {
+    import cf.spew.events.windowing;
+    import cf.spew.implementation.windowing.window;
+    import cf.spew.implementation.instance;
+    import std.typecons : Nullable;
+
+    this(shared(DefaultImplementation) instance) shared {
+        super(instance);
+    }
+
+    @property {
+        override Nullable!EventSource pairOnlyWithSource() shared { return Nullable!EventSource(EventSources.X11); }
+        bool onMainThread() shared { return true; }
+        bool onAdditionalThreads() shared { return true; }
+    }
+
+    override bool processEvent(ref Event event) shared {
+        IWindow window = cast()uiInstance.windowToIdMapper[event.wellData1Value];
+
+        if (WindowImpl_X11 w = cast(WindowImpl_X11)window) {
+            WindowImpl w2 = cast(WindowImpl)w;
+
+            switch(event.type) {
+                case Windowing_Events_Types.Window_KeyUp:
+                    tryFunc(w2.onKeyEntryDel, event.windowing.keyInput.key, event.windowing.keyInput.special, event.windowing.keyInput.modifiers);
+                    tryFunc(w2.onKeyReleaseDel, event.windowing.keyUp.key, event.windowing.keyUp.special, event.windowing.keyUp.modifiers);
+                    return true;
+                case Windowing_Events_Types.Window_KeyDown:
+                    tryFunc(w2.onKeyPressDel, event.windowing.keyDown.key, event.windowing.keyDown.special, event.windowing.keyDown.modifiers);
+                    return true;
+
+                default:
+                    break;
+            }
+        }
+
+        if (super.processEvent(event))
+            return true;
+        else
+            return false;
+    }
+}

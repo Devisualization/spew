@@ -105,8 +105,8 @@ version(Windows) {
 				return managed!(IWindow[])(ctx.windows, managers(), alloc);
 			}
 
-			void* __handle() {
-				return &hMonitor;
+			size_t __handle() {
+				return cast(size_t)hMonitor;
 			}
 		}
 
@@ -238,8 +238,8 @@ final class DisplayImpl_X11 : DisplayImpl, Feature_Display_ScreenShot, Have_Disp
 			return managed!(IWindow[])(ctx.windows, managers(), alloc);
 		}
 
-		void* __handle() {
-			return screen;
+		size_t __handle() {
+			return cast(size_t)screen;
 		}
 	}
 

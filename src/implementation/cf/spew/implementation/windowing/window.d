@@ -43,12 +43,12 @@ abstract class WindowImpl : IWindow, IWindowEvents {
 		this.ownedByProcess = processOwns;
 
 		if (processOwns)
-			instance.windowToIdMapper[cast(size_t)__handle] = cast(shared)this;
+			instance.windowToIdMapper[__handle] = cast(shared)this;
 	}
 
 	~this() {
 		if (ownedByProcess)
-			instance.windowToIdMapper.remove(cast(size_t)__handle);
+			instance.windowToIdMapper.remove(__handle);
 	}
 
 	@property {
@@ -283,7 +283,7 @@ version(Windows) {
 
 			bool renderable() { return !isClosed && IsWindowVisible(hwnd) == 1; }
 
-			void* __handle() { return hwnd; }
+			size_t __handle() { return cast(size_t)hwnd; }
 
 			override void onFileDrop(EventOnFileDropDel del) {
 				if (isClosed) return;
@@ -655,7 +655,7 @@ version(Windows) {
 			MONITORINFOEXA mi;
 			mi.cbSize = MONITORINFOEXA.sizeof;
 			
-			HMONITOR hMonitor = *cast(HMONITOR*)display().__handle;
+			HMONITOR hMonitor = cast(HMONITOR)display().__handle;
 			GetMonitorInfoA(hMonitor, &mi);
 			
 			if (windowStyle == WindowStyle.Fullscreen) {
@@ -719,6 +719,9 @@ final class WindowImpl_X11 : WindowImpl,
 
 	bool isClosed;
 	Window whandle;
+    XIC xic;
+
+    uint eventMasks;
 
 	Cursor currentCursor = None;
 	WindowCursorStyle cursorStyle;
@@ -732,6 +735,10 @@ final class WindowImpl_X11 : WindowImpl,
 
 		super(uiInstance, processOwns);
 
+        xic = x11.XCreateIC(x11XIM(),
+                        XNInputStyle.ptr, XIMPreeditNothing | XIMStatusNothing,
+                        XNClientWindow.ptr, whandle,
+                        XNFocusWindow.ptr, whandle, 0);
 	}
 
 	~this() {
@@ -785,13 +792,14 @@ final class WindowImpl_X11 : WindowImpl,
 			return (att.map_state & IsViewable) == IsViewable;
 		}
 
-		void* __handle() { return &whandle; }
+		size_t __handle() { return cast(size_t)whandle; }
 
 		override void onFileDrop(EventOnFileDropDel del) { onFileDropDel = del; }
 	}
 
 	void close() {
 		hide();
+        x11.XDestroyIC(xic);
 		x11.XDestroyWindow(x11Display(), whandle);
 		if (currentCursor != None)
 			x11.XFreeCursor(x11Display(), currentCursor);
@@ -844,41 +852,41 @@ final class WindowImpl_X11 : WindowImpl,
 		}
 
 		void location(vec2!int point) {
-			if (!visible || isClosed) return;
+			if (isClosed) return;
 			x11.XMoveWindow(x11Display(), whandle, point.x, point.y);
 			x11.XFlush(x11Display());
 		}
 
 		vec2!int location() {
-			if (!visible || isClosed) return vec2!int.init;
+			if (isClosed) return vec2!int.init;
 			auto att = x11WindowAttributes(whandle);
 			return vec2!int(att.x, att.y);
 		}
 
 		void size(vec2!uint point) {
-			if (!visible || isClosed) return;
+			if (isClosed) return;
 			x11.XResizeWindow(x11Display(), whandle, point.x, point.y);
 			x11.XFlush(x11Display());
 		}
 	}
 
 	void hide() {
-		if (!visible || isClosed) return;
-		x11.XMapWindow(x11Display(), whandle);
-	}
-
-	void show() {
-		if (!visible || isClosed) return;
+		if (isClosed) return;
 		x11.XUnmapWindow(x11Display(), whandle);
 	}
 
+	void show() {
+		if (isClosed) return;
+		x11.XMapWindow(x11Display(), whandle);
+	}
+
 	Feature_Window_ScreenShot __getFeatureScreenShot() {
-		if (!visible || isClosed) return null;
+		if (isClosed) return null;
 		return this;
 	}
 
 	ImageStorage!RGB8 screenshot(IAllocator alloc=null) {
-		if (!visible || isClosed) return null;
+		if (isClosed) return null;
 
 		import devisualization.image : ImageStorage;
 		import devisualization.image.storage.base : ImageStorageHorizontal;
@@ -1094,8 +1102,8 @@ final class WindowImpl_X11 : WindowImpl,
 
 	bool lockCursorToWindow() {
 		// if this fails, we'll just have to return false :/
-
-		auto ret = x11.XGrabPointer(x11Display(), whandle, true, uint.max, GrabModeAsync, GrabModeAsync, whandle, currentCursor, CurrentTime);
+        auto ret = x11.XGrabPointer(x11Display(), whandle, false,
+            ~(ExposureMask | KeyPressMask | KeyReleaseMask) & eventMasks, GrabModeAsync, GrabModeAsync, whandle, currentCursor, CurrentTime);
 		return ret == GrabSuccess;
 	}
 

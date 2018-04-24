@@ -434,6 +434,11 @@ class WindowCreatorImpl_X11 : WindowCreatorImpl,
         if (ret.__getFeatureStyle !is null)
 		    ret.setStyle(windowStyle);
 
+        ret.eventMasks = ExposureMask | StructureNotifyMask | FocusChangeMask |
+                KeyReleaseMask | KeyPressMask | ButtonReleaseMask | ButtonPressMask | PointerMotionMask;
+        x11.XSelectInput(x11Display(), whandle, ret.eventMasks);
+        x11.XFlush(x11Display());
+
 		return managed!IWindow(ret, managers(), alloc);
 	}
 
