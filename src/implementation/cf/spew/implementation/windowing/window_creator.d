@@ -406,6 +406,13 @@ class WindowCreatorImpl_X11 : WindowCreatorImpl,
 
 		assert(whandle != 0);
 
+        if (x11.XSetWMProtocols !is null) {
+            Atom closeAtom = x11.XInternAtom(x11Display(), cast(char*)"WM_DELETE_WINDOW".ptr, false);
+            if (closeAtom != 0) {
+                x11.XSetWMProtocols(x11Display(), whandle, &closeAtom, 1);
+            }
+        }
+
 		// TODO: create context
 		/+if (useVRAMContext) {
 			context = alloc.make!VRAMContextImpl_WinAPI(hwnd, vramWithAlpha, alloc);

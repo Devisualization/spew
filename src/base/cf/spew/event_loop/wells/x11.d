@@ -6,6 +6,7 @@ module cf.spew.event_loop.wells.x11;
 import cf.spew.event_loop.defs;
 import cf.spew.events.defs;
 import cf.spew.events.windowing;
+import cf.spew.events.x11;
 import stdx.allocator : ISharedAllocator, make;
 import devisualization.bindings.x11;
 
@@ -24,6 +25,7 @@ XIM x11XIM() {
 private {
 	Display* display;
     XIM xim;
+    Atom closeAtom;
 
 	void performInit() {
 		if (x11Loader is X11Loader.init) {
@@ -36,6 +38,7 @@ private {
 		assert(x11.XNextEvent !is null);
         assert(x11.XOpenIM !is null);
         assert(x11.XSetLocaleModifiers !is null);
+        assert(x11.XInternAtom !is null);
 
 		display = x11.XOpenDisplay(null);
 
@@ -45,6 +48,8 @@ private {
             x11.XSetLocaleModifiers("@im=none");
             xim = x11.XOpenIM(display, null, null, null);
         }
+
+        closeAtom = x11.XInternAtom(display, cast(char*)"WM_DELETE_WINDOW".ptr, false);
 	}
 
 	static ~this() {
@@ -101,7 +106,7 @@ final class X11EventLoopSourceRetrieve : EventLoopSourceRetriever {
                 x11.XPeekEvent(display, &x11Event);
 
 			    x11.XNextEvent(display, &x11Event);
-                if (x11.XFilterEvent(&x11Event, 0)) continue;
+                //if (x11.XFilterEvent(&x11Event, 0)) continue;
 
 			    processEvent(x11Event, event, xicgetdel);
                 return true;
@@ -118,8 +123,6 @@ final class X11EventLoopSourceRetrieve : EventLoopSourceRetriever {
 
 private {
 	void processEvent(ref XEvent x11Event, ref Event event, X11GetXICDel xicgetdel) {
-        // TODO: close atom
-
         event.wellData1Value = x11Event.xany.window;
 
         switch(x11Event.type) {
@@ -129,11 +132,13 @@ private {
                 break;
             case MapNotify:
             case Expose:
+                event.type = X11_Events_Types.Expose;
                 break;
 
             case FocusIn:
                 auto xic = xicgetdel(x11Event.xany.window);
                 if (xic !is null) x11.XSetICFocus(xic);
+                event.type = Windowing_Events_Types.Window_Focused;
                 break;
             case FocusOut:
                 auto xic = xicgetdel(x11Event.xany.window);
@@ -141,14 +146,61 @@ private {
                 break;
 
             case ConfigureNotify:
+                event.type = X11_Events_Types.NewSizeLocation;
+                event.x11.configureNotify.x = x11Event.xconfigure.x;
+                event.x11.configureNotify.y = x11Event.xconfigure.y;
+                event.x11.configureNotify.width = x11Event.xconfigure.width;
+                event.x11.configureNotify.height = x11Event.xconfigure.height;
                 break;
             case ClientMessage:
+                if (closeAtom != 0 && x11Event.xclient.format == 32 && x11Event.xclient.data.l[0] == closeAtom) {
+                    event.type = Windowing_Events_Types.Window_RequestClose;
+                }
                 break;
             case MotionNotify:
+                event.type = Windowing_Events_Types.Window_CursorMoved;
+                event.windowing.cursorMoved.newX = x11Event.xmotion.x;
+                event.windowing.cursorMoved.newY = x11Event.xmotion.y;
                 break;
             case ButtonPress:
+                if (x11Event.xbutton.button == Button4) {
+                    event.type = Windowing_Events_Types.Window_CursorScroll;
+                    event.windowing.scroll.amount = 1;
+                    event.windowing.scroll.x = x11Event.xbutton.x;
+                    event.windowing.scroll.y = x11Event.xbutton.y;
+                } else if (x11Event.xbutton.button == Button5) {
+                    event.type = Windowing_Events_Types.Window_CursorScroll;
+                    event.windowing.scroll.amount = -1;
+                    event.windowing.scroll.x = x11Event.xbutton.x;
+                    event.windowing.scroll.y = x11Event.xbutton.y;
+                } else {
+                    event.type = Windowing_Events_Types.Window_CursorAction;
+                    event.windowing.cursorAction.x = x11Event.xbutton.x;
+                    event.windowing.cursorAction.y = x11Event.xbutton.y;
+                    event.windowing.cursorAction.isDoubleClick = false;
+
+                    if (x11Event.xbutton.button == Button1)
+                        event.windowing.cursorAction.action = CursorEventAction.Select;
+                    else if (x11Event.xbutton.button == Button2)
+                        event.windowing.cursorAction.action = CursorEventAction.ViewChange;
+                    else if (x11Event.xbutton.button == Button3)
+                        event.windowing.cursorAction.action = CursorEventAction.Alter;
+                }
                 break;
             case ButtonRelease:
+                event.type = Windowing_Events_Types.Window_CursorActionEnd;
+                event.windowing.cursorAction.x = x11Event.xbutton.x;
+                event.windowing.cursorAction.y = x11Event.xbutton.y;
+                event.windowing.cursorAction.isDoubleClick = false;
+
+                if (x11Event.xbutton.button == Button1)
+                    event.windowing.cursorAction.action = CursorEventAction.Select;
+                else if (x11Event.xbutton.button == Button2)
+                    event.windowing.cursorAction.action = CursorEventAction.ViewChange;
+                else if (x11Event.xbutton.button == Button3)
+                    event.windowing.cursorAction.action = CursorEventAction.Alter;
+                else
+                    event.type = 0;
                 break;
             case KeyPress:
                 event.type = Windowing_Events_Types.Window_KeyDown;
@@ -293,3 +345,4 @@ private {
         }
     }
 }
+

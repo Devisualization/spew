@@ -386,7 +386,7 @@ void aWindowTest() {
 
 	auto creator = Instance.current.ui.createWindow();
 	//creator.style = WindowStyle.Fullscreen;
-	//creator.size = vec2!ushort(cast(short)800, cast(short)600);
+	creator.size = vec2!ushort(cast(short)800, cast(short)600);
 	creator.assignMenu;
 
 	static if (Enable_Window_GL) {

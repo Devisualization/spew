@@ -4,6 +4,7 @@
  */
 module cf.spew.events.defs;
 import cf.spew.events.windowing;
+import cf.spew.events.x11 : X11_Events;
 
 /**
  * 
@@ -48,6 +49,9 @@ struct Event {
 
 		///
 		Windowing_Events windowing;
+
+        ///
+        X11_Events x11;
 
 		// TODO
 	}

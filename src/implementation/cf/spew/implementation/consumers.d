@@ -41,9 +41,9 @@ abstract class EventLoopConsumerImpl : EventLoopConsumer {
 				case Windowing_Events_Types.Window_Resized:
 					tryFunc(w.onSizeChangeDel, event.windowing.windowResized.newWidth, event.windowing.windowResized.newHeight);
 					return true;
-				case Windowing_Events_Types.Window_CursorScroll:
-					tryFunc(w.onScrollDel, event.windowing.scroll.amount / 120);
-					return true;
+                case Windowing_Events_Types.Window_CursorScroll:
+                    tryFunc(w.onScrollDel, event.windowing.scroll.amount);
+                    return true;
 				case Windowing_Events_Types.Window_CursorMoved:
 					tryFunc(w.onCursorMoveDel, event.windowing.cursorMoved.newX, event.windowing.cursorMoved.newY);
 					return true;
@@ -158,6 +158,9 @@ version(Windows) {
 								w.lockCursorToWindow;
 						}
 						return true;
+                    case Windowing_Events_Types.Window_CursorScroll:
+                        tryFunc(w.onScrollDel, event.windowing.scroll.amount / 120);
+                        return true;
 
 					case WinAPI_Events_Types.Window_Quit:
 						return false;
@@ -295,6 +298,7 @@ class EventLoopConsumerImpl_X11 : EventLoopConsumerImpl {
     import cf.spew.events.windowing;
     import cf.spew.implementation.windowing.window;
     import cf.spew.implementation.instance;
+    import cf.spew.events.x11;
     import std.typecons : Nullable;
 
     this(shared(DefaultImplementation) instance) shared {
@@ -322,6 +326,40 @@ class EventLoopConsumerImpl_X11 : EventLoopConsumerImpl {
                     tryFunc(w2.onKeyPressDel, event.windowing.keyDown.key, event.windowing.keyDown.special, event.windowing.keyDown.modifiers);
                     return true;
 
+                case Windowing_Events_Types.Window_RequestClose:
+                    if (tryFunc(w2.onRequestCloseDel, true)) {
+                        w.close();
+                    }
+                    return true;
+
+                case X11_Events_Types.NewSizeLocation:
+                    Event temp;
+                    if (w.lastX != event.x11.configureNotify.x || w.lastY != event.x11.configureNotify.y) {
+                        w.lastX = event.x11.configureNotify.x;
+                        w.lastY = event.x11.configureNotify.y;
+
+                        temp = event;
+                        temp.type = Windowing_Events_Types.Window_Moved;
+                        temp.windowing.windowMoved.newX = w.lastX;
+                        temp.windowing.windowMoved.newY = w.lastY;
+                        return super.processEvent(temp);
+                    }
+                    if (w.lastWidth != event.x11.configureNotify.width || w.lastHeight != event.x11.configureNotify.height) {
+                        w.lastWidth = event.x11.configureNotify.width;
+                        w.lastHeight = event.x11.configureNotify.height;
+
+                        temp = event;
+                        temp.type = Windowing_Events_Types.Window_Resized;
+                        temp.windowing.windowResized.newWidth = w.lastWidth;
+                        temp.windowing.windowResized.newHeight = w.lastHeight;
+                        return super.processEvent(temp);
+                    }
+                    return true;
+                case Windowing_Events_Types.Window_Focused:
+                    return true;
+                case X11_Events_Types.Expose:
+                    return handlePaint(event, w, w2);
+
                 default:
                     break;
             }
@@ -331,5 +369,17 @@ class EventLoopConsumerImpl_X11 : EventLoopConsumerImpl {
             return true;
         else
             return false;
+    }
+
+    bool handlePaint(ref Event event, WindowImpl_X11 w, WindowImpl w2) shared {
+        if (w2.context_ is null) {
+            // TODO: draw manually
+        } else if (w2.onDrawDel is null) {
+            w2.context.activate;
+            w2.context.deactivate;
+        } else {
+            tryFunc(w2.onDrawDel);
+        }
+        return true;
     }
 }

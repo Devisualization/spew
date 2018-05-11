@@ -728,6 +728,9 @@ final class WindowImpl_X11 : WindowImpl,
 	ImageStorage!RGBA8 customCursor;
 	XcursorImage* customCursorImage;
 
+    int lastX, lastY;
+    int lastWidth, lastHeight;
+
 	this(Window handle, IContext context, IAllocator alloc, shared(UIInstance) uiInstance, bool processOwns=false) {
 		this.whandle = handle;
 		this.alloc = alloc;
@@ -806,6 +809,7 @@ final class WindowImpl_X11 : WindowImpl,
 		if (customCursorImage !is null) // ugh are these needed?
 			x11.XcursorImageDestroy(customCursorImage);
 		isClosed = true;
+        x11.XFlush(x11Display());
 	}
 
 	@property {
