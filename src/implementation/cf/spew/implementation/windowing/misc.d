@@ -15,6 +15,7 @@ import stdx.allocator : IAllocator, ISharedAllocator, processAllocator, theAlloc
 import devisualization.util.core.memory.managed;
 import x11b = devisualization.bindings.x11;
 import derelict.util.sharedlib;
+import core.stdc.config : c_long, c_ulong;
 
 version(Windows) {
 	public import winapi = core.sys.windows.windows;
@@ -580,4 +581,46 @@ X11WindowProperty x11ReadWindowProperty(x11b.Display* display, x11b.Window windo
 	}
 
 	return ret;
+}
+
+struct Motif_WMHints {
+    c_ulong Flags;
+    c_ulong Functions;
+    c_ulong Decorations;
+    c_long InputMode;
+    c_ulong State;
+}
+
+// https://people.gnome.org/~tthurman/docs/metacity/xprops_8h.html#1b63c2b33eb9128fd4ec991bf472502e
+enum {
+    MWM_HINTS_FUNCTIONS = 1 << 0,
+    MWM_HINTS_DECORATIONS = 1 << 1,
+
+    MWM_FUNC_ALL = 1 << 0,
+    MWM_FUNC_RESIZE = 1 << 1,
+    MWM_FUNC_MOVE = 1 << 2,
+    MWM_FUNC_MINIMIZE = 1 << 3,
+    MWM_FUNC_MAXIMIZE = 1 << 4,
+
+    MWM_DECOR_ALL = 1 << 0,
+    MWM_DECOR_BORDER = 1 << 1,
+    MWM_DECOR_RESIZEH = 1 << 2,
+    MWM_DECOR_TITLE = 1 << 3,
+    MWM_DECOR_MENU = 1 << 4,
+    MWM_DECOR_MINIMIZE = 1 << 5,
+    MWM_DECOR_MAXIMIZE = 1 << 6
+}
+
+enum WindowX11Styles : Motif_WMHints {
+    Dialog = Motif_WMHints(MWM_HINTS_FUNCTIONS | MWM_HINTS_DECORATIONS,
+        MWM_FUNC_RESIZE | MWM_FUNC_MOVE | MWM_FUNC_MINIMIZE | MWM_FUNC_MAXIMIZE,
+        MWM_DECOR_BORDER | MWM_DECOR_RESIZEH | MWM_DECOR_TITLE | MWM_DECOR_MINIMIZE | MWM_DECOR_MAXIMIZE),
+    Borderless = Motif_WMHints(MWM_HINTS_FUNCTIONS | MWM_HINTS_DECORATIONS,
+        MWM_FUNC_MOVE,
+        MWM_DECOR_MINIMIZE | MWM_DECOR_TITLE),
+    Popup = Motif_WMHints(MWM_HINTS_FUNCTIONS | MWM_HINTS_DECORATIONS,
+        MWM_FUNC_MOVE,
+        MWM_DECOR_MINIMIZE | MWM_DECOR_BORDER | MWM_DECOR_TITLE),
+    Fullscreen = Motif_WMHints(MWM_HINTS_FUNCTIONS | MWM_HINTS_DECORATIONS, 0, 0),
+    NoDecorations = Motif_WMHints(MWM_HINTS_FUNCTIONS | MWM_HINTS_DECORATIONS, 0, 0),
 }

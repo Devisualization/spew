@@ -9,6 +9,7 @@
  */
 module cf.spew.ui.window.styles;
 import cf.spew.ui.window.defs;
+import devisualization.util.core.memory.managed;
 
 /**
  * A style a window can have
@@ -20,7 +21,7 @@ enum WindowStyle {
 
 	/**
 	 * Useful for e.g. context menus, menus, splash screens
-	 * No top bar, non-resiable, non-moveable, no-decorations
+	 * No top bar, non-resizable, non-moveable, no-decorations
 	 */
 	NoDecorations,
 
@@ -69,16 +70,10 @@ interface Feature_Style {
 	 *      The window style or unknown
 	 */
 	WindowStyle style(T)(T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
-		if (self is null)
-			return WindowStyle.Unknown;
-		if (auto ss = cast(Have_Style)self) {
-			auto fss = ss.__getFeatureStyle();
-			if (fss !is null) {
-				return fss.getStyle();
-			}
-		}
-		
-		return WindowStyle.Unknown;
+        if (self.capableOfWindowStyles) {
+            return (cast(managed!Have_Style)self).__getFeatureStyle().getStyle();
+        } else
+            return WindowStyle.Unknown;
 	}
 	
 	/**
@@ -89,14 +84,9 @@ interface Feature_Style {
 	 * 		to		=	The style to set to
 	 */
 	void style(T)(T self, WindowStyle to) if (is(T : IWindow) || is(T : IWindowCreator)) {
-		if (self is null)
-			return;
-		if (auto ss = cast(Have_Style)self) {
-			auto fss = ss.__getFeatureStyle();
-			if (fss !is null) {
-				fss.setStyle(to);
-			}
-		}
+        if (self.capableOfWindowStyles) {
+            (cast(managed!Have_Style)self).__getFeatureStyle().setStyle(to);
+        }
 	}
 	
 	/**
@@ -109,11 +99,11 @@ interface Feature_Style {
 	 * 		If the window[creator] supports having a style
 	 */
 	bool capableOfWindowStyles(T)(T self) if (is(T : IWindow) || is(T : IWindowCreator)) {
-		if (self is null)
-			return false;
-		else if (auto ss = cast(Have_Style)self)
-			return ss.__getFeatureStyle() !is null;
-		else
-			return false;
+        if (self is null)
+            return false;
+        else {
+            auto ss = cast(managed!Have_Style)self;
+            return ss !is null && ss.__getFeatureStyle() !is null;
+        }
 	}
 }

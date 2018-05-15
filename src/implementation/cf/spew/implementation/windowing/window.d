@@ -722,6 +722,7 @@ final class WindowImpl_X11 : WindowImpl,
     XIC xic;
 
     uint eventMasks;
+    WindowStyle wstyle;
 
 	Cursor currentCursor = None;
 	WindowCursorStyle cursorStyle;
@@ -1115,7 +1116,137 @@ final class WindowImpl_X11 : WindowImpl,
 		x11.XUngrabPointer(x11Display(), CurrentTime);
 	}
 
-	Feature_Style __getFeatureStyle() { return null; /+assert(0);+/ }
-	void setStyle(WindowStyle style) { assert(0); }
-	WindowStyle getStyle() { assert(0); }
+	Feature_Style __getFeatureStyle() { return isClosed ? null : this; }
+
+    void setStyle(WindowStyle style) {
+        wstyle = style;
+
+        bool noResize;
+        Motif_WMHints motifWmHints;
+
+        Atom windowType = x11.XInternAtom(x11Display(), "_NET_WM_WINDOW_TYPE_NORMAL", true);
+        Atom[10] wmAllowedActions, wmState;
+        uint wmAllowedActionsCount, wmStateCount;
+
+        switch(style) {
+            case WindowStyle.NoDecorations:
+                noResize = true;
+                motifWmHints = WindowX11Styles.NoDecorations;
+
+                wmState[wmStateCount++] = x11.XInternAtom(x11Display(), "_NET_WM_STATE_STICKY", true);
+                break;
+
+            case WindowStyle.Fullscreen:
+                motifWmHints = WindowX11Styles.Fullscreen;
+
+                wmAllowedActions[wmAllowedActionsCount++] = x11.XInternAtom(x11Display(), "_NET_WM_ACTION_FULLSCREEN", true);
+                wmAllowedActions[wmAllowedActionsCount++] = x11.XInternAtom(x11Display(), "_NET_WM_ACTION_ABOVE", true);
+
+                wmState[wmStateCount++] = x11.XInternAtom(x11Display(), "_NET_WM_STATE_FULLSCREEN", true);
+                wmState[wmStateCount++] = x11.XInternAtom(x11Display(), "_NET_WM_STATE_ABOVE", true);
+
+                // reset size hints in case already set
+
+                XSizeHints sizeHints;
+                sizeHints.flags = PMinSize | PMaxSize;
+
+                sizeHints.min_width = 0;
+                sizeHints.max_width = int.max;
+                sizeHints.min_height = 0;
+                sizeHints.max_height = int.max;
+
+                x11.XSetWMNormalHints(x11Display(), whandle, &sizeHints);
+                break;
+
+            case WindowStyle.Popup:
+                noResize = true;
+                motifWmHints = WindowX11Styles.Popup;
+                windowType = x11.XInternAtom(x11Display(), "_NET_WM_STATE_MODAL", true);
+
+                wmAllowedActions[wmAllowedActionsCount++] = x11.XInternAtom(x11Display(), "_NET_WM_ACTION_CLOSE", true);
+                wmAllowedActions[wmAllowedActionsCount++] = x11.XInternAtom(x11Display(), "_NET_WM_ACTION_MINIMIZE", true);
+                wmAllowedActions[wmAllowedActionsCount++] = x11.XInternAtom(x11Display(), "_NET_WM_ACTION_MOVE", true);
+                wmAllowedActions[wmAllowedActionsCount++] = x11.XInternAtom(x11Display(), "_NET_WM_ACTION_ABOVE", true);
+
+                wmState[wmStateCount++] = x11.XInternAtom(x11Display(), "_NET_WM_STATE_ABOVE", true);
+                break;
+
+            case WindowStyle.Borderless:
+                noResize = true;
+                motifWmHints = WindowX11Styles.Borderless;
+                windowType = x11.XInternAtom(x11Display(), "_NET_WM_WINDOW_TYPE_UTILITY", true);
+
+                wmAllowedActions[wmAllowedActionsCount++] = x11.XInternAtom(x11Display(), "_NET_WM_ACTION_CLOSE", true);
+                wmAllowedActions[wmAllowedActionsCount++] = x11.XInternAtom(x11Display(), "_NET_WM_ACTION_MINIMIZE", true);
+                wmAllowedActions[wmAllowedActionsCount++] = x11.XInternAtom(x11Display(), "_NET_WM_ACTION_MOVE", true);
+                break;
+
+            case WindowStyle.Dialog:
+            default:
+                motifWmHints = WindowX11Styles.Dialog;
+
+                wmAllowedActions[wmAllowedActionsCount++] = x11.XInternAtom(x11Display(), "_NET_WM_ACTION_MOVE", true);
+                wmAllowedActions[wmAllowedActionsCount++] = x11.XInternAtom(x11Display(), "_NET_WM_ACTION_RESIZE", true);
+                wmAllowedActions[wmAllowedActionsCount++] = x11.XInternAtom(x11Display(), "_NET_WM_ACTION_CLOSE", true);
+                wmAllowedActions[wmAllowedActionsCount++] = x11.XInternAtom(x11Display(), "_NET_WM_ACTION_MINIMIZE", true);
+                wmAllowedActions[wmAllowedActionsCount++] = x11.XInternAtom(x11Display(), "_NET_WM_ACTION_MAXIMIZE_HORZ", true);
+                wmAllowedActions[wmAllowedActionsCount++] = x11.XInternAtom(x11Display(), "_NET_WM_ACTION_MAXIMIZE_VERT", true);
+                break;
+        }
+
+        auto currentwAttributes = x11WindowAttributes(whandle);
+        lastWidth = currentwAttributes.width;
+        lastHeight = currentwAttributes.height;
+
+        // sets WM_NORMAL_HINTS
+        if (noResize) {
+            XSizeHints sizeHints;
+            sizeHints.flags = PMinSize | PMaxSize;
+
+            sizeHints.min_width = lastWidth;
+            sizeHints.max_width = lastWidth;
+            sizeHints.min_height = lastHeight;
+            sizeHints.max_height = lastHeight;
+
+            x11.XSetWMNormalHints(x11Display(), whandle, &sizeHints);
+        }
+
+        // first up we /try/ to setup window hints using motif as a fallback
+        Atom motifWindowHintsAtom = x11.XInternAtom(x11Display(), "_MOTIF_WM_HINTS", false);
+        if (motifWindowHintsAtom != None)
+            x11.XChangeProperty(x11Display(), whandle, motifWindowHintsAtom, motifWindowHintsAtom, 32, PropModeReplace, cast(ubyte*)&motifWmHints, 5);
+
+        Atom xaAtom = x11.XInternAtom(x11Display(), "XA_ATOM", false);
+        if (xaAtom != None) {
+            // apply _NET_WM_ALLOWED_ACTIONS
+            Atom wmAllowedActionsAtom = x11.XInternAtom(x11Display(), "_NET_WM_ALLOWED_ACTIONS", true);
+            if (wmAllowedActionsAtom != None)
+                x11.XChangeProperty(x11Display(), whandle, wmAllowedActionsAtom, xaAtom, 32, PropModeReplace, cast(ubyte*)wmAllowedActions.ptr, wmAllowedActionsCount);
+
+            // apply _NET_WM_STATE
+            Atom wmStateAtom = x11.XInternAtom(x11Display(), "_NET_WM_STATE", true);
+            if (wmStateAtom != None)
+                x11.XChangeProperty(x11Display(), whandle, wmStateAtom, xaAtom, 32, PropModeReplace, cast(ubyte*)wmState.ptr, wmStateCount);
+        }
+
+        // full screen requires further special behavior
+        // which requires knowledge of the monitor itself
+        if (style == WindowStyle.Fullscreen) {
+            XEvent xev;
+            xev.type = ClientMessage;
+            xev.xclient.window = whandle;
+            xev.xclient.message_type = x11.XInternAtom(x11Display(), "_NET_WM_STATE", true);
+            xev.xclient.format = 32;
+            xev.xclient.data.l[0] = 1;
+            xev.xclient.data.l[1] = x11.XInternAtom(x11Display(), "_NET_WM_STATE_FULLSCREEN", true);
+            xev.xclient.data.l[2] = 0;
+
+            x11.XMapWindow(x11Display(), whandle);
+            x11.XSendEvent(x11Display(), x11.XDefaultRootWindow(x11Display()), false, SubstructureRedirectMask | SubstructureNotifyMask, &xev);
+        }
+
+        x11.XFlush(x11Display());
+    }
+
+	WindowStyle getStyle() { return wstyle; }
 }
