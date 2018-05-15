@@ -211,6 +211,8 @@ private {
                 translateKey(x11Event, event, false, xicgetdel);
                 break;
 
+            case DestroyNotify:
+                event.type = X11_Events_Types.DestroyNotify;
             default:
                 break;
         }

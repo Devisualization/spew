@@ -132,7 +132,10 @@ final class DefaultImplementation : Instance {
                     auto w = _userInterface.windowToIdMapper[whandle];
                     if (w is null) return null;
                     else if (WindowImpl_X11 w2 = cast(WindowImpl_X11)w) {
-                        return w2.xic;
+                        if (w2.isClosed)
+                            return null;
+                        else
+                            return w2.xic;
                     } else return null;
                 }));
                 _eventLoop.manager.addSources(_mainEventSource_);

@@ -388,7 +388,7 @@ void aWindowTest() {
     //creator.style = WindowStyle.NoDecorations;
     //creator.style = WindowStyle.Dialog;
     //creator.style = WindowStyle.Borderless;
-    creator.style = WindowStyle.Fullscreen;
+    //creator.style = WindowStyle.Fullscreen;
     //creator.style = WindowStyle.Popup;
 
 	creator.size = vec2!ushort(cast(short)800, cast(short)600);

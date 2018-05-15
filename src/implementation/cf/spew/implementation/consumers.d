@@ -359,6 +359,9 @@ class EventLoopConsumerImpl_X11 : EventLoopConsumerImpl {
                     return true;
                 case X11_Events_Types.Expose:
                     return handlePaint(event, w, w2);
+                case X11_Events_Types.DestroyNotify:
+                    tryFunc(w2.onCloseDel);
+                    return true;
 
                 default:
                     break;
