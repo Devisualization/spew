@@ -29,7 +29,7 @@ enum : bool {
 	Enable_Kill_UDP = false,
 	Enable_Kill_FileSystemWatch = false,
 
-	Enable_Window_GL = false,
+	Enable_Window_GL = true,
 	Enable_Force_Kill_Window = false,
 }
 

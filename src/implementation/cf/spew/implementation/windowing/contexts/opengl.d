@@ -6,6 +6,7 @@ module cf.spew.implementation.windowing.contexts.opengl;
 import cf.spew.ui.context.defs;
 import cf.spew.ui.context.features.opengl;
 import cf.spew.implementation.windowing.window : WindowImpl;
+import x11b = devisualization.bindings.x11;
 
 class OpenGLContextImpl : IContext, Have_OpenGL, Feature_OpenGL {
 	private {
@@ -164,4 +165,168 @@ version(Windows) {
 			}
 		}
 	}
+}
+
+final class OpenGLContextImpl_X11 : OpenGLContextImpl {
+    import cf.spew.event_loop.wells.x11;
+
+    private {
+        enum {
+            GLX_CONTEXT_MAJOR_VERSION_ARB = 0x2091,
+            GLX_CONTEXT_MINOR_VERSION_ARB = 0x2092,
+            GLX_RGBA = 4,
+            GLX_DEPTH_SIZE = 12,
+            GLX_DOUBLEBUFFER = 5,
+            GLX_X_RENDERABLE = 0x8012,
+            GLX_DRAWABLE_TYPE = 0x8010,
+            GLX_RENDER_TYPE = 0x8011,
+            GLX_X_VISUAL_TYPE = 0x22,
+            GLX_WINDOW_BIT = 0x00000001,
+            GLX_RGBA_BIT = 0x00000001,
+            GLX_TRUE_COLOR = 0x8002,
+            GLX_RED_SIZE = 8,
+            GLX_GREEN_SIZE = 9,
+            GLX_BLUE_SIZE = 10,
+            GLX_ALPHA_SIZE = 11,
+            GLX_STENCIL_SIZE = 13,
+        }
+
+        struct __GLXcontextRec;
+        alias GLXContext = __GLXcontextRec*;
+        struct __GLXFBConfigRec;
+        alias GLXFBConfig = __GLXFBConfigRec*;
+        alias GLXDrawable = x11b.XID;
+
+        x11b.Window whandle;
+        GLXContext _context;
+        int[] attribs = [GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, x11b.None];
+        int[] arbAttribs = [GLX_CONTEXT_MAJOR_VERSION_ARB, 1, GLX_CONTEXT_MINOR_VERSION_ARB, 0, 0];
+        int[] visualAttribs = [
+            GLX_X_RENDERABLE, true,
+            GLX_DRAWABLE_TYPE, GLX_WINDOW_BIT,
+            GLX_RENDER_TYPE, GLX_RGBA_BIT,
+            GLX_X_VISUAL_TYPE, GLX_TRUE_COLOR,
+            GLX_RED_SIZE, 8,
+            GLX_GREEN_SIZE, 8,
+            GLX_BLUE_SIZE, 8,
+            GLX_ALPHA_SIZE, 8,
+            GLX_DEPTH_SIZE, 24,
+            GLX_STENCIL_SIZE, 8,
+            GLX_DOUBLEBUFFER, true,
+            //GLX_SAMPLE_BUFFERS  , 1,
+            //GLX_SAMPLES         , 4,
+            x11b.None
+        ];
+
+        x11b.XVisualInfo* visual;
+
+        extern(C) GLXContext function(x11b.Display* dpy, x11b.XVisualInfo* vis, GLXContext shareList, x11b.Bool direct) glXCreateContext;
+        extern(C) x11b.Bool function(x11b.Display* dpy, GLXDrawable drawable, GLXContext ctx) glXMakeCurrent;
+        extern(C) void function(x11b.Display* dpy, GLXContext ctx) glXDestroyContext;
+        extern(C) x11b.XVisualInfo* function(x11b.Display* dpy, int screen, int* attribList) glXChooseVisual;
+        extern(C) void function(x11b.Display* dpy, GLXDrawable drawable) glXSwapBuffers;
+
+        extern(C) GLXContext function(x11b.Display* dpy, GLXFBConfig config, GLXContext share_context, x11b.Bool direct, const int* attrib_list) glXCreateContextAttribsARB;
+        extern(C) GLXFBConfig* function(x11b.Display* dpy, int screen, const int* attrib_list, int* nelements) glXChooseFBConfig;
+        extern(C) x11b.XVisualInfo* function(x11b.Display* dpy, GLXFBConfig config) glXGetVisualFromFBConfig;
+        extern(C) int function(x11b.Display* dpy, GLXFBConfig config, int attribute, int* value) glXGetFBConfigAttrib;
+    }
+
+    this(x11b.Window whandle, OpenGLVersion version_, OpenGL_Context_Callbacks* callbacks) {
+        super(version_, callbacks);
+
+        this.whandle = whandle;
+        arbAttribs[1] = version_.major;
+        arbAttribs[3] = version_.minor;
+    }
+
+    ~this() {
+        if (visual !is null) {
+            x11b.x11.XFree(visual);
+        }
+
+        if (_context !is null) {
+            if (callbacks.onUnload !is null)
+                callbacks.onUnload();
+            glXMakeCurrent(x11Display(), 0, null);
+            glXDestroyContext(x11Display(), _context);
+        }
+    }
+
+    override {
+        bool readyToBeUsed() { return _context !is null; }
+
+        void activate() {
+            if (_context is null)
+                attemptCreation();
+
+            if (_context !is null) {
+                glXMakeCurrent(x11Display(), cast(GLXDrawable)whandle, _context);
+                if (callbacks.onActivate !is null)
+                    callbacks.onActivate();
+            }
+        }
+
+        void deactivate() {
+            if (callbacks.onDeactivate !is null)
+                callbacks.onDeactivate();
+            if (glXMakeCurrent !is null && glXSwapBuffers !is null) {
+                glXSwapBuffers(x11Display(), cast(GLXDrawable)whandle);
+                glXMakeCurrent(x11Display(), 0, null);
+            }
+        }
+    }
+
+    void attemptCreation() {
+        if (callbacks.onLoadOfSymbols !is null)
+            callbacks.onLoadOfSymbols();
+
+        if (callbacks.loadSymbol !is null &&
+            (glXCreateContext is null)) {
+            glXCreateContext = cast(typeof(glXCreateContext))callbacks.loadSymbol("glXCreateContext");
+            glXMakeCurrent = cast(typeof(glXMakeCurrent))callbacks.loadSymbol("glXMakeCurrent");
+            glXDestroyContext = cast(typeof(glXDestroyContext))callbacks.loadSymbol("glXDestroyContext");
+            glXSwapBuffers = cast(typeof(glXSwapBuffers))callbacks.loadSymbol("glXSwapBuffers");
+            glXChooseVisual = cast(typeof(glXChooseVisual))callbacks.loadSymbol("glXChooseVisual");
+        }
+
+        if (glXCreateContext !is null &&
+            glXMakeCurrent !is null &&
+            glXDestroyContext !is null &&
+            glXSwapBuffers !is null &&
+            glXChooseVisual !is null) {
+
+            if (visual !is null)
+                x11b.x11.XFree(visual);
+            visual = glXChooseVisual(x11Display(), x11b.x11.XDefaultScreen(x11Display()), attribs.ptr);
+            x11b.XVisualInfo* prefferedVisual;
+
+            GLXContext fallbackRC = glXCreateContext(x11Display(), visual, null, true);
+            GLXContext preferredRC;
+
+            glXMakeCurrent(x11Display(), cast(GLXDrawable)whandle, fallbackRC);
+            if (callbacks.onLoad !is null)
+                callbacks.onLoad("glXGetProcAddress");
+
+            _context = fallbackRC;
+
+            /+wglCreateContextAttribsARB = cast(typeof(wglCreateContextAttribsARB))callbacks.loadSymbol("wglCreateContextAttribsARB");
+            if (wglCreateContextAttribsARB !is null) {
+                preferredRC = wglCreateContextAttribsARB(_hdc, null, arbAttribs.ptr);
+                if (preferredRC !is null) {
+                    wglMakeCurrent(_hdc, preferredRC);
+                    if (callbacks.onReload !is null)
+                        callbacks.onReload();
+                }
+            }
+
+            if (preferredRC !is null) {
+                _context = preferredRC;
+                if (fallbackRC !is null) {
+                    wglDeleteContext(fallbackRC);
+                }
+            } else
+                _context = fallbackRC;+/
+        }
+    }
 }
