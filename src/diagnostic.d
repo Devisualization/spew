@@ -668,6 +668,8 @@ void onForcedDraw() {
 				    gl.glDeleteShader(fragmentShaderGL);+/
 			    }
             } else {
+                auto wsize = window.size;
+                gl.glViewport(0, 0, wsize.x, wsize.y);
                 gl.glClearColor(0, 0, 0, 1);
                 gl.glClear(GL_COLOR_BUFFER_BIT);
 
