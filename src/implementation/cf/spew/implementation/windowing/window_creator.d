@@ -418,9 +418,9 @@ class WindowCreatorImpl_X11 : WindowCreatorImpl,
 			context = alloc.make!VRAMContextImpl_X11(whandle, vramWithAlpha, alloc);
 		}/+ else if (useOGLContext) {
 			context = alloc.make!OpenGLContextImpl_WinAPI(hwnd, oglVersion, oglCallbacks);
-		} else if (customContext !is null) {
+		}+/ else if (customContext !is null) {
 			context = alloc.make!CustomContext(customContext);
-		}+/
+		}
 
 		ret = alloc.make!WindowImpl_X11(whandle, context, alloc, uiInstance, true);
 
