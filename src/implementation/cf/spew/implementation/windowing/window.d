@@ -247,11 +247,9 @@ version(Windows) {
 				}
 			}
 
-			if (!isClosed) {
-				if (context_ !is null)
-					alloc.dispose(context_);
-				close();
-			}
+			if (context_ !is null)
+				alloc.dispose(context_);
+			close();
 		}
 
 		@property {
@@ -746,11 +744,9 @@ final class WindowImpl_X11 : WindowImpl,
 	}
 
 	~this() {
-		if (!isClosed) {
-			if (context_ !is null)
-				alloc.dispose(context_);
-			close();
-		}
+		if (context_ !is null)
+			alloc.dispose(context_);
+		close();
 	}
 
 	@property {
@@ -802,13 +798,21 @@ final class WindowImpl_X11 : WindowImpl,
 	}
 
 	void close() {
-		hide();
-        x11.XDestroyIC(xic);
+        if (isClosed) return;
+
+        if (xic !is null) {
+            x11.XDestroyIC(xic);
+            xic = null;
+        }
+
+        hide();
 		x11.XDestroyWindow(x11Display(), whandle);
+
 		if (currentCursor != None)
 			x11.XFreeCursor(x11Display(), currentCursor);
 		if (customCursorImage !is null) // ugh are these needed?
 			x11.XcursorImageDestroy(customCursorImage);
+
 		isClosed = true;
         x11.XFlush(x11Display());
 	}

@@ -257,13 +257,14 @@ private {
 
         }
 
-        if (count == 0 && isPush) {
+        auto xic = xicgetdel(x11Event.xany.window);
+        if (count == 0 && isPush && xic !is null) {
             // press
 
             Status status;
             size_t tempIndex;
 
-            count = x11.Xutf8LookupString(xicgetdel(x11Event.xany.window), &x11Event.xkey, c.ptr, 4, &keysym, &status);
+            count = x11.Xutf8LookupString(xic, &x11Event.xkey, c.ptr, 4, &keysym, &status);
 
             if (status == XLookupChars) {
                 event.type = Windowing_Events_Types.Window_KeyInput;

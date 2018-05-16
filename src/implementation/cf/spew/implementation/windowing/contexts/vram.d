@@ -149,11 +149,11 @@ final class VRAMContextImpl_X11 : VRAMContextImpl {
         alloc.dispose(stage3);
         alloc.dispose(stage3Alpha);
 
-        x11b.x11.XFreeGC(x11Display(), graphicGC);
-
         if (x11Image !is null) {
             x11b.x11.XDestroyImage(x11Image);
         }
+
+        x11b.x11.XFreeGC(x11Display(), graphicGC);
 
         // removes an existing instance without calling the destructor!
         *(&stage1Alpha) = FlatImageStorage!BGRA8.init;
