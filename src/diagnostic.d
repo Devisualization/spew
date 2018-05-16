@@ -584,84 +584,101 @@ void onForcedDraw() {
 		buffer.fillOn(RGBA8(255, 0, 0, 255));
 	} else if (window.context.capableOfOpenGL) {
 		static if (Enable_Window_GL) {
-			if (!openglContextCreated) {
-				gl.glGenVertexArrays(1, &vertexArrayGL);
-				gl.glBindVertexArray(vertexArrayGL);
-				
-				gl.glGenBuffers(1, &vertexbufferGL);
-				gl.glBindBuffer(GL_ARRAY_BUFFER, vertexbufferGL);
-				gl.glBufferData(GL_ARRAY_BUFFER, opengl_example_vertex_bufferdata.length*float.sizeof, opengl_example_vertex_bufferdata.ptr, GL_STATIC_DRAW);
+            int glMajorVersion, glMinorVersion;
+            gl.glGetIntegerv(GL_MAJOR_VERSION, &glMajorVersion);
+            gl.glGetIntegerv(GL_MINOR_VERSION, &glMinorVersion);
 
-				openglContextCreated = true;
-			} else if (!openglObjectsCreated) {
-				char* source = cast(char*)VertexShaderGL_Source.ptr;
-				
-				vertexShaderGL = gl.glCreateShader(GL_VERTEX_SHADER);
-				gl.glShaderSource(vertexShaderGL, 1, &source, null);
-				gl.glCompileShader(vertexShaderGL);
-				
-				gl.glGetShaderiv(vertexShaderGL, GL_COMPILE_STATUS, &resultGL);
-				gl.glGetShaderiv(vertexShaderGL, GL_INFO_LOG_LENGTH, &infoLogLengthGL);
-				
-				if (resultGL == GL_FALSE) {
-					char[] log;
-					log.length = infoLogLengthGL+1;
-					gl.glGetShaderInfoLog(vertexShaderGL, infoLogLengthGL, null, log.ptr);
-					writeln("onForcedDraw OGL vertex fail: ", log[0 .. $-1]);
-					return;
-				}
+            if ((glMajorVersion == 3 && glMinorVersion >= 3) || glMajorVersion > 3) {
+			    if (!openglContextCreated) {
+				    gl.glGenVertexArrays(1, &vertexArrayGL);
+				    gl.glBindVertexArray(vertexArrayGL);
 
-				source = cast(char*)FragmentShaderGL_Source.ptr;
-				
-				fragmentShaderGL = gl.glCreateShader(GL_FRAGMENT_SHADER);
-				gl.glShaderSource(fragmentShaderGL, 1, &source, null);
-				gl.glCompileShader(fragmentShaderGL);
-				
-				gl.glGetShaderiv(fragmentShaderGL, GL_COMPILE_STATUS, &resultGL);
-				gl.glGetShaderiv(fragmentShaderGL, GL_INFO_LOG_LENGTH, &infoLogLengthGL);
-				
-				if (resultGL == GL_FALSE) {
-					char[] log;
-					log.length = infoLogLengthGL+1;
-					gl.glGetShaderInfoLog(fragmentShaderGL, infoLogLengthGL, null, log.ptr);
-					writeln("onForcedDraw OGL fragment fail: ", log[0 .. $-1]);
-					return;
-				}
+				    gl.glGenBuffers(1, &vertexbufferGL);
+				    gl.glBindBuffer(GL_ARRAY_BUFFER, vertexbufferGL);
+				    gl.glBufferData(GL_ARRAY_BUFFER, opengl_example_vertex_bufferdata.length*float.sizeof, opengl_example_vertex_bufferdata.ptr, GL_STATIC_DRAW);
 
-				programGL = gl.glCreateProgram();
-				gl.glAttachShader(programGL, vertexShaderGL);
-				gl.glAttachShader(programGL, fragmentShaderGL);
-				gl.glLinkProgram(programGL);
-				
-				gl.glGetProgramiv(programGL, GL_LINK_STATUS, &resultGL);
-				gl.glGetProgramiv(programGL, GL_INFO_LOG_LENGTH, &infoLogLengthGL);
-				if (resultGL == GL_FALSE) {
-					char[] log;
-					log.length = infoLogLengthGL+1;
-					gl.glGetProgramInfoLog(programGL, infoLogLengthGL, null, log.ptr);
-					writeln("onForcedDraw OGL link fail: ", log[0 .. $-1]);
-					return;
-				}
-				
-				openglObjectsCreated = true;
-			} else {
-				gl.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-				gl.glUseProgram(programGL);
-				gl.glBindVertexArray(vertexArrayGL);
-				
-				gl.glEnableVertexAttribArray(0);
-				gl.glBindBuffer(GL_ARRAY_BUFFER, vertexbufferGL);
-				gl.glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, null);
-				gl.glDrawArrays(GL_TRIANGLES, 0, 3);
-				gl.glDisableVertexAttribArray(0);
-				
-				/+
-				gl.glDetachShader(programGL, vertexShaderGL);
-				gl.glDetachShader(programGL, fragmentShaderGL);
-				gl.glDeleteProgram(programGL);
-				gl.glDeleteShader(vertexShaderGL);
-				gl.glDeleteShader(fragmentShaderGL);+/
-			}
+				    openglContextCreated = true;
+			    } else if (!openglObjectsCreated) {
+				    char* source = cast(char*)VertexShaderGL_Source.ptr;
+
+				    vertexShaderGL = gl.glCreateShader(GL_VERTEX_SHADER);
+				    gl.glShaderSource(vertexShaderGL, 1, &source, null);
+				    gl.glCompileShader(vertexShaderGL);
+
+				    gl.glGetShaderiv(vertexShaderGL, GL_COMPILE_STATUS, &resultGL);
+				    gl.glGetShaderiv(vertexShaderGL, GL_INFO_LOG_LENGTH, &infoLogLengthGL);
+
+				    if (resultGL == GL_FALSE) {
+					    char[] log;
+					    log.length = infoLogLengthGL+1;
+					    gl.glGetShaderInfoLog(vertexShaderGL, infoLogLengthGL, null, log.ptr);
+					    writeln("onForcedDraw OGL vertex fail: ", log[0 .. $-1]);
+					    return;
+				    }
+
+				    source = cast(char*)FragmentShaderGL_Source.ptr;
+
+				    fragmentShaderGL = gl.glCreateShader(GL_FRAGMENT_SHADER);
+				    gl.glShaderSource(fragmentShaderGL, 1, &source, null);
+				    gl.glCompileShader(fragmentShaderGL);
+
+				    gl.glGetShaderiv(fragmentShaderGL, GL_COMPILE_STATUS, &resultGL);
+				    gl.glGetShaderiv(fragmentShaderGL, GL_INFO_LOG_LENGTH, &infoLogLengthGL);
+
+				    if (resultGL == GL_FALSE) {
+					    char[] log;
+					    log.length = infoLogLengthGL+1;
+					    gl.glGetShaderInfoLog(fragmentShaderGL, infoLogLengthGL, null, log.ptr);
+					    writeln("onForcedDraw OGL fragment fail: ", log[0 .. $-1]);
+					    return;
+				    }
+
+				    programGL = gl.glCreateProgram();
+				    gl.glAttachShader(programGL, vertexShaderGL);
+				    gl.glAttachShader(programGL, fragmentShaderGL);
+				    gl.glLinkProgram(programGL);
+
+				    gl.glGetProgramiv(programGL, GL_LINK_STATUS, &resultGL);
+				    gl.glGetProgramiv(programGL, GL_INFO_LOG_LENGTH, &infoLogLengthGL);
+				    if (resultGL == GL_FALSE) {
+					    char[] log;
+					    log.length = infoLogLengthGL+1;
+					    gl.glGetProgramInfoLog(programGL, infoLogLengthGL, null, log.ptr);
+					    writeln("onForcedDraw OGL link fail: ", log[0 .. $-1]);
+					    return;
+				    }
+
+				    openglObjectsCreated = true;
+			    } else {
+				    gl.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+				    gl.glUseProgram(programGL);
+				    gl.glBindVertexArray(vertexArrayGL);
+
+				    gl.glEnableVertexAttribArray(0);
+				    gl.glBindBuffer(GL_ARRAY_BUFFER, vertexbufferGL);
+				    gl.glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, null);
+				    gl.glDrawArrays(GL_TRIANGLES, 0, 3);
+				    gl.glDisableVertexAttribArray(0);
+
+				    /+
+				    gl.glDetachShader(programGL, vertexShaderGL);
+				    gl.glDetachShader(programGL, fragmentShaderGL);
+				    gl.glDeleteProgram(programGL);
+				    gl.glDeleteShader(vertexShaderGL);
+				    gl.glDeleteShader(fragmentShaderGL);+/
+			    }
+            } else {
+                gl.glClearColor(0, 0, 0, 1);
+                gl.glClear(GL_COLOR_BUFFER_BIT);
+
+                gl.glBegin(GL_QUADS);
+                gl.glColor4f(1, 0, 0, 1);
+                gl.glVertex2f(-0.5f, -0.5f);
+                gl.glVertex2f(0.5f, -0.5f);
+                gl.glVertex2f(0.5f, 0.5f);
+                gl.glVertex2f(-0.5f, 0.5f);
+                gl.glEnd();
+            }
 		}
 	}
 
