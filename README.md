@@ -25,12 +25,13 @@ Warning: Windows 64bit for dmd is currently bugged when using the diagnostic cod
   - [x] Abstraction
   - [x] Basic implementation
   - [ ] Wells:
-    - [ ] X11
+    - [x] X11
     - [x] WinAPI
     - [ ] Cocoa
 	- [x] LibUV
+    - [x] GLIB
   - [ ] Consumers:
-    - [ ] X11
+    - [x] X11
     - [x] WinAPI
     - [ ] Cocoa
 - [x] Streams
@@ -49,18 +50,18 @@ Warning: Windows 64bit for dmd is currently bugged when using the diagnostic cod
   - [x] LibUV
 - [ ] Windowing
   - [ ] X11
-    - [ ] Core
+    - [x] Core
     - [ ] Features:
-       - [ ] notifications
-       - [ ] cursor
-       - [ ] icon
+       - [x] notifications
+       - [x] cursor
+       - [x] icon
        - [ ] menu
-       - [ ] screenshot
+       - [x] screenshot
        - [ ] Clipboard
        - [ ] Drag&Drop
-    - [ ] Contexts:
-       - [ ] VRAM
-       - [ ] OpenGL
+    - [x] Contexts:
+       - [x] VRAM
+       - [x] OpenGL
   - [x] WinAPI
     - [x] Core
     - [x] Features:
