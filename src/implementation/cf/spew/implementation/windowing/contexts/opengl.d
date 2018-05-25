@@ -189,6 +189,9 @@ final class OpenGLContextImpl_X11 : OpenGLContextImpl {
             GLX_BLUE_SIZE = 10,
             GLX_ALPHA_SIZE = 11,
             GLX_STENCIL_SIZE = 13,
+            GLX_SAMPLE_BUFFERS = 100000,
+            GLX_SAMPLES = 100001,
+
         }
 
         struct __GLXcontextRec;
@@ -199,9 +202,9 @@ final class OpenGLContextImpl_X11 : OpenGLContextImpl {
 
         x11b.Window whandle;
         GLXContext _context;
-        int[] attribs = [GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, x11b.None];
-        int[] arbAttribs = [GLX_CONTEXT_MAJOR_VERSION_ARB, 1, GLX_CONTEXT_MINOR_VERSION_ARB, 0, 0];
-        int[] visualAttribs = [
+        int[5] attribs = [GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, x11b.None];
+        int[5] arbAttribs = [GLX_CONTEXT_MAJOR_VERSION_ARB, 1, GLX_CONTEXT_MINOR_VERSION_ARB, 0, 0];
+        int[23] visualAttribs = [
             GLX_X_RENDERABLE, true,
             GLX_DRAWABLE_TYPE, GLX_WINDOW_BIT,
             GLX_RENDER_TYPE, GLX_RGBA_BIT,
@@ -308,25 +311,69 @@ final class OpenGLContextImpl_X11 : OpenGLContextImpl {
             if (callbacks.onLoad !is null)
                 callbacks.onLoad("glXGetProcAddress");
 
-            _context = fallbackRC;
+            glXChooseFBConfig = cast(typeof(glXChooseFBConfig))callbacks.loadSymbol("glXChooseFBConfig");
+            glXGetVisualFromFBConfig = cast(typeof(glXGetVisualFromFBConfig))callbacks.loadSymbol("glXGetVisualFromFBConfig");
+            glXGetFBConfigAttrib = cast(typeof(glXGetFBConfigAttrib))callbacks.loadSymbol("glXGetFBConfigAttrib");
+            glXCreateContextAttribsARB = cast(typeof(glXCreateContextAttribsARB))callbacks.loadSymbol("glXCreateContextAttribsARB");
 
-            /+wglCreateContextAttribsARB = cast(typeof(wglCreateContextAttribsARB))callbacks.loadSymbol("wglCreateContextAttribsARB");
-            if (wglCreateContextAttribsARB !is null) {
-                preferredRC = wglCreateContextAttribsARB(_hdc, null, arbAttribs.ptr);
-                if (preferredRC !is null) {
-                    wglMakeCurrent(_hdc, preferredRC);
-                    if (callbacks.onReload !is null)
-                        callbacks.onReload();
+            if (glXChooseFBConfig !is null &&
+                glXGetVisualFromFBConfig !is null &&
+                glXGetFBConfigAttrib !is null &&
+                glXCreateContextAttribsARB !is null) {
+
+                int fbcount;
+                GLXFBConfig* fbc = glXChooseFBConfig(x11Display(), x11b.x11.XDefaultScreen(x11Display()), visualAttribs.ptr, &fbcount);
+
+                if (fbc !is null) {
+                    int best_fbc = -1,
+                        worst_fbc = -1,
+                        bestNumberSamples = -1,
+                        worstNumberSamples = 999;
+
+                    foreach(i, fbcV; fbc[0 .. fbcount]) {
+                        int samplesBuffer, samples;
+
+                        x11b.x11.XVisualInfo* vi = glXGetVisualFromFBConfig(x11Display(), fbcV);
+
+                        if (vi) {
+                            // GLX_SAMPLE_BUFFERS == 1
+                            glXGetFBConfigAttrib(x11Display(), fbcV, GLX_SAMPLE_BUFFERS, &samplesBuffer);
+                            glXGetFBConfigAttrib(x11Display(), fbcV, GLX_SAMPLES, &samples);
+
+                            if (best_fbc < 0 || samplesBuffer && samples > bestNumberSamples) {
+                                best_fbc = cast(int)i;
+                                bestNumberSamples = samples;
+                            }
+
+                            if (worst_fbc < 0 || !samplesBuffer || samples < worstNumberSamples) {
+                                worst_fbc = cast(int)i;
+                                worstNumberSamples = samples;
+                            }
+
+                            x11b.x11.XFree(vi);
+                        }
+                    }
+
+
+                    GLXFBConfig bestFBC = fbc[best_fbc];
+                    x11b.x11.XFree(fbc);
+
+                    preferredRC = glXCreateContextAttribsARB(x11Display(), bestFBC, null, x11b.True, cast(const)arbAttribs.ptr);
+                    x11b.x11.XSync(x11Display(), false);
                 }
             }
 
             if (preferredRC !is null) {
                 _context = preferredRC;
+
+                glXMakeCurrent(x11Display(), cast(GLXDrawable)whandle, _context);
+                callbacks.onReload();
+
                 if (fallbackRC !is null) {
-                    wglDeleteContext(fallbackRC);
+                    glXDestroyContext(x11Display(), fallbackRC);
                 }
             } else
-                _context = fallbackRC;+/
+                _context = fallbackRC;
         }
     }
 }

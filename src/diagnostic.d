@@ -397,7 +397,7 @@ void aWindowTest() {
 	static if (Enable_Window_GL) {
 		gl = new GL;
 		oglLoader = new OpenGL_Loader!OpenGL_Context_Callbacks(gl);
-		creator.assignOpenGLContext(OpenGLVersion(3, 2), &oglLoader.callbacks);
+		creator.assignOpenGLContext(OpenGLVersion(3, 3), &oglLoader.callbacks);
 	}
 
 	window = creator.createWindow();
@@ -577,6 +577,15 @@ void onForcedDraw() {
             int glMajorVersion, glMinorVersion;
             gl.glGetIntegerv(GL_MAJOR_VERSION, &glMajorVersion);
             gl.glGetIntegerv(GL_MINOR_VERSION, &glMinorVersion);
+
+            // OpenGL < 3 don't support the above version, so let's do a more expensive but compat way
+            if (glMajorVersion == 0) {
+                import std.format : formattedRead;
+                import core.stdc.string : strlen;
+
+                char* glText = cast(char*)gl.glGetString(GL_VERSION);
+                glText[0 .. strlen(glText)].formattedRead!"%d.%d"(glMajorVersion, glMinorVersion);
+            }
 
             if ((glMajorVersion == 3 && glMinorVersion >= 3) || glMajorVersion > 3) {
 			    if (!openglContextCreated) {
