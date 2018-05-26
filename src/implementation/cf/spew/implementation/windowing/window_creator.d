@@ -399,10 +399,30 @@ class WindowCreatorImpl_X11 : WindowCreatorImpl,
 			}
 		}
 
-		Window whandle = x11.XCreateSimpleWindow(x11Display(),
-		    parentWindow,
-		    actualX, actualY, actualWidth, actualHeight, 0, 0,
-		    x11.XWhitePixel(x11Display(), screenNum));
+        Window whandle;
+
+        if (useOGLContext) {
+            context = alloc.make!OpenGLContextImpl_X11(oglVersion, oglCallbacks);
+
+            XVisualInfo* visualInfo = cast(XVisualInfo*)(cast(OpenGLContextImpl_X11)context).getPlatformData(0);
+            XSetWindowAttributes swa;
+            Colormap cmap;
+
+            cmap = x11.XCreateColormap(x11Display(), x11.XRootWindow(x11Display(), visualInfo.screen),
+                                        visualInfo.visual, AllocNone);
+            swa.colormap = cmap;
+            swa.background_pixmap = None;
+            swa.border_pixel = 0;
+
+            whandle = x11.XCreateWindow(x11Display(), parentWindow,
+                actualX, actualY, actualWidth, actualHeight, 0, visualInfo.depth, InputOutput,
+                visualInfo.visual, CWBorderPixel|CWColormap, &swa);
+            (cast(OpenGLContextImpl_X11)context).setPlatformData(0, &whandle);
+        } else {
+            whandle = x11.XCreateSimpleWindow(x11Display(), parentWindow,
+                actualX, actualY, actualWidth, actualHeight, 0, 0,
+                x11.XWhitePixel(x11Display(), screenNum));
+        }
 
 		assert(whandle != 0);
 
@@ -413,11 +433,8 @@ class WindowCreatorImpl_X11 : WindowCreatorImpl,
             }
         }
 
-		// TODO: create context
 		if (useVRAMContext) {
 			context = alloc.make!VRAMContextImpl_X11(whandle, vramWithAlpha, alloc);
-		} else if (useOGLContext) {
-			context = alloc.make!OpenGLContextImpl_X11(whandle, oglVersion, oglCallbacks);
 		} else if (customContext !is null) {
 			context = alloc.make!CustomContext(customContext);
 		}

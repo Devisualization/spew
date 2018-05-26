@@ -167,7 +167,7 @@ version(Windows) {
 	}
 }
 
-final class OpenGLContextImpl_X11 : OpenGLContextImpl {
+final class OpenGLContextImpl_X11 : OpenGLContextImpl, IPlatformData {
     import cf.spew.event_loop.wells.x11;
 
     private {
@@ -202,6 +202,8 @@ final class OpenGLContextImpl_X11 : OpenGLContextImpl {
 
         x11b.Window whandle;
         GLXContext _context;
+        x11b.XVisualInfo* visualInfo;
+
         int[5] attribs = [GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, x11b.None];
         int[5] arbAttribs = [GLX_CONTEXT_MAJOR_VERSION_ARB, 1, GLX_CONTEXT_MINOR_VERSION_ARB, 0, 0];
         int[23] visualAttribs = [
@@ -221,8 +223,6 @@ final class OpenGLContextImpl_X11 : OpenGLContextImpl {
             x11b.None
         ];
 
-        x11b.XVisualInfo* visual;
-
         extern(C) GLXContext function(x11b.Display* dpy, x11b.XVisualInfo* vis, GLXContext shareList, x11b.Bool direct) glXCreateContext;
         extern(C) x11b.Bool function(x11b.Display* dpy, GLXDrawable drawable, GLXContext ctx) glXMakeCurrent;
         extern(C) void function(x11b.Display* dpy, GLXContext ctx) glXDestroyContext;
@@ -235,17 +235,16 @@ final class OpenGLContextImpl_X11 : OpenGLContextImpl {
         extern(C) int function(x11b.Display* dpy, GLXFBConfig config, int attribute, int* value) glXGetFBConfigAttrib;
     }
 
-    this(x11b.Window whandle, OpenGLVersion version_, OpenGL_Context_Callbacks* callbacks) {
+    this(OpenGLVersion version_, OpenGL_Context_Callbacks* callbacks) {
         super(version_, callbacks);
 
-        this.whandle = whandle;
         arbAttribs[1] = version_.major;
         arbAttribs[3] = version_.minor;
     }
 
     ~this() {
-        if (visual !is null) {
-            x11b.x11.XFree(visual);
+        if (visualInfo !is null) {
+            x11b.x11.XFree(visualInfo);
         }
 
         if (_context !is null) {
@@ -263,7 +262,7 @@ final class OpenGLContextImpl_X11 : OpenGLContextImpl {
             if (_context is null)
                 attemptCreation();
 
-            if (_context !is null) {
+            if (_context !is null && whandle != x11b.None) {
                 glXMakeCurrent(x11Display(), cast(GLXDrawable)whandle, _context);
                 if (callbacks.onActivate !is null)
                     callbacks.onActivate();
@@ -273,7 +272,7 @@ final class OpenGLContextImpl_X11 : OpenGLContextImpl {
         void deactivate() {
             if (callbacks.onDeactivate !is null)
                 callbacks.onDeactivate();
-            if (glXMakeCurrent !is null && glXSwapBuffers !is null) {
+            if (glXMakeCurrent !is null && glXSwapBuffers !is null && whandle != x11b.None) {
                 glXSwapBuffers(x11Display(), cast(GLXDrawable)whandle);
                 glXMakeCurrent(x11Display(), 0, null);
             }
@@ -299,15 +298,16 @@ final class OpenGLContextImpl_X11 : OpenGLContextImpl {
             glXSwapBuffers !is null &&
             glXChooseVisual !is null) {
 
-            if (visual !is null)
-                x11b.x11.XFree(visual);
-            visual = glXChooseVisual(x11Display(), x11b.x11.XDefaultScreen(x11Display()), attribs.ptr);
+            if (visualInfo !is null)
+                x11b.x11.XFree(visualInfo);
+            visualInfo = glXChooseVisual(x11Display(), x11b.x11.XDefaultScreen(x11Display()), attribs.ptr);
             x11b.XVisualInfo* prefferedVisual;
 
-            GLXContext fallbackRC = glXCreateContext(x11Display(), visual, null, true);
+            GLXContext fallbackRC = glXCreateContext(x11Display(), visualInfo, null, true);
             GLXContext preferredRC;
 
-            glXMakeCurrent(x11Display(), cast(GLXDrawable)whandle, fallbackRC);
+            if (whandle != x11b.None)
+                glXMakeCurrent(x11Display(), cast(GLXDrawable)whandle, fallbackRC);
             if (callbacks.onLoad !is null)
                 callbacks.onLoad("glXGetProcAddress");
 
@@ -358,6 +358,7 @@ final class OpenGLContextImpl_X11 : OpenGLContextImpl {
                         GLXFBConfig bestFBC = fbc[best_fbc];
                         glXMakeCurrent(x11Display(), 0, null);
 
+                        prefferedVisual = glXGetVisualFromFBConfig(x11Display(), bestFBC);
                         preferredRC = glXCreateContextAttribsARB(x11Display(), bestFBC, null, x11b.True, cast(const)arbAttribs.ptr);
                         x11b.x11.XSync(x11Display(), false);
                     }
@@ -369,8 +370,15 @@ final class OpenGLContextImpl_X11 : OpenGLContextImpl {
             if (preferredRC !is null) {
                 _context = preferredRC;
 
-                glXMakeCurrent(x11Display(), cast(GLXDrawable)whandle, _context);
-                callbacks.onReload();
+                if (visualInfo !is null) {
+                    x11b.x11.XFree(visualInfo);
+                    visualInfo = prefferedVisual;
+                }
+
+                if (whandle != x11b.None) {
+                    glXMakeCurrent(x11Display(), cast(GLXDrawable)whandle, _context);
+                    callbacks.onReload();
+                }
 
                 if (fallbackRC !is null) {
                     glXDestroyContext(x11Display(), fallbackRC);
@@ -378,5 +386,18 @@ final class OpenGLContextImpl_X11 : OpenGLContextImpl {
             } else
                 _context = fallbackRC;
         }
+    }
+
+    void* getPlatformData(int x) {
+        attemptCreation();
+        return visualInfo;
+    }
+
+    void setPlatformData(int x, void* v) {
+        if (glXDestroyContext !is null && _context !is null)
+            glXDestroyContext(x11Display(), _context);
+        _context = null;
+        if (v !is null)
+            whandle = *cast(x11b.Window*)v;
     }
 }

@@ -26,3 +26,8 @@ interface IContext {
 	 */
 	bool readyToBeUsed();
 }
+
+interface IPlatformData {
+    void* getPlatformData(int);
+    void setPlatformData(int, void*);
+}
