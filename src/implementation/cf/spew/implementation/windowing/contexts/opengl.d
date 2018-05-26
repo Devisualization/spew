@@ -354,12 +354,15 @@ final class OpenGLContextImpl_X11 : OpenGLContextImpl {
                         }
                     }
 
+                    if (best_fbc >= 0) {
+                        GLXFBConfig bestFBC = fbc[best_fbc];
+                        glXMakeCurrent(x11Display(), 0, null);
 
-                    GLXFBConfig bestFBC = fbc[best_fbc];
+                        preferredRC = glXCreateContextAttribsARB(x11Display(), bestFBC, null, x11b.True, cast(const)arbAttribs.ptr);
+                        x11b.x11.XSync(x11Display(), false);
+                    }
+
                     x11b.x11.XFree(fbc);
-
-                    preferredRC = glXCreateContextAttribsARB(x11Display(), bestFBC, null, x11b.True, cast(const)arbAttribs.ptr);
-                    x11b.x11.XSync(x11Display(), false);
                 }
             }
 
