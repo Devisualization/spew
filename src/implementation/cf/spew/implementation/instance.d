@@ -524,18 +524,22 @@ class UIInstance_X11 : UIInstance, Feature_Management_Clipboard {
 				int numMonitors;
 				XRRMonitorInfo* monitors = x11.XRRGetMonitors(x11Display(), rootWindow, true, &numMonitors);
 
+                scope(exit)
+                    x11.XRRFreeMonitors(monitors);
+
 				foreach(i; 0 .. numMonitors) {
-					if (monitors[i].primary == 1) {
+					if (monitors[i].primary) {
 						theDisplay = alloc.make!DisplayImpl_X11(theScreen, &monitors[i], alloc, this);
 						break;
 					}
 				}
 
-				x11.XRRFreeMonitors(monitors);
-				if (theDisplay is null)
-					return managed!IDisplay.init;
-				else
-					return managed!IDisplay(theDisplay, managers(ReferenceCountedManager()), alloc);
+				if (theDisplay is null && numMonitors == 0)
+				    return managed!IDisplay.init;
+                else if (theDisplay is null) // why did we not get it? Who knows.
+                    theDisplay = alloc.make!DisplayImpl_X11(theScreen, &monitors[0], alloc, this);
+
+				return managed!IDisplay(theDisplay, managers(ReferenceCountedManager()), alloc);
 			}
 
 			managed!(IDisplay[]) displays(IAllocator alloc = theAllocator()) shared {
