@@ -404,7 +404,7 @@ class WindowCreatorImpl_X11 : WindowCreatorImpl,
         if (useOGLContext) {
             context = alloc.make!OpenGLContextImpl_X11(oglVersion, oglCallbacks);
 
-            XVisualInfo* visualInfo = cast(XVisualInfo*)(cast(OpenGLContextImpl_X11)context).getPlatformData(0);
+            XVisualInfo* visualInfo = cast(XVisualInfo*)(cast(OpenGLContextImpl_X11)context).getPlatformData(this, 0);
             XSetWindowAttributes swa;
             Colormap cmap;
 
@@ -417,7 +417,7 @@ class WindowCreatorImpl_X11 : WindowCreatorImpl,
             whandle = x11.XCreateWindow(x11Display(), parentWindow,
                 actualX, actualY, actualWidth, actualHeight, 0, visualInfo.depth, InputOutput,
                 visualInfo.visual, CWBorderPixel|CWColormap, &swa);
-            (cast(OpenGLContextImpl_X11)context).setPlatformData(0, &whandle);
+            (cast(OpenGLContextImpl_X11)context).setPlatformData(this, 0, &whandle);
         } else {
             whandle = x11.XCreateSimpleWindow(x11Display(), parentWindow,
                 actualX, actualY, actualWidth, actualHeight, 0, 0,

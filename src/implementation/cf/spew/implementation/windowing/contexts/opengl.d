@@ -5,7 +5,9 @@
 module cf.spew.implementation.windowing.contexts.opengl;
 import cf.spew.ui.context.defs;
 import cf.spew.ui.context.features.opengl;
+import cf.spew.ui.rendering : IRenderPointCreator;
 import cf.spew.implementation.windowing.window : WindowImpl;
+import cf.spew.implementation.windowing.window_creator;
 import x11b = devisualization.bindings.x11;
 
 class OpenGLContextImpl : IContext, Have_OpenGL, Feature_OpenGL {
@@ -388,12 +390,16 @@ final class OpenGLContextImpl_X11 : OpenGLContextImpl, IPlatformData {
         }
     }
 
-    void* getPlatformData(int x) {
+    bool supportsPlatformData(IRenderPointCreator renderPointCreator, int) {
+        return (cast(WindowCreatorImpl_X11)renderPointCreator) !is null;
+    }
+
+    void* getPlatformData(IRenderPointCreator renderPointCreator, int x) {
         attemptCreation();
         return visualInfo;
     }
 
-    void setPlatformData(int x, void* v) {
+    void setPlatformData(IRenderPointCreator renderPointCreator, int x, void* v) {
         if (glXDestroyContext !is null && _context !is null)
             glXDestroyContext(x11Display(), _context);
         _context = null;

@@ -3,6 +3,7 @@
  * Authors: $(LINK2 http://cattermole.co.nz, Richard Andrew Cattermole)
  */
 module cf.spew.ui.context.defs;
+import cf.spew.ui.rendering : IRenderPointCreator;
 
 /**
  * A basic representation of a context to be rendered to.
@@ -27,7 +28,14 @@ interface IContext {
 	bool readyToBeUsed();
 }
 
+/**
+ * Enables platform specific data hooking
+ */
 interface IPlatformData {
-    void* getPlatformData(int);
-    void setPlatformData(int, void*);
+    ///
+    bool supportsPlatformData(IRenderPointCreator renderPointCreator, int);
+    ///
+    void* getPlatformData(IRenderPointCreator renderPointCreator, int);
+    ///
+    void setPlatformData(IRenderPointCreator renderPointCreator, int, void*);
 }
