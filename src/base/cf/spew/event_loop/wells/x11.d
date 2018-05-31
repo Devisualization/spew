@@ -39,6 +39,7 @@ struct X11Atoms {
         XdndFinished,
         XdndSelection,
         XdndProxy,
+        XdndAware,
 
         CARDINAL,
         XA_ATOM,
@@ -46,6 +47,7 @@ struct X11Atoms {
         INTEGER,
         Backlight,
         BACKLIGHT,
+        PRIMARY,
 
         WM_DELETE_WINDOW,
         _NET_WM_ICON,
@@ -204,9 +206,25 @@ private {
                 event.x11.configureNotify.height = x11Event.xconfigure.height;
                 break;
             case ClientMessage:
-                if (atoms.WM_DELETE_WINDOW != 0 && x11Event.xclient.format == 32 && x11Event.xclient.data.l[0] == atoms.WM_DELETE_WINDOW) {
-                    event.type = Windowing_Events_Types.Window_RequestClose;
+                if (x11Event.xclient.format == 32) {
+                    if (atoms.WM_DELETE_WINDOW != 0 && x11Event.xclient.data.l[0] == atoms.WM_DELETE_WINDOW) {
+                        event.type = Windowing_Events_Types.Window_RequestClose;
+                    } else if ((atoms.XdndEnter != None && x11Event.xclient.message_type == atoms.XdndEnter) ||
+                                (atoms.XdndPosition != None && x11Event.xclient.message_type == atoms.XdndPosition) ||
+                                (atoms.XdndLeave != None && x11Event.xclient.message_type == atoms.XdndLeave) ||
+                                (atoms.XdndPosition != None && x11Event.xclient.message_type == atoms.XdndDrop)) {
+
+                        event.type = X11_Events_Types.Raw;
+                        event.x11.raw = x11Event;
+                    }
                 }
+                break;
+            case SelectionNotify:
+                if (x11Event.xselection.property != None) {
+                    event.type = X11_Events_Types.Raw;
+                    event.x11.raw = x11Event;
+                }
+
                 break;
             case MotionNotify:
                 event.type = Windowing_Events_Types.Window_CursorMoved;

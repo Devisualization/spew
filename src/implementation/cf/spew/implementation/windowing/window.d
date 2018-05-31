@@ -715,9 +715,12 @@ final class WindowImpl_X11 : WindowImpl,
 
 	@disable this(shared(UIInstance) instance);
 
-	bool isClosed;
+	bool isClosed, supportsXDND;
 	Window whandle;
     XIC xic;
+
+    Atom xdndToBeRequested, xdndBufferSelection;
+    Window xdndSourceWindow;
 
     uint eventMasks;
     WindowStyle wstyle;
@@ -741,6 +744,12 @@ final class WindowImpl_X11 : WindowImpl,
                         XNInputStyle.ptr, XIMPreeditNothing | XIMStatusNothing,
                         XNClientWindow.ptr, whandle,
                         XNFocusWindow.ptr, whandle, 0);
+
+        if (x11Atoms().XdndAware != None) {
+            supportsXDND  = true;
+            Atom version_ = 5;
+            x11.XChangeProperty(x11Display(), whandle, x11Atoms().XdndAware, x11Atoms().XA_ATOM, 32, PropModeReplace, cast(ubyte*)&version_, 1);
+        }
 	}
 
 	~this() {
