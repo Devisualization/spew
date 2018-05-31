@@ -297,8 +297,11 @@ version(Windows) {
 class EventLoopConsumerImpl_X11 : EventLoopConsumerImpl {
     import cf.spew.events.windowing;
     import cf.spew.implementation.windowing.window;
+    import cf.spew.implementation.windowing.misc;
     import cf.spew.implementation.instance;
     import cf.spew.events.x11;
+    import cf.spew.event_loop.wells.x11;
+    import x11b = devisualization.bindings.x11;
     import std.typecons : Nullable;
 
     this(shared(DefaultImplementation) instance) shared {
@@ -312,6 +315,8 @@ class EventLoopConsumerImpl_X11 : EventLoopConsumerImpl {
     }
 
     override bool processEvent(ref Event event) shared {
+        import core.stdc.string : strlen;
+
         IWindow window = cast()uiInstance.windowToIdMapper[event.wellData1Value];
 
         if (WindowImpl_X11 w = cast(WindowImpl_X11)window) {
@@ -364,6 +369,133 @@ class EventLoopConsumerImpl_X11 : EventLoopConsumerImpl {
                     return true;
 
                 default:
+                    if (event.type == X11_Events_Types.Raw) {
+                        x11b.XEvent x11Event = event.x11.raw;
+
+                        switch(x11Event.type) {
+                            case x11b.ClientMessage:
+                                if (x11Event.xclient.message_type == x11Atoms().XdndEnter) {
+                                    bool moreThanThreeTypes = (x11Event.xclient.data.l[1] & 1) == 1;
+                                    w.xdndSourceWindow = cast(x11b.Window)x11Event.xclient.data.l[0];
+                                    w.xdndToBeRequested = x11b.None;
+
+                                    if (moreThanThreeTypes) {
+                                        X11WindowProperty property = x11ReadWindowProperty(x11Display(), w.xdndSourceWindow, x11Atoms().XdndTypeList);
+                                        if (property.type == x11Atoms().XA_ATOM)
+                                            w.xdndToBeRequested = chooseAtomXDND(x11Display(), (cast(x11b.Atom*)property.data)[0 .. property.numberOfItems]);
+                                        x11b.x11.XFree(property.data);
+                                    } else {
+                                        x11b.Atom[3] listOfAtoms = [cast(x11b.Atom)x11Event.xclient.data.l[2], x11Event.xclient.data.l[3], x11Event.xclient.data.l[4]];
+                                        w.xdndToBeRequested = chooseAtomXDND(x11Display(), listOfAtoms[]);
+                                    }
+
+                                    tryFunc(w2.onFileDragStartDel);
+                                } else if (x11Event.xclient.message_type == x11Atoms().XdndPosition) {
+                                    x11b.Window _1, _2;
+                                    int _3, _4, x, y;
+                                    uint _5;
+
+                                    x11b.x11.XQueryPointer(x11Display(), w.whandle, &_1, &_2, &_3, &_4, &x, &y, &_5);
+                                    bool canDrop = tryFunc(w2.onFileDraggingDel, false, x, y);
+
+                                    x11b.XClientMessageEvent message;
+                                    message.type = x11b.ClientMessage;
+                                    message.display = x11Event.xclient.display;
+                                    message.window = x11Event.xclient.data.l[0];
+                                    message.message_type = x11Atoms().XdndStatus;
+                                    message.format = 32;
+                                    message.data.l[0] = w.whandle;
+                                    message.data.l[1] = canDrop && w.xdndToBeRequested != x11b.None;
+                                    message.data.l[4] = x11Atoms().XdndActionCopy;
+
+                                    x11b.x11.XSendEvent(x11Display(), x11Event.xclient.data.l[0], x11b.False, x11b.NoEventMask, cast(x11b.XEvent*)&message);
+                                    x11b.x11.XFlush(x11Display());
+                                } else if (x11Event.xclient.message_type == x11Atoms().XdndLeave) {
+                                    tryFunc(w2.onFileDragStopDel);
+                                } else if (x11Event.xclient.message_type == x11Atoms().XdndDrop) {
+                                    if (w.xdndToBeRequested == x11b.None) {
+                                        x11b.XClientMessageEvent message;
+                                        message.type = x11b.ClientMessage;
+                                        message.display = x11Event.xclient.display;
+                                        message.window = x11Event.xclient.data.l[0];
+                                        message.message_type = x11Atoms().XdndFinished;
+                                        message.format = 32;
+                                        message.data.l[0] = w.whandle;
+                                        message.data.l[2] = x11b.None;
+
+                                        x11b.x11.XSendEvent(x11Display(), x11Event.xclient.data.l[0], x11b.False, x11b.NoEventMask, cast(x11b.XEvent*)&message);
+                                    } else {
+                                        x11b.x11.XConvertSelection(x11Display(), x11Atoms().XdndSelection, w.xdndToBeRequested, x11Atoms().PRIMARY, w.whandle, x11Event.xclient.data.l[2]);
+                                    }
+                                }
+                                break;
+
+                            case x11b.SelectionNotify:
+                                if (!w.supportsXDND)
+                                    break;
+
+                                x11b.Atom target = x11Event.xselection.target;
+                                X11WindowProperty property = x11ReadWindowProperty(x11Display(), w.whandle, x11Atoms().PRIMARY);
+
+                                if (target == x11Atoms().XA_TARGETS) {
+                                    X11WindowProperty propertyTL = x11ReadWindowProperty(x11Display(), w.xdndSourceWindow, x11Atoms().XdndTypeList);
+
+                                    if (propertyTL.type == x11Atoms().XA_ATOM) {
+                                        w.xdndToBeRequested = chooseAtomXDND(x11Display(), (cast(x11b.Atom*)propertyTL.data)[0 .. propertyTL.numberOfItems]);
+                                        if (w.xdndToBeRequested != x11b.None) {
+                                            x11b.x11.XConvertSelection(x11Display(), x11Atoms().XdndSelection, w.xdndToBeRequested, x11Atoms().PRIMARY, w.whandle, x11Event.xclient.data.l[2]);
+                                        }
+                                    }
+                                    x11b.x11.XFree(propertyTL.data);
+                                } else if (target == w.xdndToBeRequested) {
+                                    char* str = cast(char*)property.data;
+                                    string text = cast(string)str[0 .. strlen(str)];
+
+                                    x11b.Window queryPointer1, queryPointer2;
+                                    int x, y, queryPointer3, queryPointer4;
+                                    uint queryPointer5;
+                                    x11b.x11.XQueryPointer(x11Display(), w.whandle, &queryPointer1, &queryPointer2, &queryPointer3, &queryPointer4, &x, &y, &queryPointer5);
+
+                                    bool canDrop = tryFunc(w2.onFileDraggingDel, false, x, y);
+                                    if (canDrop) {
+                                        size_t start;
+                                        foreach(i, c; text) {
+                                            if (c == '\n') {
+                                                tryFunc(w2.onFileDropDel, text[start .. i], x, y);
+                                                start = i + 1;
+                                            }
+                                        }
+
+                                        if (start < text.length)
+                                            tryFunc(w2.onFileDropDel, text[start .. $], x, y);
+                                    }
+
+                                    tryFunc(w2.onFileDragStopDel);
+
+                                    x11b.XClientMessageEvent message;
+                                    message.type = x11b.ClientMessage;
+                                    message.display = x11Display();
+                                    message.window = w.xdndSourceWindow;
+                                    message.message_type = x11Atoms().XdndFinished;
+                                    message.format = 32;
+                                    message.data.l[0] = w.whandle;
+                                    message.data.l[1] = 1;
+                                    message.data.l[2] = x11Atoms().XdndActionCopy;
+
+                                    x11b.x11.XSendEvent(x11Display(), w.xdndSourceWindow, x11b.False, x11b.NoEventMask, cast(x11b.XEvent*)&message);
+
+                                    x11b.x11.XDeleteProperty(x11Display(), w.whandle, x11Atoms().PRIMARY);
+                                    x11b.x11.XSync(x11Display(), false);
+                                }
+
+                                if (property.data !is null)
+                                    x11b.x11.XFree(property.data);
+
+                                break;
+                            default:
+                                break;
+                        }
+                    }
                     break;
             }
         }
@@ -374,7 +506,7 @@ class EventLoopConsumerImpl_X11 : EventLoopConsumerImpl {
             return false;
     }
 
-    bool handlePaint(ref Event event, WindowImpl_X11 w, WindowImpl w2) shared {
+    final bool handlePaint(ref Event event, WindowImpl_X11 w, WindowImpl w2) shared {
         if (w2.context_ is null) {
             // TODO: draw manually
         } else if (w2.onDrawDel is null) {
@@ -384,5 +516,27 @@ class EventLoopConsumerImpl_X11 : EventLoopConsumerImpl {
             tryFunc(w2.onDrawDel);
         }
         return true;
+    }
+
+    final x11b.Atom chooseAtomXDND(x11b.Display* display, x11b.Atom[] atoms) shared {
+        import core.stdc.string : strlen;
+        x11b.Atom ret = x11b.None;
+
+        if (x11b.x11.XGetAtomName !is null) {
+            foreach(atom; atoms) {
+                char* str = x11b.x11.XGetAtomName(display, atom);
+                string name = cast(string)str[0 .. strlen(str)];
+
+                if (name == "UTF8_STRING") {
+                    return atom;
+                } else if (name == "text/plain;charset=utf-8") {
+                    return atom;
+                } else if (ret == x11b.None && name == "text/plain") {
+                    ret = atom;
+                }
+            }
+        }
+
+        return ret;
     }
 }

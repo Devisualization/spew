@@ -103,6 +103,9 @@ private {
         static foreach(m; __traits(allMembers, X11Atoms)) {
             mixin("atoms." ~ m ~ " = x11.XInternAtom(x11Display(), cast(char*)\"" ~ m ~ "\".ptr, false);");
         }
+
+        atoms.XA_ATOM = x11.XInternAtom(x11Display(), cast(char*)"ATOM".ptr, false);
+        atoms.XA_TARGETS = x11.XInternAtom(x11Display(), cast(char*)"TARGETS".ptr, false);
 	}
 
 	static ~this() {
@@ -206,17 +209,15 @@ private {
                 event.x11.configureNotify.height = x11Event.xconfigure.height;
                 break;
             case ClientMessage:
-                if (x11Event.xclient.format == 32) {
-                    if (atoms.WM_DELETE_WINDOW != 0 && x11Event.xclient.data.l[0] == atoms.WM_DELETE_WINDOW) {
-                        event.type = Windowing_Events_Types.Window_RequestClose;
-                    } else if ((atoms.XdndEnter != None && x11Event.xclient.message_type == atoms.XdndEnter) ||
-                                (atoms.XdndPosition != None && x11Event.xclient.message_type == atoms.XdndPosition) ||
-                                (atoms.XdndLeave != None && x11Event.xclient.message_type == atoms.XdndLeave) ||
-                                (atoms.XdndPosition != None && x11Event.xclient.message_type == atoms.XdndDrop)) {
+                if (atoms.WM_DELETE_WINDOW != 0 && x11Event.xclient.format == 32 && x11Event.xclient.data.l[0] == atoms.WM_DELETE_WINDOW) {
+                    event.type = Windowing_Events_Types.Window_RequestClose;
+                } else if ((atoms.XdndEnter != None && x11Event.xclient.message_type == atoms.XdndEnter) ||
+                            (atoms.XdndPosition != None && x11Event.xclient.message_type == atoms.XdndPosition) ||
+                            (atoms.XdndDrop != None && x11Event.xclient.message_type == atoms.XdndDrop) ||
+                            (atoms.XdndLeave != None && x11Event.xclient.message_type == atoms.XdndLeave)) {
 
-                        event.type = X11_Events_Types.Raw;
-                        event.x11.raw = x11Event;
-                    }
+                    event.type = X11_Events_Types.Raw;
+                    event.x11.raw = x11Event;
                 }
                 break;
             case SelectionNotify:

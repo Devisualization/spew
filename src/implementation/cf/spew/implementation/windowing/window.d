@@ -719,7 +719,7 @@ final class WindowImpl_X11 : WindowImpl,
 	Window whandle;
     XIC xic;
 
-    Atom xdndToBeRequested, xdndBufferSelection;
+    Atom xdndToBeRequested;
     Window xdndSourceWindow;
 
     uint eventMasks;
