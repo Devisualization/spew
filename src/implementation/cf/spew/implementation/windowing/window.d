@@ -931,8 +931,8 @@ final class WindowImpl_X11 : WindowImpl,
 		import devisualization.image.interfaces : imageObject;
 		import std.experimental.color : RGB8, RGBA8;
 
-		Atom net_wm_icon = x11.XInternAtom(x11Display(), "_NET_WM_ICON", false);
-		Atom cardinal = x11.XInternAtom(x11Display(), "CARDINAL", false);
+		Atom net_wm_icon = x11Atoms()._NET_WM_ICON;
+		Atom cardinal = x11Atoms().CARDINAL;
 
 		X11WindowProperty prop = x11ReadWindowProperty(x11Display(), whandle, net_wm_icon);
 		scope(exit) if (prop.data !is null) x11.XFree(prop.data);
@@ -981,8 +981,8 @@ final class WindowImpl_X11 : WindowImpl,
 			}
 		}
 
-		Atom net_wm_icon = x11.XInternAtom(x11Display(), "_NET_WM_ICON", false);
-		Atom cardinal = x11.XInternAtom(x11Display(), "CARDINAL", false);
+		Atom net_wm_icon = x11Atoms()._NET_WM_ICON;
+		Atom cardinal = x11Atoms().CARDINAL;
 		x11.XChangeProperty(x11Display(), whandle, net_wm_icon, cardinal, 32, PropModeReplace, cast(ubyte*)imageData.ptr, numItems);
 	}
 
@@ -1128,7 +1128,7 @@ final class WindowImpl_X11 : WindowImpl,
         bool noResize;
         Motif_WMHints motifWmHints;
 
-        Atom windowType = x11.XInternAtom(x11Display(), "_NET_WM_WINDOW_TYPE_NORMAL", true);
+        Atom windowType = x11Atoms()._NET_WM_WINDOW_TYPE_NORMAL;
         Atom[10] wmAllowedActions, wmState;
         uint wmAllowedActionsCount, wmStateCount;
 
@@ -1137,17 +1137,17 @@ final class WindowImpl_X11 : WindowImpl,
                 noResize = true;
                 motifWmHints = WindowX11Styles.NoDecorations;
 
-                wmState[wmStateCount++] = x11.XInternAtom(x11Display(), "_NET_WM_STATE_STICKY", true);
+                wmState[wmStateCount++] = x11Atoms()._NET_WM_STATE_STICKY;
                 break;
 
             case WindowStyle.Fullscreen:
                 motifWmHints = WindowX11Styles.Fullscreen;
 
-                wmAllowedActions[wmAllowedActionsCount++] = x11.XInternAtom(x11Display(), "_NET_WM_ACTION_FULLSCREEN", true);
-                wmAllowedActions[wmAllowedActionsCount++] = x11.XInternAtom(x11Display(), "_NET_WM_ACTION_ABOVE", true);
+                wmAllowedActions[wmAllowedActionsCount++] = x11Atoms()._NET_WM_ACTION_FULLSCREEN;
+                wmAllowedActions[wmAllowedActionsCount++] = x11Atoms()._NET_WM_ACTION_ABOVE;
 
-                wmState[wmStateCount++] = x11.XInternAtom(x11Display(), "_NET_WM_STATE_FULLSCREEN", true);
-                wmState[wmStateCount++] = x11.XInternAtom(x11Display(), "_NET_WM_STATE_ABOVE", true);
+                wmState[wmStateCount++] = x11Atoms()._NET_WM_STATE_FULLSCREEN;
+                wmState[wmStateCount++] = x11Atoms()._NET_WM_STATE_ABOVE;
 
                 // reset size hints in case already set
 
@@ -1165,36 +1165,36 @@ final class WindowImpl_X11 : WindowImpl,
             case WindowStyle.Popup:
                 noResize = true;
                 motifWmHints = WindowX11Styles.Popup;
-                windowType = x11.XInternAtom(x11Display(), "_NET_WM_STATE_MODAL", true);
+                windowType = x11Atoms()._NET_WM_STATE_MODAL;
 
-                wmAllowedActions[wmAllowedActionsCount++] = x11.XInternAtom(x11Display(), "_NET_WM_ACTION_CLOSE", true);
-                wmAllowedActions[wmAllowedActionsCount++] = x11.XInternAtom(x11Display(), "_NET_WM_ACTION_MINIMIZE", true);
-                wmAllowedActions[wmAllowedActionsCount++] = x11.XInternAtom(x11Display(), "_NET_WM_ACTION_MOVE", true);
-                wmAllowedActions[wmAllowedActionsCount++] = x11.XInternAtom(x11Display(), "_NET_WM_ACTION_ABOVE", true);
+                wmAllowedActions[wmAllowedActionsCount++] = x11Atoms()._NET_WM_ACTION_CLOSE;
+                wmAllowedActions[wmAllowedActionsCount++] = x11Atoms()._NET_WM_ACTION_MINIMIZE;
+                wmAllowedActions[wmAllowedActionsCount++] = x11Atoms()._NET_WM_ACTION_MOVE;
+                wmAllowedActions[wmAllowedActionsCount++] = x11Atoms()._NET_WM_ACTION_ABOVE;
 
-                wmState[wmStateCount++] = x11.XInternAtom(x11Display(), "_NET_WM_STATE_ABOVE", true);
+                wmState[wmStateCount++] = x11Atoms()._NET_WM_STATE_ABOVE;
                 break;
 
             case WindowStyle.Borderless:
                 noResize = true;
                 motifWmHints = WindowX11Styles.Borderless;
-                windowType = x11.XInternAtom(x11Display(), "_NET_WM_WINDOW_TYPE_UTILITY", true);
+                windowType = x11Atoms()._NET_WM_WINDOW_TYPE_UTILITY;
 
-                wmAllowedActions[wmAllowedActionsCount++] = x11.XInternAtom(x11Display(), "_NET_WM_ACTION_CLOSE", true);
-                wmAllowedActions[wmAllowedActionsCount++] = x11.XInternAtom(x11Display(), "_NET_WM_ACTION_MINIMIZE", true);
-                wmAllowedActions[wmAllowedActionsCount++] = x11.XInternAtom(x11Display(), "_NET_WM_ACTION_MOVE", true);
+                wmAllowedActions[wmAllowedActionsCount++] = x11Atoms()._NET_WM_ACTION_CLOSE;
+                wmAllowedActions[wmAllowedActionsCount++] = x11Atoms()._NET_WM_ACTION_MINIMIZE;
+                wmAllowedActions[wmAllowedActionsCount++] = x11Atoms()._NET_WM_ACTION_MOVE;
                 break;
 
             case WindowStyle.Dialog:
             default:
                 motifWmHints = WindowX11Styles.Dialog;
 
-                wmAllowedActions[wmAllowedActionsCount++] = x11.XInternAtom(x11Display(), "_NET_WM_ACTION_MOVE", true);
-                wmAllowedActions[wmAllowedActionsCount++] = x11.XInternAtom(x11Display(), "_NET_WM_ACTION_RESIZE", true);
-                wmAllowedActions[wmAllowedActionsCount++] = x11.XInternAtom(x11Display(), "_NET_WM_ACTION_CLOSE", true);
-                wmAllowedActions[wmAllowedActionsCount++] = x11.XInternAtom(x11Display(), "_NET_WM_ACTION_MINIMIZE", true);
-                wmAllowedActions[wmAllowedActionsCount++] = x11.XInternAtom(x11Display(), "_NET_WM_ACTION_MAXIMIZE_HORZ", true);
-                wmAllowedActions[wmAllowedActionsCount++] = x11.XInternAtom(x11Display(), "_NET_WM_ACTION_MAXIMIZE_VERT", true);
+                wmAllowedActions[wmAllowedActionsCount++] = x11Atoms()._NET_WM_ACTION_MOVE;
+                wmAllowedActions[wmAllowedActionsCount++] = x11Atoms()._NET_WM_ACTION_RESIZE;
+                wmAllowedActions[wmAllowedActionsCount++] = x11Atoms()._NET_WM_ACTION_CLOSE;
+                wmAllowedActions[wmAllowedActionsCount++] = x11Atoms()._NET_WM_ACTION_MINIMIZE;
+                wmAllowedActions[wmAllowedActionsCount++] = x11Atoms()._NET_WM_ACTION_MAXIMIZE_HORZ;
+                wmAllowedActions[wmAllowedActionsCount++] = x11Atoms()._NET_WM_ACTION_MAXIMIZE_VERT;
                 break;
         }
 
@@ -1216,19 +1216,19 @@ final class WindowImpl_X11 : WindowImpl,
         }
 
         // first up we /try/ to setup window hints using motif as a fallback
-        Atom motifWindowHintsAtom = x11.XInternAtom(x11Display(), "_MOTIF_WM_HINTS", false);
+        Atom motifWindowHintsAtom = x11Atoms()._MOTIF_WM_HINTS;
         if (motifWindowHintsAtom != None)
             x11.XChangeProperty(x11Display(), whandle, motifWindowHintsAtom, motifWindowHintsAtom, 32, PropModeReplace, cast(ubyte*)&motifWmHints, 5);
 
-        Atom xaAtom = x11.XInternAtom(x11Display(), "XA_ATOM", false);
+        Atom xaAtom = x11Atoms().XA_ATOM;
         if (xaAtom != None) {
             // apply _NET_WM_ALLOWED_ACTIONS
-            Atom wmAllowedActionsAtom = x11.XInternAtom(x11Display(), "_NET_WM_ALLOWED_ACTIONS", true);
+            Atom wmAllowedActionsAtom = x11Atoms()._NET_WM_ALLOWED_ACTIONS;
             if (wmAllowedActionsAtom != None)
                 x11.XChangeProperty(x11Display(), whandle, wmAllowedActionsAtom, xaAtom, 32, PropModeReplace, cast(ubyte*)wmAllowedActions.ptr, wmAllowedActionsCount);
 
             // apply _NET_WM_STATE
-            Atom wmStateAtom = x11.XInternAtom(x11Display(), "_NET_WM_STATE", true);
+            Atom wmStateAtom = x11Atoms()._NET_WM_STATE;
             if (wmStateAtom != None)
                 x11.XChangeProperty(x11Display(), whandle, wmStateAtom, xaAtom, 32, PropModeReplace, cast(ubyte*)wmState.ptr, wmStateCount);
         }
@@ -1239,10 +1239,10 @@ final class WindowImpl_X11 : WindowImpl,
             XEvent xev;
             xev.type = ClientMessage;
             xev.xclient.window = whandle;
-            xev.xclient.message_type = x11.XInternAtom(x11Display(), "_NET_WM_STATE", true);
+            xev.xclient.message_type = x11Atoms()._NET_WM_STATE;
             xev.xclient.format = 32;
             xev.xclient.data.l[0] = 1;
-            xev.xclient.data.l[1] = x11.XInternAtom(x11Display(), "_NET_WM_STATE_FULLSCREEN", true);
+            xev.xclient.data.l[1] = x11Atoms()._NET_WM_STATE_FULLSCREEN;
             xev.xclient.data.l[2] = 0;
 
             x11.XMapWindow(x11Display(), whandle);

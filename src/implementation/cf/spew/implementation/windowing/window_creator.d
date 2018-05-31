@@ -427,7 +427,7 @@ class WindowCreatorImpl_X11 : WindowCreatorImpl,
 		assert(whandle != 0);
 
         if (x11.XSetWMProtocols !is null) {
-            Atom closeAtom = x11.XInternAtom(x11Display(), cast(char*)"WM_DELETE_WINDOW".ptr, false);
+            Atom closeAtom = x11Atoms().WM_DELETE_WINDOW;
             if (closeAtom != 0) {
                 x11.XSetWMProtocols(x11Display(), whandle, &closeAtom, 1);
             }

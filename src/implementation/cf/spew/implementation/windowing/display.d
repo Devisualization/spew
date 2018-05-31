@@ -192,9 +192,9 @@ final class DisplayImpl_X11 : DisplayImpl, Feature_Display_ScreenShot, Have_Disp
 
 	@property {
 		uint luminosity() {
-			Atom XA_INTEGER = x11.XInternAtom(x11Display(), "INTEGER", false);
-			Atom backlightAtom = x11.XInternAtom(x11Display(), "Backlight", true);
-			Atom backlightAtomOld = x11.XInternAtom(x11Display(), "BACKLIGHT", true);
+			Atom XA_INTEGER = x11Atoms().INTEGER;
+			Atom backlightAtom = x11Atoms().Backlight;
+			Atom backlightAtomOld = x11Atoms().BACKLIGHT;
 
 			if (backlightAtom <= 0) {
 				backlightAtom = backlightAtomOld;

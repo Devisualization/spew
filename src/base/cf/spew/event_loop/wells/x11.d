@@ -22,10 +22,59 @@ XIM x11XIM() {
     return xim;
 }
 
+X11Atoms x11Atoms() {
+    x11Display();
+    return atoms;
+}
+
+struct X11Atoms {
+    Atom
+        XdndEnter,
+        XdndPosition,
+        XdndStatus,
+        XdndTypeList,
+        XdndActionCopy,
+        XdndDrop,
+        XdndLeave,
+        XdndFinished,
+        XdndSelection,
+        XdndProxy,
+
+        CARDINAL,
+        XA_ATOM,
+        XA_TARGETS,
+        INTEGER,
+        Backlight,
+        BACKLIGHT,
+
+        WM_DELETE_WINDOW,
+        _NET_WM_ICON,
+        _MOTIF_WM_HINTS,
+        _NET_WM_ALLOWED_ACTIONS,
+        _NET_WM_STATE,
+
+        _NET_WM_WINDOW_TYPE_NORMAL,
+        _NET_WM_WINDOW_TYPE_UTILITY,
+
+        _NET_WM_STATE_STICKY,
+        _NET_WM_STATE_MODAL,
+        _NET_WM_STATE_ABOVE,
+        _NET_WM_STATE_FULLSCREEN,
+
+        _NET_WM_ACTION_FULLSCREEN,
+        _NET_WM_ACTION_CLOSE,
+        _NET_WM_ACTION_MINIMIZE,
+        _NET_WM_ACTION_RESIZE,
+        _NET_WM_ACTION_MOVE,
+        _NET_WM_ACTION_ABOVE,
+        _NET_WM_ACTION_MAXIMIZE_HORZ,
+        _NET_WM_ACTION_MAXIMIZE_VERT;
+}
+
 private {
 	Display* display;
     XIM xim;
-    Atom closeAtom;
+    X11Atoms atoms;
 
 	void performInit() {
 		if (x11Loader is X11Loader.init) {
@@ -49,7 +98,9 @@ private {
             xim = x11.XOpenIM(display, null, null, null);
         }
 
-        closeAtom = x11.XInternAtom(display, cast(char*)"WM_DELETE_WINDOW".ptr, false);
+        static foreach(m; __traits(allMembers, X11Atoms)) {
+            mixin("atoms." ~ m ~ " = x11.XInternAtom(x11Display(), cast(char*)\"" ~ m ~ "\".ptr, false);");
+        }
 	}
 
 	static ~this() {
@@ -153,7 +204,7 @@ private {
                 event.x11.configureNotify.height = x11Event.xconfigure.height;
                 break;
             case ClientMessage:
-                if (closeAtom != 0 && x11Event.xclient.format == 32 && x11Event.xclient.data.l[0] == closeAtom) {
+                if (atoms.WM_DELETE_WINDOW != 0 && x11Event.xclient.format == 32 && x11Event.xclient.data.l[0] == atoms.WM_DELETE_WINDOW) {
                     event.type = Windowing_Events_Types.Window_RequestClose;
                 }
                 break;
