@@ -3,7 +3,7 @@
 	' Not spew,' said Alphaglosined impatiently. 'It's S-P-E-W. Stands for the System Propagation of Event Wells.'
 
 So what is an Event Well, you may ask. Well good question.
-I don't quite know, but it has something to do with creating events at a higher level then the system that created them and propergating them to a nice user (developer) interface.
+I don't quite know, but it has something to do with creating events at a higher level then the system that created them and propagating them to a nice user (developer) interface.
 
 In the end what exactly are the goals for S.P.E.W?
 Well not much, just a unified event loop, bindings and of course interfacing to OS constructs that can have major performance impact like windowing.
