@@ -8,6 +8,7 @@ module cf.spew.ui.features.clipboard;
 import cf.spew.instance;
 import devisualization.util.core.memory.managed;
 import stdx.allocator : IAllocator, theAllocator;
+import core.time : Duration, seconds;
 
 interface Have_Management_Clipboard {
 	shared(Feature_Management_Clipboard) __getFeatureClipboard() shared;
@@ -21,7 +22,7 @@ interface Feature_Management_Clipboard {
 		///
 		size_t maxClipboardDataSize() shared;
 		///
-		managed!string clipboardText(IAllocator alloc=theAllocator()) shared;
+		managed!string clipboardText(IAllocator alloc=theAllocator(), Duration timeout=0.seconds) shared;
 		///
 		void clipboardText(scope string text) shared;
 	}
@@ -46,24 +47,6 @@ interface Feature_Management_Clipboard {
 		}
 	}
 
-	/// Copies a UTF8 string from the clipboard
-	managed!string clipboardText(scope shared(Management_UserInterface) self, IAllocator alloc=theAllocator()) {
-		if (!self.capableOfClipboard)
-			return managed!string.init;
-		else {
-			return (cast(shared(Have_Management_Clipboard))self).__getFeatureClipboard().clipboardText(alloc);
-		}
-	}
-
-	/// Copies the given UTF8 string into the clipboard
-	void clipboardText(scope shared(Management_UserInterface) self, scope string content) {
-		if (!self.capableOfClipboard)
-			return;
-		else {
-			(cast(shared(Have_Management_Clipboard))self).__getFeatureClipboard().clipboardText(content);
-		}
-	}
-
 	/**
 	 * Does the given user interface manager have a clipboard?
 	 * 
@@ -81,4 +64,22 @@ interface Feature_Management_Clipboard {
 		else
 			return false;
 	}
+}
+
+/// Copies a UTF8 string from the clipboard
+managed!string clipboardText(scope shared(Management_UserInterface) self, IAllocator alloc=theAllocator(), Duration timeout=0.seconds) {
+    if (!self.capableOfClipboard)
+        return managed!string.init;
+    else {
+        return (cast(shared(Have_Management_Clipboard))self).__getFeatureClipboard().clipboardText(alloc, timeout);
+    }
+}
+
+/// Copies the given UTF8 string into the clipboard
+void clipboardText(scope shared(Management_UserInterface) self, scope string content) {
+    if (!self.capableOfClipboard)
+        return;
+    else {
+        (cast(shared(Have_Management_Clipboard))self).__getFeatureClipboard().clipboardText(content);
+    }
 }

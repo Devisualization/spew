@@ -11,10 +11,10 @@ import stdx.allocator : ISharedAllocator, make;
 import devisualization.bindings.x11;
 
 Display* x11Display() {
-	if (display is null)
-		performInit();
-	assert(display !is null);
-	return display;
+    if (display is null)
+        performInit();
+    assert(display !is null);
+    return display;
 }
 
 XIM x11XIM() {
@@ -45,9 +45,13 @@ struct X11Atoms {
         XA_ATOM,
         XA_TARGETS,
         INTEGER,
+        UTF8_STRING,
+
         Backlight,
         BACKLIGHT,
+
         PRIMARY,
+        CLIPBOARD,
 
         WM_DELETE_WINDOW,
         _NET_WM_ICON,
@@ -74,24 +78,24 @@ struct X11Atoms {
 }
 
 private {
-	Display* display;
+    Display* display;
     XIM xim;
     X11Atoms atoms;
 
-	void performInit() {
-		if (x11Loader is X11Loader.init) {
-			x11Loader = X11Loader(null);
-		}
+    void performInit() {
+        if (x11Loader is X11Loader.init) {
+            x11Loader = X11Loader(null);
+        }
 
-		assert(x11.XOpenDisplay !is null);
-		assert(x11.XCloseDisplay !is null);
-		assert(x11.XPending !is null);
-		assert(x11.XNextEvent !is null);
+        assert(x11.XOpenDisplay !is null);
+        assert(x11.XCloseDisplay !is null);
+        assert(x11.XPending !is null);
+        assert(x11.XNextEvent !is null);
         assert(x11.XOpenIM !is null);
         assert(x11.XSetLocaleModifiers !is null);
         assert(x11.XInternAtom !is null);
 
-		display = x11.XOpenDisplay(null);
+        display = x11.XOpenDisplay(null);
 
         x11.XSetLocaleModifiers("");
         xim = x11.XOpenIM(display, null, null, null);
@@ -106,18 +110,18 @@ private {
 
         atoms.XA_ATOM = x11.XInternAtom(x11Display(), cast(char*)"ATOM".ptr, false);
         atoms.XA_TARGETS = x11.XInternAtom(x11Display(), cast(char*)"TARGETS".ptr, false);
-	}
+    }
 
-	static ~this() {
-		if (display !is null)
-			x11.XCloseDisplay(display);
-	}
+    static ~this() {
+        if (display !is null)
+            x11.XCloseDisplay(display);
+    }
 }
 
 alias X11GetXICDel = shared XIC delegate(Window);
 
 final class X11EventLoopSource : EventLoopSource {
-	import cf.spew.event_loop.known_implementations;
+    import cf.spew.event_loop.known_implementations;
 
     X11GetXICDel xicgetdel;
 
@@ -125,24 +129,24 @@ final class X11EventLoopSource : EventLoopSource {
         this.xicgetdel = xicgetdel;
     }
 
-	@property {
-		bool onMainThread() shared { return true; }
-		bool onAdditionalThreads() shared { return true; }
-		string description() shared { return "Implements support for a X11 based event loop iteration. Singleton but threaded."; }
-		EventSource identifier() shared { return EventSources.X11; }
-	}
+    @property {
+        bool onMainThread() shared { return true; }
+        bool onAdditionalThreads() shared { return true; }
+        string description() shared { return "Implements support for a X11 based event loop iteration. Singleton but threaded."; }
+        EventSource identifier() shared { return EventSources.X11; }
+    }
 
-	shared(EventLoopSourceRetriever) nextEventGenerator(shared(ISharedAllocator) alloc) shared {
-		if (display is null)
-			performInit();
+    shared(EventLoopSourceRetriever) nextEventGenerator(shared(ISharedAllocator) alloc) shared {
+        if (display is null)
+            performInit();
 
-		return alloc.make!(shared(X11EventLoopSourceRetrieve))(xicgetdel);
-	}
+        return alloc.make!(shared(X11EventLoopSourceRetrieve))(xicgetdel);
+    }
 }
 
 final class X11EventLoopSourceRetrieve : EventLoopSourceRetriever {
-	import cf.spew.event_loop.known_implementations;
-	import core.time : dur, Duration;
+    import cf.spew.event_loop.known_implementations;
+    import core.time : dur, Duration;
 
     X11GetXICDel xicgetdel;
 
@@ -150,35 +154,35 @@ final class X11EventLoopSourceRetrieve : EventLoopSourceRetriever {
         this.xicgetdel = xicgetdel;
     }
 
-	bool nextEvent(ref Event event) shared {
-		event.source = EventSources.X11;
-		// prevents any searching for a consumer (no event actually returned)
-		event.type.value = 0;
+    bool nextEvent(ref Event event) shared {
+        event.source = EventSources.X11;
+        // prevents any searching for a consumer (no event actually returned)
+        event.type.value = 0;
 
         for(;;) {
-		    int pending = x11.XPending(display);
-		    if (pending > 0) {
-			    XEvent x11Event;
+            int pending = x11.XPending(display);
+            if (pending > 0) {
+                XEvent x11Event;
                 x11.XPeekEvent(display, &x11Event);
 
-			    x11.XNextEvent(display, &x11Event);
+                x11.XNextEvent(display, &x11Event);
                 //if (x11.XFilterEvent(&x11Event, 0)) continue;
 
-			    processEvent(x11Event, event, xicgetdel);
+                processEvent(x11Event, event, xicgetdel);
                 return true;
-		    } else
+            } else
                 return false;
         }
-	}
+    }
 
-	void handledEvent(ref Event event) shared {}
-	void unhandledEvent(ref Event event) shared {}
-	void handledErrorEvent(ref Event event) shared {}
-	void hintTimeout(Duration timeout) shared {}
+    void handledEvent(ref Event event) shared {}
+    void unhandledEvent(ref Event event) shared {}
+    void handledErrorEvent(ref Event event) shared {}
+    void hintTimeout(Duration timeout) shared {}
 }
 
 private {
-	void processEvent(ref XEvent x11Event, ref Event event, X11GetXICDel xicgetdel) {
+    void processEvent(ref XEvent x11Event, ref Event event, X11GetXICDel xicgetdel) {
         event.wellData1Value = x11Event.xany.window;
 
         switch(x11Event.type) {
@@ -286,7 +290,7 @@ private {
             default:
                 break;
         }
-	}
+    }
 
     void translateKey(ref XEvent x11Event, ref Event event, bool isPush, X11GetXICDel xicgetdel) {
         import cf.spew.events.windowing;
