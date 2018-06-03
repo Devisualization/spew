@@ -650,12 +650,21 @@ class UIInstance_X11 : UIInstance, Feature_Management_Clipboard {
             X11WindowProperty value = x11ReadWindowProperty(x11Display(), clipboardWindowHandleX11, property);
 
             if (value.data !is null && value.numberOfItems > 0) {
-                char[] ret = alloc.makeArray!char(value.numberOfItems);
-                ret[] = cast(char[])value.data[0 .. value.numberOfItems][];
+                char[] ret;
 
-                x11.XFree(value.data);
-                x11.XDeleteProperty(x11Display(), clipboardWindowHandleX11, property);
-                return managed!string(cast(string)ret, managers(), alloc);
+                // well we did ask for it to be limited...
+                if (value.numberOfItems <= maxClipboardSizeV) {
+                    ret = alloc.makeArray!char(value.numberOfItems);
+                    ret[] = cast(char[])value.data[0 .. value.numberOfItems][];
+
+                    x11.XFree(value.data);
+                    x11.XDeleteProperty(x11Display(), clipboardWindowHandleX11, property);
+                    return managed!string(cast(string)ret, managers(), alloc);
+                } else {
+                    x11.XFree(value.data);
+                    x11.XDeleteProperty(x11Display(), clipboardWindowHandleX11, property);
+                    return managed!string.init;
+                }
             } else {
                 return managed!string.init;
             }
