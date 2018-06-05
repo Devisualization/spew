@@ -24,13 +24,13 @@
 			"excludedSourceFiles": ["src/diagnostic.d"],
 			"targetType": "sourceLibrary",
 			"dependencies": {
-				"de_image:base": "~>1.0.3",
-				"emsi_containers": "~>0.5.3",
+				"de_image:base": "~>1.1.0",
+				"emsi_containers": "*",
 				"de_bindings:libuv": "~>0.4.2",
 				"de_bindings:x11": "*",
-                                "de_bindings:libnotify": "*",
+                "de_bindings:libnotify": "*",
 				"spew:utils": "*",
-				"stdx-allocator": "~>2.77.0"
+				"stdx-allocator": "*"
 			}
 		},
 		{
