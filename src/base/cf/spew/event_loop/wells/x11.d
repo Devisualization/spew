@@ -310,6 +310,7 @@ private {
 
             case DestroyNotify:
                 event.type = X11_Events_Types.DestroyNotify;
+                break;
             default:
                 break;
         }

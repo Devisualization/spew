@@ -336,7 +336,7 @@ class EventLoopConsumerImpl_X11 : EventLoopConsumerImpl {
                             ret.property = x11b.None;
                             ret.time = ser.time;
 
-                            x11b.x11.XSendEvent(x11Display(), ser.requestor, x11b.True, x11b.NoEventMask, cast(XEvent*)&ret);
+                            x11b.x11.XSendEvent(x11Display(), ser.requestor, x11b.True, x11b.NoEventMask, cast(x11b.XEvent*)&ret);
                         } else {
                             x11b.x11.XChangeProperty(x11Display(), ser.requestor, ser.property, x11Atoms().UTF8_STRING, 8, x11b.PropModeReplace, cast(ubyte*)clipboardSendData.ptr, cast(int)clipboardSendData.length);
 
@@ -346,7 +346,7 @@ class EventLoopConsumerImpl_X11 : EventLoopConsumerImpl {
                             ret.selection = ser.selection;
                             ret.target = ser.property;
                             ret.time = ser.time;
-                            x11b.x11.XSendEvent(x11Display(), ser.requestor, x11b.True, x11b.NoEventMask, cast(XEvent*)&ser);
+                            x11b.x11.XSendEvent(x11Display(), ser.requestor, x11b.True, x11b.NoEventMask, cast(x11b.XEvent*)&ser);
                         }
                         break;
                     default:

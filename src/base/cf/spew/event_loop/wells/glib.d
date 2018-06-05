@@ -8,6 +8,7 @@ import cf.spew.events.defs;
 import stdx.allocator : ISharedAllocator, make;
 import devisualization.bindings.gdk.glib.gmain;
 import core.atomic;
+import core.time;
 
 final class GlibEventLoopSource : EventLoopSource {
     import cf.spew.event_loop.known_implementations;

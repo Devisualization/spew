@@ -6,7 +6,7 @@
  */
 module cf.spew.ui.window.defs;
 import devisualization.image.interfaces : SwappableImage;
-import std.experimental.color.rgb : RGB8, RGBA8;
+import std.experimental.color : RGB8, RGBA8;
 import cf.spew.ui.rendering;
 import cf.spew.ui.window.events : IWindowEvents;
 //import std.experimental.math.linearalgebra.vector : vec2;
