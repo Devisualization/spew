@@ -10,6 +10,12 @@ import cf.spew.events.x11;
 import stdx.allocator : ISharedAllocator, make;
 import devisualization.bindings.x11;
 
+void setX11ErrorHandler(XErrorHandler handler=null) {
+    if (handler is null)
+        handler = &defaultX11ErrorHandler;
+    x11.XSetErrorHandler(handler);
+}
+
 Display* x11Display() {
     if (display is null)
         performInit();
@@ -85,6 +91,7 @@ private {
     void performInit() {
         if (x11Loader is X11Loader.init) {
             x11Loader = X11Loader(null);
+            setX11ErrorHandler(null);
         }
 
         assert(x11.XOpenDisplay !is null);
@@ -110,6 +117,22 @@ private {
 
         atoms.XA_ATOM = x11.XInternAtom(x11Display(), cast(char*)"ATOM".ptr, false);
         atoms.XA_TARGETS = x11.XInternAtom(x11Display(), cast(char*)"TARGETS".ptr, false);
+    }
+
+    extern(C) int defaultX11ErrorHandler(Display* d, XErrorEvent* err) {
+        import std.stdio : stderr;
+
+        debug {
+            import core.stdc.string : strlen;
+            char[1024] buffer;
+            x11.XGetErrorText(d, err.error_code, buffer.ptr, cast(int)buffer.length);
+            stderr.writeln("X11 Error: ", buffer[0 .. strlen(buffer.ptr)]);
+        } else {
+            stderr.writeln("X11 error");
+        }
+
+        stderr.flush;
+        return 0;
     }
 
     static ~this() {

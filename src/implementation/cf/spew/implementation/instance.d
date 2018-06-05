@@ -16,7 +16,15 @@ import core.time : Duration, seconds, nsecs;
 
 // \/ TLS clipboard data
 
-x11b.Window clipboardWindowHandleX11;
+x11b.Window clipboardReceiveWindowHandleX11, clipboardSendWindowHandleX11;
+shared(ISharedAllocator) clipboardDataAllocator;
+char[] clipboardSendData;
+
+static ~this() {
+    if (clipboardDataAllocator !is null && clipboardSendData.length > 0) {
+        clipboardDataAllocator.dispose(clipboardSendData);
+    }
+}
 
 // /\ TLS clipboard data
 
@@ -513,6 +521,7 @@ class UIInstance_X11 : UIInstance, Feature_Management_Clipboard {
 
     this(shared(ISharedAllocator) allocator) shared {
         super(allocator);
+        clipboardDataAllocator = allocator;
     }
 
     ~this() {
@@ -597,20 +606,30 @@ class UIInstance_X11 : UIInstance, Feature_Management_Clipboard {
                 guardClipboard();
 
                 auto CLIPBOARD = x11Atoms().CLIPBOARD;
-                if (clipboardWindowHandleX11 == None || CLIPBOARD == None ||
+                if (clipboardReceiveWindowHandleX11 == None || CLIPBOARD == None ||
                     x11.XGetSelectionOwner(x11Display(), x11Atoms().CLIPBOARD) == None) {
                     return managed!string.init;
+                }
+
+                Window owner = x11.XGetSelectionOwner(x11Display(), CLIPBOARD);
+
+                // thread owns clipboard, woops
+                // so we special case so nothing blocks up
+                if (owner == clipboardSendWindowHandleX11) {
+                    char[] ret = alloc.makeArray!char(clipboardSendData.length);
+                    ret[] = cast(char[])clipboardSendData[];
+                    return managed!string(cast(string)ret, managers(), alloc);
                 }
 
                 XEvent event;
 
                 // remove any existing events that exist
-                while(x11.XCheckWindowEvent(x11Display(), clipboardWindowHandleX11, SelectionNotify, &event) == True) {}
+                while(x11.XCheckWindowEvent(x11Display(), clipboardReceiveWindowHandleX11, SelectionNotify, &event) == True) {}
 
-                x11.XConvertSelection(x11Display(), CLIPBOARD, x11Atoms().UTF8_STRING, CLIPBOARD, clipboardWindowHandleX11, CurrentTime);
+                x11.XConvertSelection(x11Display(), CLIPBOARD, x11Atoms().UTF8_STRING, CLIPBOARD, clipboardReceiveWindowHandleX11, CurrentTime);
                 if (timeout.total!"hnsecs" == 0) {
                     for(;;) {
-                        if (x11.XCheckTypedWindowEvent(x11Display(), clipboardWindowHandleX11, SelectionNotify, &event) == True)
+                        if (x11.XCheckTypedWindowEvent(x11Display(), clipboardReceiveWindowHandleX11, SelectionNotify, &event) == True)
                             return clipboardGetContents(alloc, CLIPBOARD);
 
                         Thread.getThis().sleep(1.nsecs);
@@ -620,7 +639,7 @@ class UIInstance_X11 : UIInstance, Feature_Management_Clipboard {
                     sw.start();
 
                     while(sw.peek < timeout) {
-                        if (x11.XCheckTypedWindowEvent(x11Display(), clipboardWindowHandleX11, SelectionNotify, &event) == True)
+                        if (x11.XCheckTypedWindowEvent(x11Display(), clipboardReceiveWindowHandleX11, SelectionNotify, &event) == True)
                             return clipboardGetContents(alloc, CLIPBOARD);
 
                         Thread.getThis().sleep(1.nsecs);
@@ -634,20 +653,34 @@ class UIInstance_X11 : UIInstance, Feature_Management_Clipboard {
 
             void clipboardText(scope string text) shared {
                 guardClipboard();
+
+                if (text.length > maxClipboardSizeV)
+                    text = text[0 .. maxClipboardSizeV];
+
+
+                if (clipboardSendData.length > 0)
+                    clipboardDataAllocator.dispose(clipboardSendData);
+                clipboardSendData = clipboardDataAllocator.makeArray!char(text.length);
+                clipboardSendData[] = text[];
+
+                x11.XSetSelectionOwner(x11Display(), x11Atoms().CLIPBOARD, clipboardSendWindowHandleX11, CurrentTime);
             }
         }
     }
 
     private {
         void guardClipboard() shared {
-            if (clipboardWindowHandleX11 == None) {
-                clipboardWindowHandleX11 = x11.XCreateSimpleWindow(x11Display(), x11.XRootWindow(x11Display(), x11.XDefaultScreen(x11Display())), int.min, int.min, 1, 1, 0, 0, 0);
-                x11.XSelectInput(x11Display(), clipboardWindowHandleX11, SelectionNotify);
+            if (clipboardReceiveWindowHandleX11 == None) {
+                clipboardReceiveWindowHandleX11 = x11.XCreateSimpleWindow(x11Display(), x11.XRootWindow(x11Display(), x11.XDefaultScreen(x11Display())), int.min, int.min, 1, 1, 0, 0, 0);
+                x11.XSelectInput(x11Display(), clipboardReceiveWindowHandleX11, SelectionNotify);
+
+                clipboardSendWindowHandleX11 = x11.XCreateSimpleWindow(x11Display(), x11.XRootWindow(x11Display(), x11.XDefaultScreen(x11Display())), int.min, int.min, 1, 1, 0, 0, 0);
+                x11.XSelectInput(x11Display(), clipboardSendWindowHandleX11, SelectionClear | SelectionRequest);
             }
         }
 
         managed!string clipboardGetContents(IAllocator alloc, Atom property) shared {
-            X11WindowProperty value = x11ReadWindowProperty(x11Display(), clipboardWindowHandleX11, property);
+            X11WindowProperty value = x11ReadWindowProperty(x11Display(), clipboardReceiveWindowHandleX11, property);
 
             if (value.data !is null && value.numberOfItems > 0) {
                 char[] ret;
@@ -658,11 +691,11 @@ class UIInstance_X11 : UIInstance, Feature_Management_Clipboard {
                     ret[] = cast(char[])value.data[0 .. value.numberOfItems][];
 
                     x11.XFree(value.data);
-                    x11.XDeleteProperty(x11Display(), clipboardWindowHandleX11, property);
+                    x11.XDeleteProperty(x11Display(), clipboardReceiveWindowHandleX11, property);
                     return managed!string(cast(string)ret, managers(), alloc);
                 } else {
                     x11.XFree(value.data);
-                    x11.XDeleteProperty(x11Display(), clipboardWindowHandleX11, property);
+                    x11.XDeleteProperty(x11Display(), clipboardReceiveWindowHandleX11, property);
                     return managed!string.init;
                 }
             } else {
