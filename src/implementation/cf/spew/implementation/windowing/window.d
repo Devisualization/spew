@@ -36,6 +36,8 @@ abstract class WindowImpl : IWindow, IWindowEvents {
 		EventOnForcedDrawDel onDrawDel;
 		EventOnCloseDel onCloseDel;
 		EventOnRequestCloseDel onRequestCloseDel;
+
+        EventOnRendableDel onVisibleDel, onInvisibleDel;
 	}
 	
 	this(shared(UIInstance) instance, bool processOwns) {
@@ -76,6 +78,9 @@ abstract class WindowImpl : IWindow, IWindowEvents {
 		void onRequestClose(EventOnRequestCloseDel del) { onRequestCloseDel = del; }
 		void onKeyPress(EventOnKeyDel del) { onKeyPressDel = del; }
 		void onKeyRelease(EventOnKeyDel del) { onKeyReleaseDel = del; }
+
+        void onVisible(EventOnRendableDel del) { onVisibleDel = del; }
+        void onInvisible(EventOnRendableDel del) { onInvisibleDel = del; }
 	}
 }
 

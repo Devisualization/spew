@@ -531,6 +531,16 @@ void aWindowTest() {
         writeln("onFileDrop ", filename, " ", x, "x", y);
         stdout.flush;
     };
+
+    window.events.onVisible = () {
+        writeln("<> onVisible");
+        stdout.flush;
+    };
+
+    window.events.onInvisible = () {
+        writeln("<> onInvisible");
+        stdout.flush;
+    };
 	
     window.show();
 

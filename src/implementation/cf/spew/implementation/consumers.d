@@ -59,6 +59,13 @@ abstract class EventLoopConsumerImpl : EventLoopConsumer {
                     tryFunc(w.onKeyEntryDel, event.windowing.keyInput.key, event.windowing.keyInput.special, event.windowing.keyInput.modifiers);
                     return true;
 
+                case Windowing_Events_Types.Window_Show:
+                    tryFunc(w.onVisibleDel);
+                    return true;
+                case Windowing_Events_Types.Window_Hide:
+                    tryFunc(w.onInvisibleDel);
+                    return true;
+
                 case Windowing_Events_Types.Window_CursorActionDo:
                 case Windowing_Events_Types.Window_KeyDown:
                 default:
@@ -151,12 +158,10 @@ version(Windows) {
                         winapi.InvalidateRgn(event.wellData1Ptr, null, 0);
                         tryFunc(w2.onMoveDel, event.windowing.windowMoved.newX, event.windowing.windowMoved.newY);
                         return true;
-                    case Windowing_Events_Types.Window_Focused:
-                        if (winapi.LOWORD(event.wellData2Value) == 0) {
-                        } else {
-                            if (w.oldCursorClipArea != winapi.RECT.init)
-                                w.lockCursorToWindow;
-                        }
+                    case Windowing_Events_Types.Window_Show:
+                        if (w.oldCursorClipArea != winapi.RECT.init)
+                            w.lockCursorToWindow;
+                        tryFunc(w2.onVisibleDel);
                         return true;
                     case Windowing_Events_Types.Window_CursorScroll:
                         tryFunc(w2.onScrollDel, event.windowing.scroll.amount / 120);
@@ -396,8 +401,6 @@ class EventLoopConsumerImpl_X11 : EventLoopConsumerImpl {
                             temp.windowing.windowResized.newHeight = w.lastHeight;
                             return super.processEvent(temp);
                         }
-                        return true;
-                    case Windowing_Events_Types.Window_Focused:
                         return true;
                     case X11_Events_Types.Expose:
                         return handlePaint(event, w, w2);

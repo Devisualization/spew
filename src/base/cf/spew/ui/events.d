@@ -57,6 +57,11 @@ alias EventOnFileDraggingDel = bool delegate(int x, int y);
 /// Ditto
 alias EventOnFileDraggingFunc = bool function(int x, int y);
 
+///
+alias EventOnRendableDel = void delegate();
+///
+alias EventOnRendableFunc = void function();
+
 /**
  * Group of hookable events for rendering upon
  */
@@ -224,5 +229,27 @@ interface IRenderEvents {
 
 		/// Ditto
 		final void onFileDragging(EventOnFileDraggingFunc func) { onFileDragging(func.toDelegate); }
+
+        /**
+         * When visible.
+         * 
+         * Params:
+         *      del     =   The callback to call
+         */
+        void onVisible(EventOnRendableDel del);
+        
+        /// Ditto
+        final void onVisible(EventOnRendableFunc func) { onVisible(func.toDelegate); }
+
+        /**
+         * When not visible.
+         * 
+         * Params:
+         *      del     =   The callback to call
+         */
+        void onInvisible(EventOnRendableDel del);
+        
+        /// Ditto
+        final void onInvisible(EventOnRendableFunc func) { onInvisible(func.toDelegate); }
 	}
 }

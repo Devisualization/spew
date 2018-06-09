@@ -14,8 +14,6 @@ enum Windowing_Events_Types {
 	///
 	Window_Resized = EventType.from("w_resize"),
 	///
-	Window_Focused = EventType.from("w_focus"),
-	///
 	Window_CursorMoved = EventType.from("w_curmvd"),
 	///
 	Window_CursorAction = EventType.from("w_curac"),
@@ -33,6 +31,11 @@ enum Windowing_Events_Types {
 	Window_KeyInput = EventType.from("w_ki"),
 	///
 	Window_RequestClose = EventType.from("w_reqclo"),
+    ///
+    Window_Show = EventType.from("w_show"),
+    ///
+    Window_Hide = EventType.from("w_hide"),
+
 }
 
 ///

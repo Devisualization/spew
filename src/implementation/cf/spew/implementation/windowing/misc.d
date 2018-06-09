@@ -60,23 +60,7 @@ version(Windows) {
 		winapi.BOOL function(winapi.HMONITOR hMonitor, winapi.DWORD dwPhysicalMonitorArraySize, PHYSICAL_MONITOR* pPhysicalMonitorArray) GetPhysicalMonitorsFromHMONITOR;
 	}
 
-	SharedLib dxva2;
-	static this() {
-		import cf.spew.implementation.windowing.misc;
-		dxva2.load(["dxva2.dll"]);
-
-		if (dxva2.isLoaded) {
-			GetMonitorCapabilities = cast(typeof(GetMonitorCapabilities))dxva2.loadSymbol("GetMonitorCapabilities", false);
-			GetMonitorBrightness = cast(typeof(GetMonitorBrightness))dxva2.loadSymbol("GetMonitorCapabilities", false);
-			GetPhysicalMonitorsFromHMONITOR = cast(typeof(GetPhysicalMonitorsFromHMONITOR))dxva2.loadSymbol("GetMonitorCapabilities", false);
-		}
-	}
-
-	static ~this() {
-		if (dxva2.isLoaded) {
-			dxva2.unload();
-		}
-	}
+	__gshared SharedLib dxva2;
 
 	//
 
@@ -337,7 +321,7 @@ version(Windows) {
 	}
 
 	struct GetDisplays_WinAPI {
-		import cf.spew.implementation.instance;
+        import cf.spew.implementation.instance : UIInstance;
 		IAllocator alloc;
 		shared(UIInstance) uiInstance;
 
@@ -350,7 +334,7 @@ version(Windows) {
 	}
 
 	struct GetPrimaryDisplay_WinAPI {
-		import cf.spew.implementation.instance;
+        import cf.spew.implementation.instance : UIInstance;
 		IAllocator alloc;
 		shared(UIInstance) uiInstance;
 
@@ -362,7 +346,7 @@ version(Windows) {
 	}
 
 	struct GetWindows_WinAPI {
-		import cf.spew.implementation.instance;
+        import cf.spew.implementation.instance : UIInstance;
 		IAllocator alloc;
 
 		shared(UIInstance) uiInstance;
@@ -473,7 +457,7 @@ struct HandleAppender(Handle) {
 }
 
 struct GetWindows_X11 {
-	import cf.spew.implementation.instance;
+    import cf.spew.implementation.instance : UIInstance;
 	import cf.spew.implementation.windowing.display;
 	import devisualization.bindings.x11;
 	import cf.spew.event_loop.wells.x11;

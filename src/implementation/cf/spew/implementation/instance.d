@@ -103,9 +103,19 @@ final class DefaultImplementation : Instance {
 
         version(Windows) {
             import cf.spew.event_loop.wells.winapi;
+            import cf.spew.implementation.windowing.misc : dxva2,
+                GetMonitorCapabilities, GetMonitorBrightness, GetPhysicalMonitorsFromHMONITOR;
             import core.sys.windows.ole2 : OleInitialize;
 
             OleInitialize(null);
+            dxva2.load(["dxva2.dll"]);
+            
+            if (dxva2.isLoaded) {
+                GetMonitorCapabilities = cast(typeof(GetMonitorCapabilities))dxva2.loadSymbol("GetMonitorCapabilities", false);
+                GetMonitorBrightness = cast(typeof(GetMonitorBrightness))dxva2.loadSymbol("GetMonitorCapabilities", false);
+                GetPhysicalMonitorsFromHMONITOR = cast(typeof(GetPhysicalMonitorsFromHMONITOR))dxva2.loadSymbol("GetMonitorCapabilities", false);
+            }
+
             _userInterface = allocator.make!(shared(UIInstance_WinAPI))(allocator);
 
             _mainEventSource_ = allocator.make!(shared(WinAPI_EventLoop_Source));
@@ -255,7 +265,8 @@ abstract class UIInstance : Management_UserInterface, Have_Notification, Have_Ma
 version(Windows) {
     final class UIInstance_WinAPI : UIInstance, Feature_Notification, Feature_Management_Clipboard {
         import cf.spew.implementation.windowing.window_creator : WindowCreatorImpl_WinAPI;
-        import cf.spew.implementation.windowing.misc;
+        import cf.spew.implementation.windowing.misc : GetPrimaryDisplay_WinAPI, GetDisplays_WinAPI, GetWindows_WinAPI,
+            NOTIFYICON_VERSION_4, imageToIcon_WinAPI, NIF_SHOWTIP, NIF_REALTIME;
         import devisualization.image.storage.base : ImageStorageHorizontal;
         import devisualization.image.interfaces : imageObjectFrom;
         import std.typecons : tuple;
@@ -509,7 +520,7 @@ version(Windows) {
 class UIInstance_X11 : UIInstance, Feature_Management_Clipboard {
     import cf.spew.implementation.windowing.window_creator : WindowCreatorImpl_X11;
     import cf.spew.implementation.windowing.display : DisplayImpl_X11;
-    import cf.spew.implementation.windowing.misc;
+    import cf.spew.implementation.windowing.misc : GetWindows_X11, X11WindowProperty, x11ReadWindowProperty;
     import cf.spew.event_loop.wells.x11;
     import devisualization.bindings.x11;
     import devisualization.image.storage.base : ImageStorageHorizontal;

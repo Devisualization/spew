@@ -319,9 +319,10 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 			return 0;
 
 		case WM_ACTIVATE:
-			_event.type = Windowing_Events_Types.Window_Focused;
-			_event.wellData2Value = wParam;
-			_overrideEvent = *_event;
+            if (LOWORD(wParam) == WA_INACTIVE)
+                _event.type = Windowing_Events_Types.Window_Hide;
+            else
+                _event.type = Windowing_Events_Types.Window_Show;
 			return 0;//DefWindowProcW(hwnd, uMsg, wParam, lParam);
 
 		case WM_SETFOCUS:
@@ -583,6 +584,11 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 			_event.type = WinAPI_Events_Types.Window_Timer;
 			return 0;
 
+        case WM_SYSCOMMAND:
+            if (wParam == SC_MINIMIZE)
+                addToBacklog(hwnd, WM_ACTIVATE, 0, 0);
+            return DefWindowProc(hwnd, uMsg, wParam, lParam);
+
 		//case WM_SYSTEMERROR:
 		//case WM_CTLCOLOR:
 
@@ -660,7 +666,6 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 		//case WM_IME_KEYLAST: same as WM_IME_COMPOSITION
 			
 		case WM_INITDIALOG:
-		case WM_SYSCOMMAND:
 		case WM_HSCROLL:
 		case WM_VSCROLL:
 		case WM_INITMENU:

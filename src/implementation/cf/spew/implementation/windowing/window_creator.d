@@ -170,9 +170,9 @@ version(Windows) {
 			
 			HMONITOR hMonitor;
 			if (display_ is null)
-				hMonitor = *cast(HMONITOR*)primaryDisplay.__handle;
+				hMonitor = cast(HMONITOR)primaryDisplay.__handle;
 			else
-				hMonitor = *cast(HMONITOR*)display_.__handle;
+				hMonitor = cast(HMONITOR)display_.__handle;
 			GetMonitorInfoA(hMonitor, &mi);
 			
 			if (windowStyle == WindowStyle.Fullscreen) {

@@ -221,9 +221,10 @@ private {
             case FocusIn:
                 auto xic = xicgetdel(x11Event.xany.window);
                 if (xic !is null) x11.XSetICFocus(xic);
-                event.type = Windowing_Events_Types.Window_Focused;
+                event.type = Windowing_Events_Types.Window_Show;
                 break;
             case FocusOut:
+                event.type = Windowing_Events_Types.Window_Hide;
                 auto xic = xicgetdel(x11Event.xany.window);
                 if (xic !is null) x11.XUnsetICFocus(xic);
                 break;
