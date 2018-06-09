@@ -533,12 +533,12 @@ void aWindowTest() {
     };
 
     window.events.onVisible = () {
-        writeln("<> onVisible");
+        writeln("onVisible");
         stdout.flush;
     };
 
     window.events.onInvisible = () {
-        writeln("<> onInvisible");
+        writeln("onInvisible");
         stdout.flush;
     };
 	
