@@ -171,7 +171,7 @@ interface IRenderEvents {
 		 * Also triggered when the window client area's size has changed.
 		 * 
 		 * Params:
-		 * 		del		=	The callback to call
+		 *     del     =   The callback to call
 		 */
 		void onSizeChange(EventOnSizeChangeDel del);
 
@@ -182,7 +182,7 @@ interface IRenderEvents {
 		 * When dragging of files starts (inside of the window).
 		 * 
 		 * Params:
-		 * 		del		=	The callback to call
+		 *      del     =    The callback to call
 		 */
 		void onFileDragStart(EvenOnFileDragDel del);
 
@@ -194,7 +194,7 @@ interface IRenderEvents {
 		 * Will not be called if the callback for file drop is called.
 		 * 
 		 * Params:
-		 * 		del		=	The callback to call
+		 *      del     =	    The callback to call
 		 */
 		void onFileDragStopped(EvenOnFileDragDel del);
 		
@@ -207,7 +207,7 @@ interface IRenderEvents {
 		 * If this is not set, drag and drop will be disabled.
 		 * 
 		 * Params:
-		 * 		del		=	The callback to call
+		 *     del     =   The callback to call
 		 */
 		void onFileDrop(EventOnFileDropDel del);
 
@@ -218,7 +218,7 @@ interface IRenderEvents {
 		 * While dragging of files has occured.
 		 * 
 		 * Params:
-		 * 		del		=	The callback to call
+		 *     del     =    The callback to call
 		 */
 		void onFileDragging(EventOnFileDraggingDel del);
 
