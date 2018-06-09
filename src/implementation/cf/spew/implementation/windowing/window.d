@@ -11,7 +11,7 @@ import cf.spew.ui;
 import cf.spew.events.windowing;
 import stdx.allocator : IAllocator, make, makeArray, dispose;
 import devisualization.util.core.memory.managed;
-import devisualization.image : ImageStorage;
+import devisualization.image : ImageStorage, imageObjectFrom, ImageStorageHorizontal;
 import std.experimental.color : RGBA8, RGB8;
 
 abstract class WindowImpl : IWindow, IWindowEvents {
@@ -80,7 +80,8 @@ abstract class WindowImpl : IWindow, IWindowEvents {
 }
 
 version(Windows) {
-	import core.sys.windows.oleidl : IDropTarget, LPDATAOBJECT;
+	import core.sys.windows.oleidl : IDropTarget;
+    import core.sys.windows.objfwd : LPDATAOBJECT;
 
 	final class WinAPI_DropTarget : IDropTarget {
 		import core.sys.windows.windows : HRESULT, IID, DWORD, POINTL, PDWORD, IID_IUnknown, IID_IDropTarget,
@@ -559,8 +560,8 @@ version(Windows) {
 			
 			// customCursor must be a set size, as defined by:
 			vec2!size_t toSize = vec2!size_t(GetSystemMetrics(SM_CXCURSOR), GetSystemMetrics(SM_CYCURSOR));
-			hotspot.x *= toSize.x > image.width ? (toSize.x / cast(float)image.width) : (image.width / cast(float)toSize.x);
-			hotspot.y *= toSize.y > image.height ? (toSize.y / cast(float)image.height) : (image.height / cast(float)toSize.y);
+			hotspot.x *= cast(ushort)(toSize.x > image.width ? (toSize.x / cast(float)image.width) : (image.width / cast(float)toSize.x));
+			hotspot.y *= cast(ushort)(toSize.y > image.height ? (toSize.y / cast(float)image.height) : (image.height / cast(float)toSize.y));
 
 			// so customCursor must be resized to the given size
 			
@@ -578,7 +579,7 @@ version(Windows) {
 			
 			// CreateCursor
 			
-			hCursor = CreateCursor(null, cast(DWORD)hotspotx, cast(DWORD)hotspoty, cast(int)toSize.x, cast(int)toSize.y, ii.hbmColor, ii.hbmMask);
+			hCursor = CreateCursor(null, cast(DWORD)hotspot.x, cast(DWORD)hotspot.y, cast(int)toSize.x, cast(int)toSize.y, ii.hbmColor, ii.hbmMask);
 			
 			DeleteObject(hBitmap);
 			DeleteObject(hBitmap2);

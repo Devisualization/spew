@@ -159,7 +159,7 @@ version(Windows) {
                         }
                         return true;
                     case Windowing_Events_Types.Window_CursorScroll:
-                        tryFunc(w.onScrollDel, event.windowing.scroll.amount / 120);
+                        tryFunc(w2.onScrollDel, event.windowing.scroll.amount / 120);
                         return true;
 
                     case WinAPI_Events_Types.Window_Quit:
@@ -182,7 +182,7 @@ version(Windows) {
                     case WinAPI_Events_Types.Window_DevModeChanged:
                         return false;
                     case WinAPI_Events_Types.Window_SetCursor:
-                        if (winapi.LOWORD(event.wellData2Value) == winapi.HTCLIENT && w.cursorStyle != WindowCursorStyle.Underterminate) {
+                        if (winapi.LOWORD(event.wellData2Value) == winapi.HTCLIENT && w.cursorStyle != WindowCursorStyle.Indeterminate) {
                             winapi.SetCursor(w.hCursor);
                             return true;
                         }

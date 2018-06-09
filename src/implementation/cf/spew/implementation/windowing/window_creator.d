@@ -199,7 +199,7 @@ version(Windows) {
 					dwStyle,
 					setpos.x, setpos.y,
 					rect.right - rect.left, rect.bottom - rect.top,
-					this.parentWindow_.__handle,
+					cast(HWND)this.parentWindow_.__handle,
 					hMenu,
 					hInstance,
 					null);

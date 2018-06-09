@@ -26,7 +26,7 @@
 			"dependencies": {
 				"de_image:base": "~>1.1.0",
 				"emsi_containers": "*",
-				"de_bindings:libuv": "~>0.4.2",
+				"de_bindings:libuv": "~>0.4.3",
 				"de_bindings:x11": "*",
                 "de_bindings:libnotify": "*",
 				"spew:utils": "*",

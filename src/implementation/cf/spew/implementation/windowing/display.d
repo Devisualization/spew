@@ -35,6 +35,7 @@ version(Windows) {
 	import core.sys.windows.windows : MONITORINFOEXA, GetMonitorInfoA, MONITORINFOF_PRIMARY,
 		DEVMODEA, EnumDisplaySettingsA, ENUM_CURRENT_SETTINGS, CreateDCA, LONG, HMONITOR,
 		DWORD, HDC, DeleteDC;
+import core.stdc.config;
 
 	final class DisplayImpl_WinAPI : DisplayImpl, Feature_Display_ScreenShot, Have_Display_ScreenShot {
 		HMONITOR hMonitor;
@@ -205,11 +206,11 @@ final class DisplayImpl_X11 : DisplayImpl, Feature_Display_ScreenShot, Have_Disp
 
 				Atom actualType;
 				int actualFormat;
-				size_t nitems, bytesAfter;
+                c_ulong nitems, bytesAfter;
 				ubyte* prop;
 
 				x11.XRRGetOutputProperty(x11Display(), rrOutput, backlightAtom,
-				  0, 4, false, false, None,
+				  0, 4, False, False, None,
 				  &actualType, &actualFormat,
 				  &nitems, &bytesAfter, &prop);
 
