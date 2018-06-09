@@ -163,6 +163,9 @@ version(Windows) {
 					break;
 			}
 
+            if (this.parentWindow_ is null)
+                dwStyle |= WS_CLIPCHILDREN;
+
 			// multiple monitor support
 
 			MONITORINFOEXA mi;
