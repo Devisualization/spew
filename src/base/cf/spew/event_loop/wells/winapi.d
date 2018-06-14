@@ -11,7 +11,7 @@ import cf.spew.events.defs;
 import cf.spew.events.winapi;
 import cf.spew.events.windowing;
 import stdx.allocator : ISharedAllocator, make;
-import core.sys.windows.windows : LRESULT, WPARAM, LPARAM, HWND, WM_USER, MSG;
+import core.sys.windows.windows : LRESULT, WPARAM, LPARAM, HWND, WM_USER, WM_APP, MSG;
 import core.time : Duration;
 
 /**
@@ -38,6 +38,21 @@ struct EventLoopAlterationCallbacks {
 
 	///
 	LRESULT delegate(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam, ref EventLoopAlterationCallbacks callbacks, ref Event event) nothrow unhandledEvent;
+}
+
+/// Allocated WM_USER ranges
+enum AllocatedWM_USER {
+    ///
+    Start = WM_USER,
+    ///
+    NotificationTray,
+    ///
+    NotificationTrayHideFlyout,
+
+    ///
+    AllocatedEnd = NotificationTrayHideFlyout,
+    ///
+    //End = WM_APP
 }
 
 final class WinAPI_EventLoop_Source : EventLoopSource {
@@ -238,7 +253,7 @@ private {
 
 	enum {
 		ENDSESSION_CRITICAL = 0x40000000,
-		ENDSESSION_CLOSEAPP = 0x00000001
+		ENDSESSION_CLOSEAPP = 0x00000001,
 	}
 }
 
@@ -283,7 +298,10 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 		} else if (uMsg == WM_MOUSEWHEEL) {
 			PostMessageA(hwnd, uMsg, wParam, lParam);
 			return 0;
-		}
+        } else if (uMsg == AllocatedWM_USER.NotificationTray || uMsg == AllocatedWM_USER.NotificationTrayHideFlyout) {
+            addToBacklog(hwnd, uMsg, wParam, lParam);
+            return 0;
+        }
 
 		return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 	}
@@ -388,13 +406,10 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
 
 		case WM_ERASEBKGND:
 			_event.type = WinAPI_Events_Types.Raw;
-			// _event.winapi.raw has already been set
-			// either somebody handles this or not,
-			//  if not no worries, DefWindowProcW
-			//  will make sure its handled, of course
-			//  if you don't set hbrBackground on the
-			//  window class its your own damn fault
-			//  that things will get awfully corrupt.
+            _event.winapi.raw.message = uMsg;
+            _event.winapi.raw.hwnd = hwnd;
+            _event.winapi.raw.lParam = lParam;
+            _event.winapi.raw.wParam = wParam;
 			return -1;
 
 		case WM_SYSCOLORCHANGE:
@@ -588,6 +603,19 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
             if (wParam == SC_MINIMIZE)
                 addToBacklog(hwnd, WM_ACTIVATE, 0, 0);
             return DefWindowProc(hwnd, uMsg, wParam, lParam);
+
+        case AllocatedWM_USER.NotificationTray:
+        case AllocatedWM_USER.NotificationTrayHideFlyout:
+            if (depthOfCallbackCalls == 1) {
+                _event.type = WinAPI_Events_Types.Raw;
+                _event.winapi.raw.message = uMsg;
+                _event.winapi.raw.hwnd = hwnd;
+                _event.winapi.raw.lParam = lParam;
+                _event.winapi.raw.wParam = wParam;
+            } else {
+                addToBacklog(hwnd, uMsg, wParam, lParam);
+            }
+            return 0;
 
 		//case WM_SYSTEMERROR:
 		//case WM_CTLCOLOR:

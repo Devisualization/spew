@@ -58,9 +58,15 @@ version(Windows) {
 		winapi.BOOL function(winapi.HANDLE hMonitor, winapi.LPDWORD pdwMonitorCapabilities, winapi.LPDWORD pdwSupportedColorTemperatures) GetMonitorCapabilities;
 		winapi.BOOL function(winapi.HANDLE hMonitor, winapi.LPDWORD pdwMinimumBrightness, winapi.LPDWORD pdwCurrentBrightness, winapi.LPDWORD pdwMaximumBrightness) GetMonitorBrightness;
 		winapi.BOOL function(winapi.HMONITOR hMonitor, winapi.DWORD dwPhysicalMonitorArraySize, PHYSICAL_MONITOR* pPhysicalMonitorArray) GetPhysicalMonitorsFromHMONITOR;
-	}
 
-	__gshared SharedLib dxva2;
+        // shell32
+        winapi.HRESULT function(NOTIFYICONIDENTIFIER*, winapi.RECT*) Shell_NotifyIconGetRect;
+
+        // user32
+        winapi.BOOL function(winapi.POINT*, winapi.SIZE*, winapi.UINT, winapi.RECT*, winapi.RECT*) CalculatePopupWindowPosition;
+    }
+    
+    __gshared SharedLib dxva2, shell32, user32;
 
 	//
 
@@ -427,6 +433,22 @@ version(Windows) {
 			return true;
 		}
 	}
+
+    struct NOTIFYICONIDENTIFIER {
+        winapi.DWORD cbSize;
+        winapi.HWND hWnd;
+        winapi.UINT uID;
+        winapi.GUID guidItem;
+    }
+
+    enum {
+        NIN_SELECT = 0x0400,
+
+        TPM_WORKAREA = 0x10000,
+        TPM_VERTICAL = 0x0040,
+        TPM_VCENTERALIGN = 0x0010,
+        TPM_CENTERALIGN = 0x0004,
+    }
 }
 
 struct HandleAppender(Handle) {

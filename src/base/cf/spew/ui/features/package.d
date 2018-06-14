@@ -4,7 +4,7 @@
  */
 module cf.spew.ui.features;
 public import cf.spew.ui.features.clipboard;
-public import cf.spew.ui.features.notifications;
+public import cf.spew.ui.features.notificationmessage;
 public import cf.spew.ui.features.notificationtray;
 public import cf.spew.ui.features.screenshot;
 public import cf.spew.ui.features.menu;

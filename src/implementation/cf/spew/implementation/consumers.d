@@ -119,6 +119,7 @@ version(Windows) {
         import cf.spew.implementation.misc.timer;
         import cf.spew.events.windowing;
         import cf.spew.events.winapi;
+        import cf.spew.event_loop.wells.winapi : AllocatedWM_USER;
     	
         this(shared(DefaultImplementation) instance) shared {
             super(instance);
@@ -259,8 +260,73 @@ version(Windows) {
 
                     default:
                         if (event.type == WinAPI_Events_Types.Raw) {
-                            if (event.winapi.raw.message == winapi.WM_ERASEBKGND) {
-                                return handlePaint(event, w, w2);
+                            switch(event.winapi.raw.message) {
+                                case winapi.WM_ERASEBKGND:
+                                    return handlePaint(event, w, w2);
+
+                                case AllocatedWM_USER.NotificationTray:
+                                    import cf.spew.implementation.windowing.misc;
+
+                                    switch(winapi.LOWORD(event.winapi.raw.lParam)) {
+                                        case winapi.WM_LBUTTONDOWN:
+                                        case NIN_SELECT:
+                                            if (winapi.IsWindowVisible(event.winapi.raw.hwnd)) {
+                                                w.hide();
+
+                                                w2.notificationTraySW.reset;
+                                                w2.notificationTraySW.start;
+                                                tryFunc(w2.onInvisibleDel);
+                                            } else {
+                                                // show
+
+                                                if (!w2.notificationTraySW.running || winapi.GetDoubleClickTime() <= w2.notificationTraySW.peek().total!"msecs") {
+                                                    w2.notificationTraySW.reset;
+
+                                                    NOTIFYICONIDENTIFIER nii;
+                                                    nii.cbSize = NOTIFYICONIDENTIFIER.sizeof;
+                                                    nii.hWnd = w.hwnd;
+                                                    nii.guidItem = winapi.GUID_NULL;
+
+                                                    winapi.RECT rcIcon;
+                                                    if (winapi.SUCCEEDED(Shell_NotifyIconGetRect(&nii, &rcIcon))) {
+                                                        winapi.POINT ptAnchor;
+                                                        ptAnchor.x = (rcIcon.left + rcIcon.right) / 2;
+                                                        ptAnchor.y = (rcIcon.top + rcIcon.bottom) / 2;
+
+                                                        winapi.RECT rcWindow;
+                                                        winapi.GetWindowRect(w.hwnd, &rcWindow);
+
+                                                        winapi.SIZE sizeWindow;
+                                                        sizeWindow.cx = rcWindow.right - rcWindow.left;
+                                                        sizeWindow.cy = rcWindow.bottom - rcWindow.top;
+
+                                                        if (CalculatePopupWindowPosition(&ptAnchor, &sizeWindow, TPM_VERTICAL | TPM_VCENTERALIGN | TPM_CENTERALIGN | TPM_WORKAREA, &rcIcon, &rcWindow)) {
+                                                            winapi.SetWindowPos(w.hwnd, winapi.HWND_TOPMOST, rcWindow.left, rcWindow.top, 0, 0, winapi.SWP_NOSIZE | winapi.SWP_SHOWWINDOW);
+                                                            tryFunc(w2.onVisibleDel);
+                                                        }
+                                                    }
+
+                                                    winapi.SetForegroundWindow(w.hwnd);
+                                                }
+                                            }
+                                            break;
+                                            
+                                        default:
+                                            break;
+                                    }
+                                    return true;
+
+                                case AllocatedWM_USER.NotificationTrayHideFlyout:
+                                    w.hide();
+
+                                    w2.notificationTraySW.reset;
+                                    w2.notificationTraySW.start;
+
+                                    tryFunc(w2.onInvisibleDel);
+                                    return true;
+
+                                default:
+                                    return false;
                             }
                         }
                         break;

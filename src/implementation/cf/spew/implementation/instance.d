@@ -5,6 +5,7 @@
 module cf.spew.implementation.instance;
 import cf.spew.instance;
 import cf.spew.ui.features;
+import cf.spew.ui.window.defs;
 import stdx.allocator : IAllocator, ISharedAllocator, make, dispose, processAllocator, theAllocator, makeArray;
 import devisualization.image : ImageStorage;
 import std.experimental.color : RGBA8;
@@ -13,6 +14,7 @@ import x11b = devisualization.bindings.x11;
 import cf.spew.ui.rendering : vec2;
 import std.socket :  InternetAddress, Internet6Address;
 import core.time : Duration, seconds, nsecs;
+import core.thread : ThreadID, Thread;
 
 // \/ TLS clipboard data
 
@@ -103,12 +105,15 @@ final class DefaultImplementation : Instance {
 
         version(Windows) {
             import cf.spew.event_loop.wells.winapi;
-            import cf.spew.implementation.windowing.misc : dxva2,
+            import cf.spew.implementation.windowing.misc : dxva2, shell32, user32,
+                Shell_NotifyIconGetRect, CalculatePopupWindowPosition,
                 GetMonitorCapabilities, GetMonitorBrightness, GetPhysicalMonitorsFromHMONITOR;
             import core.sys.windows.ole2 : OleInitialize;
 
             OleInitialize(null);
             dxva2.load(["dxva2.dll"]);
+            shell32.load(["Shell32.dll"]);
+            user32.load(["User32.dll"]);
             
             if (dxva2.isLoaded) {
                 GetMonitorCapabilities = cast(typeof(GetMonitorCapabilities))dxva2.loadSymbol("GetMonitorCapabilities", false);
@@ -116,6 +121,14 @@ final class DefaultImplementation : Instance {
                 GetPhysicalMonitorsFromHMONITOR = cast(typeof(GetPhysicalMonitorsFromHMONITOR))dxva2.loadSymbol("GetMonitorCapabilities", false);
             }
 
+            if (shell32.isLoaded) {
+                Shell_NotifyIconGetRect = cast(typeof(Shell_NotifyIconGetRect))shell32.loadSymbol("Shell_NotifyIconGetRect", false);
+            } else assert(0);
+
+            if (user32.isLoaded) {
+                CalculatePopupWindowPosition = cast(typeof(CalculatePopupWindowPosition))user32.loadSymbol("CalculatePopupWindowPosition", false);
+            } else assert(0);
+            
             _userInterface = allocator.make!(shared(UIInstance_WinAPI))(allocator);
 
             _mainEventSource_ = allocator.make!(shared(WinAPI_EventLoop_Source));
@@ -141,7 +154,7 @@ final class DefaultImplementation : Instance {
                         libnotify.gdk_pixbuf_scale_simple !is null) {
 
                         _secondaryEventSource_ = allocator.make!(shared(GlibEventLoopSource))(GlibEventLoopSource.Bindings(
-                            libnotify.g_main_context_default, libnotify.g_main_context_iteration, libnotify.g_main_context_ref, libnotify.g_main_context_unref));
+                                libnotify.g_main_context_default, libnotify.g_main_context_iteration, libnotify.g_main_context_ref, libnotify.g_main_context_unref));
                         _eventLoop.manager.addSources(_secondaryEventSource_);
                         _userInterface = allocator.make!(shared(UIInstance_X11_Libnotify))(allocator);
                     }
@@ -153,17 +166,17 @@ final class DefaultImplementation : Instance {
                 // The x11 well doesn't need to know about our abstraction
                 // but it does need to get the XIC for it...
                 _mainEventSource_ = allocator.make!(shared(X11EventLoopSource))(cast(X11GetXICDel)(delegate (whandle) {
-                    import cf.spew.implementation.windowing.window : WindowImpl_X11;
+                            import cf.spew.implementation.windowing.window : WindowImpl_X11;
 
-                    auto w = _userInterface.windowToIdMapper[whandle];
-                    if (w is null) return null;
-                    else if (WindowImpl_X11 w2 = cast(WindowImpl_X11)w) {
-                        if (w2.isClosed)
-                            return null;
-                        else
-                            return w2.xic;
-                    } else return null;
-                }));
+                            auto w = _userInterface.windowToIdMapper[whandle];
+                            if (w is null) return null;
+                            else if (WindowImpl_X11 w2 = cast(WindowImpl_X11)w) {
+                                if (w2.isClosed)
+                                    return null;
+                                else
+                                    return w2.xic;
+                            } else return null;
+                        }));
                 _eventLoop.manager.addSources(_mainEventSource_);
 
                 _mainEventConsumer_ = allocator.make!(shared(EventLoopConsumerImpl_X11))(this);
@@ -177,7 +190,7 @@ final class DefaultImplementation : Instance {
         import cf.spew.event_loop.wells.x11;
         return x11Display() !is null &&
             x11.XScreenNumberOfScreen !is null &&
-            x11.XkbSetDetectableAutoRepeat !is null;
+                x11.XkbSetDetectableAutoRepeat !is null;
     }
 }
 
@@ -206,7 +219,7 @@ final class EventLoopWrapper : Management_EventLoop {
     @property shared(IEventLoopManager) manager() shared { return _manager; }
 }
 
-abstract class UIInstance : Management_UserInterface, Have_Notification, Have_Management_Clipboard {
+abstract class UIInstance : Management_UserInterface, Have_NotificationMessage, Have_Management_Clipboard, Have_NotificationTray {
     import cf.spew.ui : IWindow, IDisplay, IWindowCreator, IRenderPoint, IRenderPointCreator;
     import stdx.allocator : IAllocator, processAllocator;
     import devisualization.util.core.memory.managed;
@@ -255,7 +268,9 @@ abstract class UIInstance : Management_UserInterface, Have_Notification, Have_Ma
 
     // notifications
 
-    shared(Feature_Notification) __getFeatureNotification() shared { return null; }
+    shared(Feature_NotificationMessage) __getFeatureNotificationMessage() shared { return null; }
+
+    shared(Feature_NotificationTray) __getFeatureNotificationTray() shared { return null; }
 
     // clipboard
 
@@ -263,8 +278,9 @@ abstract class UIInstance : Management_UserInterface, Have_Notification, Have_Ma
 }
 
 version(Windows) {
-    final class UIInstance_WinAPI : UIInstance, Feature_Notification, Feature_Management_Clipboard {
+    final class UIInstance_WinAPI : UIInstance, Feature_NotificationMessage, Feature_Management_Clipboard, Feature_NotificationTray {
         import cf.spew.implementation.windowing.window_creator : WindowCreatorImpl_WinAPI;
+        import cf.spew.implementation.windowing.window : WindowImpl_WinAPI;
         import cf.spew.implementation.windowing.misc : GetPrimaryDisplay_WinAPI, GetDisplays_WinAPI, GetWindows_WinAPI,
             NOTIFYICON_VERSION_4, imageToIcon_WinAPI, NIF_SHOWTIP, NIF_REALTIME;
         import devisualization.image.storage.base : ImageStorageHorizontal;
@@ -274,18 +290,29 @@ version(Windows) {
         import winapishell = core.sys.windows.shellapi;
         import core.sys.windows.w32api : _WIN32_IE;
 
-        winapi.HWND taskbarIconWindow;
+        version(none) {
+            winapi.HWND taskbarIconWindow;
+        }
+        managed!IWindow taskbarTrayWindow;
+        ThreadID taskbarTrayWindowThread;
         winapi.NOTIFYICONDATAW taskbarIconNID;
 
         size_t maxClipboardSizeV = size_t.max;
 
+        static shared(UIInstance_WinAPI) MyInstance;
+
         this(shared(ISharedAllocator) allocator) shared {
             super(allocator);
+            UIInstance_WinAPI.MyInstance = this;
         }
 
-        ~this() {
-            if (taskbarIconWindow)
-                winapi.DestroyWindow(cast()taskbarIconWindow);
+        static ~this() {
+            if (!(cast()UIInstance_WinAPI.MyInstance.taskbarTrayWindow).isNull &&
+                Thread.getThis().id == cast()UIInstance_WinAPI.MyInstance.taskbarTrayWindowThread) {
+
+                UIInstance_WinAPI.MyInstance.setNotificationWindow(managed!IWindow.init);
+                cast()UIInstance_WinAPI.MyInstance.taskbarTrayWindow = managed!IWindow.init;
+            }
         }
 
         override {
@@ -315,129 +342,6 @@ version(Windows) {
                     ctx.call;
                     return managed!(IWindow[])(ctx.windows, managers(ReferenceCountedManager()), alloc);
                 }
-            }
-
-            // notifications
-            static if (_WIN32_IE >= 0x500) {
-                shared(Feature_Notification) __getFeatureNotification() shared { return this; }
-
-                @property {
-                    shared(ImageStorage!RGBA8) getNotificationIcon(shared(ISharedAllocator) alloc) shared {
-                        return imageObjectFrom!(shared(ImageStorageHorizontal!RGBA8))(taskbarCustomIcon, alloc);
-                    }
-
-                    void setNotificationIcon(shared(ImageStorage!RGBA8) icon, shared(ISharedAllocator) alloc) shared {
-                        if (icon is null) {
-                            winapi.Shell_NotifyIconW(winapi.NIM_DELETE, cast(winapi.NOTIFYICONDATAW*)&taskbarIconNID);
-                            taskbarIconNID = winapi.NOTIFYICONDATAW.init;
-                        } else {
-                            bool toAdd = cast()taskbarIconNID is winapi.NOTIFYICONDATAW.init;
-
-                            if (taskbarIconWindow is null)
-                                taskbarIconWindow = cast(shared)winapi.CreateWindow(null, null, 0, 0, 0, 0, 0, null, null, null, null);
-
-                            taskbarIconNID.cbSize = winapi.NOTIFYICONDATAW.sizeof;
-                            taskbarIconNID.uVersion = NOTIFYICON_VERSION_4;
-                            taskbarIconNID.uFlags = winapi.NIF_ICON | winapi.NIF_STATE;
-                            taskbarIconNID.hWnd = cast()taskbarIconWindow;
-
-                            winapi.HDC hFrom = winapi.GetDC(null);
-                            winapi.HDC hMemoryDC = winapi.CreateCompatibleDC(hFrom);
-
-                            scope(exit) {
-                                winapi.DeleteDC(hMemoryDC);
-                                winapi.ReleaseDC(null, hFrom);
-                            }
-
-                            if (taskbarIconNID.hIcon !is null) {
-                                winapi.DeleteObject(cast(void*)taskbarIconNID.hIcon);
-                                taskbarCustomIconAllocator.dispose(taskbarCustomIcon);
-                            }
-
-                            taskbarCustomIconAllocator = alloc;
-                            taskbarCustomIcon = imageObjectFrom!(shared(ImageStorageHorizontal!RGBA8))(icon, alloc);
-
-                            taskbarIconNID.hIcon = cast(shared)imageToIcon_WinAPI(icon, hMemoryDC, alloc);
-
-                            if (toAdd) {
-                                winapi.Shell_NotifyIconW(winapi.NIM_ADD, cast(winapi.NOTIFYICONDATAW*)&taskbarIconNID);
-                            } else {
-                                winapi.Shell_NotifyIconW(winapi.NIM_MODIFY, cast(winapi.NOTIFYICONDATAW*)&taskbarIconNID);
-                            }
-
-                            winapi.Shell_NotifyIconW(winapishell.NIM_SETVERSION, cast(winapi.NOTIFYICONDATAW*)&taskbarIconNID);
-                        }
-                    }
-                }
-
-                void notify(shared(ImageStorage!RGBA8) icon, shared(dstring) title, shared(dstring) text, shared(ISharedAllocator) alloc) shared {
-                    import std.utf : byUTF;
-                    if (taskbarIconWindow is null)
-                        taskbarIconWindow = cast(shared)winapi.CreateWindow(null, null, 0, 0, 0, 0, 0, null, null, null, null);
-
-                    winapi.NOTIFYICONDATAW nid;
-                    nid.cbSize = winapi.NOTIFYICONDATAW.sizeof;
-                    nid.uVersion = NOTIFYICON_VERSION_4;
-                    nid.uFlags = winapi.NIF_ICON | NIF_SHOWTIP | winapi.NIF_INFO | winapi.NIF_STATE | NIF_REALTIME;
-                    nid.uID = 1;
-                    nid.hWnd = cast(winapi.HWND)taskbarIconWindow;
-
-                    size_t i;
-                    foreach(c; byUTF!wchar(title)) {
-                        if (i >= nid.szInfoTitle.length - 1) {
-                            nid.szInfoTitle[i] = cast(wchar)0;
-                            break;
-                        } else
-                            nid.szInfoTitle[i] = c;
-
-                        i++;
-                        if (i == title.length)
-                            nid.szInfoTitle[i] = cast(wchar)0;
-                    }
-
-                    i = 0;
-                    foreach(c; byUTF!wchar(text)) {
-                        if (i >= nid.szInfo.length - 1) {
-                            nid.szInfo[i] = cast(wchar)0;
-                            break;
-                        } else
-                            nid.szInfo[i] = c;
-
-                        i++;
-                        if (i == text.length)
-                            nid.szInfo[i] = cast(wchar)0;
-                    }
-
-                    winapi.HDC hFrom = winapi.GetDC(null);
-                    winapi.HDC hMemoryDC = winapi.CreateCompatibleDC(hFrom);
-
-                    scope(exit) {
-                        winapi.DeleteDC(hMemoryDC);
-                        winapi.ReleaseDC(null, hFrom);
-                    }
-
-                    nid.hIcon = imageToIcon_WinAPI(icon, hMemoryDC, alloc);
-
-                    winapi.Shell_NotifyIconW(winapi.NIM_ADD, &nid);
-                    winapi.Shell_NotifyIconW(winapi.NIM_SETVERSION, &nid);
-
-                    winapi.Shell_NotifyIconW(winapi.NIM_DELETE, &nid);
-                    winapi.DeleteObject(nid.hIcon);
-                }
-
-                void clearNotifications() shared {}
-            } else {
-                // not available.
-
-                pragma(msg, "Notifications are not supported. To enable them pass version IE5 or greater (see core.sys.windows.w32api).");
-
-                @property {
-                    shared(ImageStorage!RGBA8) getNotificationIcon(shared(ISharedAllocator) alloc) shared { assert(0); }
-                    void setNotificationIcon(shared(ImageStorage!RGBA8) icon, shared(ISharedAllocator) alloc) shared { assert(0); }
-                }
-
-                void notify(shared(ImageStorage!RGBA8) icon, shared(dstring) title, shared(dstring) text, shared(ISharedAllocator) alloc) shared { assert(0); }
-                void clearNotifications() shared { assert(0); }
             }
 
             // clipboard
@@ -513,6 +417,116 @@ version(Windows) {
                     winapi.CloseClipboard();
                 }
             }
+
+            shared(Feature_NotificationTray) __getFeatureNotificationTray() shared { return this; }
+
+            @property {
+                managed!IWindow getNotificationWindow(IAllocator alloc) shared {
+                    if (cast()taskbarTrayWindow is managed!IWindow.init)
+                        return managed!IWindow.init;
+                    else if (taskbarTrayWindowThread == Thread.getThis().id)
+                        return cast()taskbarTrayWindow;
+                    else
+                        return managed!IWindow(alloc.make!WindowImpl_WinAPI(cast(winapi.HWND)(cast()taskbarTrayWindow).__handle, null, alloc, this), managers(), alloc);
+                }
+
+                void setNotificationWindow(managed!IWindow window) shared {
+                    import cf.spew.event_loop.wells.winapi : AllocatedWM_USER;
+                    bool modify;
+
+                    if (!(cast()taskbarTrayWindow).isNull) {
+                        winapi.HWND primaryHandle = cast(winapi.HWND)(cast()taskbarTrayWindow).__handle;
+                        if (!window.isNull && primaryHandle is cast(winapi.HWND)(cast()window).__handle)
+                            modify = true;
+                        else {
+                            winapi.Shell_NotifyIcon(winapi.NIM_DELETE, cast(winapi.NOTIFYICONDATAW*)&taskbarIconNID);
+                            cast()taskbarTrayWindow = managed!IWindow.init;
+                            taskbarIconNID = typeof(taskbarIconNID).init;
+                        }
+                    }
+
+                    if (!window.isNull) {
+                        cast()taskbarTrayWindow = window;
+                        taskbarTrayWindowThread = Thread.getThis().id;
+
+                        taskbarIconNID = winapi.NOTIFYICONDATAW.init;
+                        taskbarIconNID.cbSize = winapi.NOTIFYICONDATAW.sizeof;
+                        taskbarIconNID.uVersion = NOTIFYICON_VERSION_4;
+                        taskbarIconNID.uFlags = winapi.NIF_ICON | winapi.NIF_MESSAGE;
+                        taskbarIconNID.hIcon = cast(shared)(cast(managed!WindowImpl_WinAPI)cast()taskbarTrayWindow).hIcon;
+                        taskbarIconNID.hWnd = cast(shared(winapi.HWND))(cast()taskbarTrayWindow).__handle;
+                        taskbarIconNID.uCallbackMessage = AllocatedWM_USER.NotificationTray;
+
+                        if (taskbarIconNID.hIcon is null)
+                            taskbarIconNID.hIcon = cast(shared(winapi.HICON))winapi.SendMessage(cast(winapi.HWND)taskbarIconNID.hWnd, winapi.WM_GETICON, cast(winapi.WPARAM)winapi.ICON_SMALL, 80);
+                        if (taskbarIconNID.hIcon is null)
+                            taskbarIconNID.hIcon = cast(shared(winapi.HICON))winapi.GetClassLongPtr(cast(winapi.HWND)taskbarIconNID.hWnd, winapi.GCL_HICON);
+
+                        if (modify)
+                            winapi.Shell_NotifyIconW(winapi.NIM_MODIFY, cast(winapi.NOTIFYICONDATAW*)&taskbarIconNID); 
+                        else
+                            winapi.Shell_NotifyIconW(winapi.NIM_ADD, cast(winapi.NOTIFYICONDATAW*)&taskbarIconNID); 
+                        winapi.Shell_NotifyIconW(winapi.NIM_SETVERSION, cast(winapi.NOTIFYICONDATAW*)&taskbarIconNID);
+                    }
+                }
+            }
+
+            shared(Feature_NotificationMessage) __getFeatureNotificationMessage() shared { return this; }
+
+            void notify(shared(ImageStorage!RGBA8) icon, dstring title, dstring text, shared(ISharedAllocator) alloc) shared {
+                import std.utf : byUTF;
+                if ((cast()taskbarTrayWindow).isNull)
+                    return;
+
+                winapi.NOTIFYICONDATAW nid = cast(winapi.NOTIFYICONDATAW)taskbarIconNID;
+                nid.cbSize = winapi.NOTIFYICONDATAW.sizeof;
+                nid.uVersion = NOTIFYICON_VERSION_4;
+                nid.uFlags = winapi.NIF_ICON | NIF_SHOWTIP | winapi.NIF_INFO | NIF_REALTIME;
+                nid.hWnd = cast(winapi.HWND)(cast()taskbarTrayWindow).__handle;
+                
+                size_t i;
+                foreach(c; byUTF!wchar(title)) {
+                    if (i >= nid.szInfoTitle.length - 1) {
+                        nid.szInfoTitle[i] = cast(wchar)0;
+                        break;
+                    } else
+                        nid.szInfoTitle[i] = c;
+                    
+                    i++;
+                    if (i == title.length)
+                        nid.szInfoTitle[i] = cast(wchar)0;
+                }
+                
+                i = 0;
+                foreach(c; byUTF!wchar(text)) {
+                    if (i >= nid.szInfo.length - 1) {
+                        nid.szInfo[i] = cast(wchar)0;
+                        break;
+                    } else
+                        nid.szInfo[i] = c;
+                    
+                    i++;
+                    if (i == text.length)
+                        nid.szInfo[i] = cast(wchar)0;
+                }
+                
+                winapi.HDC hFrom = winapi.GetDC(null);
+                winapi.HDC hMemoryDC = winapi.CreateCompatibleDC(hFrom);
+                
+                scope(exit) {
+                    winapi.DeleteDC(hMemoryDC);
+                    winapi.ReleaseDC(null, hFrom);
+                }
+
+                if (icon !is null)
+                    nid.hIcon = imageToIcon_WinAPI(icon, hMemoryDC, alloc);
+                
+                winapi.Shell_NotifyIconW(winapi.NIM_MODIFY, &nid);
+                winapi.Shell_NotifyIconW(winapi.NIM_MODIFY, cast(winapi.NOTIFYICONDATAW*)&taskbarIconNID);
+                winapi.DeleteObject(nid.hIcon);
+            }
+
+            void clearNotifications() shared {}
         }
     }
 }
@@ -716,7 +730,7 @@ class UIInstance_X11 : UIInstance, Feature_Management_Clipboard {
     }
 }
 
-final class UIInstance_X11_Libnotify : UIInstance_X11, Feature_Notification {
+final class UIInstance_X11_Libnotify : UIInstance_X11/+, Feature_Notification+/ {
     import devisualization.bindings.libnotify.loader;
 
     private char[] postName;
@@ -747,7 +761,7 @@ final class UIInstance_X11_Libnotify : UIInstance_X11, Feature_Notification {
     }
 
     // notifications
-    @property {
+    /+@property {
         shared(ImageStorage!RGBA8) getNotificationIcon(shared(ISharedAllocator) alloc) shared {
             // TODO: https://people.gnome.org/~mccann/docs/notification-spec/notification-spec-latest.html
             assert(0);
@@ -756,7 +770,7 @@ final class UIInstance_X11_Libnotify : UIInstance_X11, Feature_Notification {
         void setNotificationIcon(shared(ImageStorage!RGBA8) icon, shared(ISharedAllocator) alloc) shared {
             // TODO: https://people.gnome.org/~mccann/docs/notification-spec/notification-spec-latest.html
         }
-    }
+    }+/
 
     void notify(shared(ImageStorage!RGBA8) icon, shared(dstring) title, shared(dstring) text, shared(ISharedAllocator) alloc) shared {
         // notify_notification_new

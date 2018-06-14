@@ -22,6 +22,7 @@ enum : bool {
     Enable_Test_TCP = true,
     Enable_Test_UDP = true,
     Enable_Test_FileSystemWatch = true,
+    Enable_Test_NotificationWindow = true,
 
     Enable_Kill_Window = true,
     Enable_Kill_TCP_Client = false,
@@ -40,7 +41,11 @@ managed!ISocket_TCP tcpClientEndPoint;
 managed!ISocket_TCPServer tcpServer;
 managed!ISocket_UDPLocalPoint udpLocalPoint;
 // | /\ streams
+// | \/ notifications
 
+managed!IWindow notificationWindow;
+
+// | /\ notifications
 // | \/ windowing
 managed!IWindow window;
 managed!ITimer windowForceDrawTimer;
@@ -210,6 +215,12 @@ int main() {
             writeln("File system watching");
             fileSystemWatcherCreate();
         }
+
+        static if (Enable_Test_NotificationWindow) {
+            writeln;
+            writeln("Notification window");
+            notificationTrayTest();
+        }
     }
 
     // normally 3s would be ok for a timeout, but ugh with sockets, not so much!
@@ -344,6 +355,49 @@ void aSocketUDPCreate() {
 }
 
 // | /\ streams
+// | \/ notifications
+
+void notificationTrayTest() {
+    import cf.spew.ui.context.features.vram;
+    import std.stdio : writeln, stdout;
+
+    import devisualization.image.storage.base;
+    import devisualization.image.interfaces;
+    import std.experimental.color : RGBA8;
+
+    auto icon = imageObject!(ImageStorageHorizontal!RGBA8)(2, 2);
+    icon[0, 0] = RGBA8(255, 0, 0, 255);
+    icon[1, 0] = RGBA8(0, 255, 0, 255);
+    icon[0, 1] = RGBA8(0, 0, 255, 255);
+    icon[1, 1] = RGBA8(255, 255, 255, 255);
+
+    auto creator = Instance.current.ui.createWindow();
+    if (creator.isNull) return;
+
+    creator.style = WindowStyle.Popup;
+    creator.assignVRamContext;
+    creator.size = vec2!ushort(cast(short)100, cast(short)200);
+    creator.icon = icon;
+
+    notificationWindow = creator.createWindow();
+    if (notificationWindow.isNull) return;
+
+    notificationWindow.events.onVisible = () {
+        writeln("onVisible:: notification tray flyout");
+        stdout.flush;
+
+        Instance.current.ui.notify(cast(shared(ImageStorage!RGBA8))null, "Hi!", "my text here");
+    };
+
+    notificationWindow.events.onInvisible = () {
+        writeln("onInvisible:: notification tray flyout");
+        stdout.flush;
+    };
+
+    Instance.current.ui.notificationTrayWindow = notificationWindow;
+}
+
+// | /\ notifications
 // | \/ windowing
 
 float[] opengl_example_vertex_bufferdata = [
@@ -384,6 +438,7 @@ void aWindowTest() {
     import std.stdio : writeln, stdout;
 
     auto creator = Instance.current.ui.createWindow();
+    if (creator.isNull) return;
 
     //creator.style = WindowStyle.NoDecorations;
     //creator.style = WindowStyle.Dialog;
@@ -401,6 +456,7 @@ void aWindowTest() {
     }
 
     window = creator.createWindow();
+    if (window.isNull) return;
     window.title = "Title!";
 
     Feature_Window_Menu theMenu = window.menu;

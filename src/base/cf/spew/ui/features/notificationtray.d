@@ -61,3 +61,37 @@ void notificationTrayWindow(shared(Management_UserInterface) self, managed!IWind
             fss.setNotificationWindow(to);
     }
 }
+
+/**
+ * Removes the assigned notification tray window
+ * 
+ * Params:
+ *      self    =   The platform instance
+ */
+void removeNotificationTrayWindow(shared(Management_UserInterface) self) {
+    if (self is null)
+        return;
+    if (shared(Have_NotificationTray) ss = cast(shared(Have_NotificationTray))self) {
+        auto fss = ss.__getFeatureNotificationTray();
+        if (fss !is null)
+            fss.setNotificationWindow(managed!IWindow.init);
+    }
+}
+
+/**
+ * Does the given platform support the notification tray?
+ * 
+ * Params:
+ *      self    =   The platform instance
+ * 
+ * Returns:
+ *      If the platform supports notifications
+ */
+@property bool capableOfNotificationTray(shared(Management_UserInterface) self) {
+    if (self is null)
+        return false;
+    else if (shared(Have_NotificationTray) ss = cast(shared(Have_NotificationTray))self)
+        return ss.__getFeatureNotificationTray() !is null;
+    else
+        return false;
+}

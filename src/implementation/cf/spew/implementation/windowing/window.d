@@ -15,11 +15,14 @@ import devisualization.image : ImageStorage, imageObjectFrom, ImageStorageHorizo
 import std.experimental.color : RGBA8, RGB8;
 
 abstract class WindowImpl : IWindow, IWindowEvents {
-	package(cf.spew.implementation) {
+    package(cf.spew.implementation) {
+        import std.datetime.stopwatch;
+
 		shared(UIInstance) instance;
 		IAllocator alloc;
 		IContext context_;
 
+        StopWatch notificationTraySW;
 		bool ownedByProcess;
 
 		EventOnCursorMoveDel onCursorMoveDel;
@@ -204,6 +207,7 @@ version(Windows) {
 			HWND hwnd;
 			HMENU hMenu;
 			HCURSOR hCursor;
+            HICON hIcon;
 
 			RECT oldCursorClipArea;
 			bool isClosed;
@@ -315,6 +319,11 @@ version(Windows) {
 			isClosed = true;
 			onFileDrop(null);
 			DestroyWindow(hwnd);
+
+            if (hIcon !is null)
+                DestroyIcon(hIcon);
+            if (hCursor !is null)
+                DestroyCursor(hCursor);
 		}
 
 		@property {
@@ -424,7 +433,6 @@ version(Windows) {
 		}
 		
 		ImageStorage!RGBA8 getIcon() @property {
-			HICON hIcon = cast(HICON)GetClassLongA(hwnd, GCL_HICON);
 			ICONINFO iconinfo;
 			GetIconInfo(hIcon, &iconinfo);
 			HBITMAP hBitmap = iconinfo.hbmColor;
@@ -444,8 +452,7 @@ version(Windows) {
 		}
 		
 		void setIcon(ImageStorage!RGBA8 from) @property {
-			HICON hIcon = cast(HICON)GetClassLongA(hwnd, GCL_HICON);
-			if (hIcon)
+			if (hIcon !is null)
 				DestroyIcon(hIcon);
 			
 			HDC hFrom = GetDC(null);
@@ -456,6 +463,11 @@ version(Windows) {
 			if (hIcon) {
 				SendMessageA(hwnd, WM_SETICON, cast(WPARAM)ICON_BIG, cast(LPARAM)hIcon);
 				SendMessageA(hwnd, WM_SETICON, cast(WPARAM)ICON_SMALL, cast(LPARAM)hIcon);
+
+                if (!(cast(UIInstance_WinAPI)this.instance).taskbarTrayWindow.isNull &&
+                    cast(HWND)(cast(UIInstance_WinAPI)this.instance).taskbarTrayWindow.__handle is hwnd) {
+                    this.instance.__getFeatureNotificationTray().setNotificationWindow((cast(UIInstance_WinAPI)this.instance).taskbarTrayWindow);
+                }
 			}
 			
 			DeleteDC(hMemoryDC);
@@ -704,7 +716,8 @@ version(Windows) {
 
 			void impl_callOnClose() nothrow {
 				try {
-					onCloseDel();
+                    if (onCloseDel !is null)
+					    onCloseDel();
 				} catch (Exception e) {}
 			}
 		}
