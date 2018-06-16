@@ -36,29 +36,34 @@ Warning: Windows 64bit for dmd is currently bugged when using the diagnostic cod
     - [ ] Cocoa
 - [x] Streams
 	- [x] TCP
-		- [x] Client
-		- [x] Server
+		- [x] Client LibUV
+		- [ ] Client Fallback
+		- [x] Server LibUV
+		- [ ] Server Fallbak
 	- [x] UDP
-		- [x] Local
-		- [x] Remote
+		- [x] Local LibUV
+		- [ ] Local Fallback
+		- [x] Remote LibUV
+		- [ ] Remote Fallback
 - [ ] Threading
 - [x] File system
   - [x] Watcher
       - [x] LibUV
+      - [ ] Fallback?
 - [x] Timer
   - [x] WinAPI
   - [x] LibUV
+  - [ ] Fallback
 - [ ] Windowing
   - [ ] X11
     - [x] Core
     - [ ] Features:
-       - [x] notifications
+       - [ ] notifications
        - [x] cursor
        - [x] icon
-       - [ ] menu
        - [x] screenshot
-       - [ ] Clipboard
-       - [ ] Drag&Drop
+       - [x] Clipboard
+       - [x] Drag&Drop
     - [x] Contexts:
        - [x] VRAM
        - [x] OpenGL
