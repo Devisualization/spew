@@ -18,21 +18,21 @@ interface Feature_NotificationTray {
     @property {
         managed!IWindow getNotificationWindow(IAllocator alloc) shared;
         void setNotificationWindow(managed!IWindow) shared;
+        bool haveNotificationWindow() shared;
     }
 }
 
 /**
  * Retrieve the applications notification tray window
  * 
- * If the window is not owned by the calling thread, it will return a wrapper.
- * Be warned, you will not be able to use this wrapper to e.g. set callbacks.
+ * If the window is not owned by the calling thread, it will return null.
  * 
  * Params:
  *      self    =   The platform instance
  *      alloc   =   The allocator to allocate/deallocate during creation
  * 
  * Returns:
- *      The notification tray window (could be a wrapper)
+ *      The notification tray window if owned by this thread
  */
 managed!IWindow notificationTrayWindow(shared(Management_UserInterface) self, IAllocator alloc=theAllocator) {
     if (self is null)
@@ -93,5 +93,27 @@ void removeNotificationTrayWindow(shared(Management_UserInterface) self) {
     else if (shared(Have_NotificationTray) ss = cast(shared(Have_NotificationTray))self)
         return ss.__getFeatureNotificationTray() !is null;
     else
+        return false;
+}
+
+/**
+ * Does the given have a notification window assigned?
+ * 
+ * Params:
+ *      self    =   The platform instance
+ * 
+ * Returns:
+ *      If the platform has a notification window assigned
+ */
+@property bool haveNotificationWindow(shared(Management_UserInterface) self) {
+    if (self is null)
+        return false;
+    else if (shared(Have_NotificationTray) ss = cast(shared(Have_NotificationTray))self) {
+        auto fss = ss.__getFeatureNotificationTray();
+        if (fss !is null)
+            return fss.haveNotificationWindow();
+        else
+            return false;
+    } else
         return false;
 }
