@@ -145,23 +145,7 @@ final class DefaultImplementation : Instance {
                 import cf.spew.event_loop.wells.glib;
 
                 x11.XkbSetDetectableAutoRepeat(x11Display(), true, null);
-
-                if (libnotifyLoader is LibNotifyLoader.init) {
-                    libnotifyLoader = LibNotifyLoader(null);
-
-                    if (libnotify.gdk_pixbuf_new_from_data !is null &&
-                        libnotify.gdk_pixbuf_unref !is null &&
-                        libnotify.gdk_pixbuf_scale_simple !is null) {
-
-                        _secondaryEventSource_ = allocator.make!(shared(GlibEventLoopSource))(GlibEventLoopSource.Bindings(
-                                libnotify.g_main_context_default, libnotify.g_main_context_iteration, libnotify.g_main_context_ref, libnotify.g_main_context_unref));
-                        _eventLoop.manager.addSources(_secondaryEventSource_);
-                        _userInterface = allocator.make!(shared(UIInstance_X11_Libnotify))(allocator);
-                    }
-                }
-
-                if (_userInterface is null)
-                    _userInterface = allocator.make!(shared(UIInstance_X11))(allocator);
+                _userInterface = allocator.make!(shared(UIInstance_X11))(allocator);
 
                 // The x11 well doesn't need to know about our abstraction
                 // but it does need to get the XIC for it...
@@ -418,6 +402,8 @@ version(Windows) {
                 }
             }
 
+            // notifications
+
             shared(Feature_NotificationTray) __getFeatureNotificationTray() shared { return this; }
 
             @property {
@@ -531,7 +517,7 @@ version(Windows) {
     }
 }
 
-class UIInstance_X11 : UIInstance, Feature_Management_Clipboard {
+class UIInstance_X11 : UIInstance, Feature_Management_Clipboard, Feature_NotificationMessage, Feature_NotificationTray {
     import cf.spew.implementation.windowing.window_creator : WindowCreatorImpl_X11;
     import cf.spew.implementation.windowing.display : DisplayImpl_X11;
     import cf.spew.implementation.windowing.misc : GetWindows_X11, X11WindowProperty, x11ReadWindowProperty;
@@ -693,6 +679,30 @@ class UIInstance_X11 : UIInstance, Feature_Management_Clipboard {
         }
     }
 
+    // notifications
+
+    override shared(Feature_NotificationTray) __getFeatureNotificationTray() shared { return null; }
+
+    @property {
+        managed!IWindow getNotificationWindow(IAllocator alloc) shared {
+            assert(0);
+        }
+
+        void setNotificationWindow(managed!IWindow window) shared {
+            assert(0);
+        }
+    }
+
+    override shared(Feature_NotificationMessage) __getFeatureNotificationMessage() shared { return null; }
+
+    void notify(shared(ImageStorage!RGBA8) icon, dstring title, dstring text, shared(ISharedAllocator) alloc) shared {
+        assert(0);
+    }
+
+    void clearNotifications() shared {
+        assert(0);
+    }
+
     private {
         void guardClipboard() shared {
             if (clipboardReceiveWindowHandleX11 == None) {
@@ -727,62 +737,6 @@ class UIInstance_X11 : UIInstance, Feature_Management_Clipboard {
                 return managed!string.init;
             }
         }
-    }
-}
-
-final class UIInstance_X11_Libnotify : UIInstance_X11/+, Feature_Notification+/ {
-    import devisualization.bindings.libnotify.loader;
-
-    private char[] postName;
-
-    this(shared(ISharedAllocator) allocator) shared {
-        import std.file : thisExePath;
-        import std.path : baseName, stripExtension;
-
-        super(allocator);
-
-        if (libnotify.notify_is_initted() == 0) {
-            string preName = thisExePath.baseName.stripExtension;
-            postName = cast(shared)allocator.makeArray!char(preName.length + 1);
-            postName[0 .. $-1] = preName[];
-            postName[$-1] = '\0';
-
-            libnotify.notify_init(cast(char*)postName.ptr);
-        }
-    }
-
-    ~this() {
-        // TODO: notification area
-        (cast(shared)this).clearNotifications();
-        libnotify.notify_uninit();
-
-        if (postName !is null)
-            allocator.dispose(postName);
-    }
-
-    // notifications
-    /+@property {
-        shared(ImageStorage!RGBA8) getNotificationIcon(shared(ISharedAllocator) alloc) shared {
-            // TODO: https://people.gnome.org/~mccann/docs/notification-spec/notification-spec-latest.html
-            assert(0);
-        }
-
-        void setNotificationIcon(shared(ImageStorage!RGBA8) icon, shared(ISharedAllocator) alloc) shared {
-            // TODO: https://people.gnome.org/~mccann/docs/notification-spec/notification-spec-latest.html
-        }
-    }+/
-
-    void notify(shared(ImageStorage!RGBA8) icon, shared(dstring) title, shared(dstring) text, shared(ISharedAllocator) alloc) shared {
-        // notify_notification_new
-        // https://github.com/GNOME/libnotify/blob/master/tests/test-xy-stress.c#L51
-        // g_signal_connect G_OBJECT G_CALLBACK g_free g_strndup
-        assert(0);
-    }
-
-    void clearNotifications() shared {
-        // use a list so we can remove all of them as libnotify doesn't know how to
-        // g_object_unref
-        assert(0);
     }
 }
 
