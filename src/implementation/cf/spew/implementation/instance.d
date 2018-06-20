@@ -422,12 +422,10 @@ version(Windows) {
 
             @property {
                 managed!IWindow getNotificationWindow(IAllocator alloc) shared {
-                    if (cast()taskbarTrayWindow is managed!IWindow.init)
+                    if (cast()taskbarTrayWindow is managed!IWindow.init || taskbarTrayWindowThread != Thread.getThis().id)
                         return managed!IWindow.init;
-                    else if (taskbarTrayWindowThread == Thread.getThis().id)
-                        return cast()taskbarTrayWindow;
                     else
-                        return managed!IWindow(alloc.make!WindowImpl_WinAPI(cast(winapi.HWND)(cast()taskbarTrayWindow).__handle, null, alloc, this), managers(), alloc);
+                        return cast()taskbarTrayWindow;
                 }
 
                 void setNotificationWindow(managed!IWindow window) shared {
@@ -469,6 +467,10 @@ version(Windows) {
                         winapi.Shell_NotifyIconW(winapi.NIM_SETVERSION, cast(winapi.NOTIFYICONDATAW*)&taskbarIconNID);
                     }
                 }
+            }
+
+            bool haveNotificationWindow() shared {
+                return cast()taskbarTrayWindow is managed!IWindow.init;
             }
 
             shared(Feature_NotificationMessage) __getFeatureNotificationMessage() shared { return this; }
