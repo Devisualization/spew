@@ -16,10 +16,14 @@ import std.socket :  InternetAddress, Internet6Address;
 import core.time : Duration, seconds, nsecs;
 import core.thread : ThreadID, Thread;
 
+// \/ clipboard data
+
+shared(ISharedAllocator) clipboardDataAllocator;
+
+// /\ clipboard data
 // \/ TLS clipboard data
 
 x11b.Window clipboardReceiveWindowHandleX11, clipboardSendWindowHandleX11;
-shared(ISharedAllocator) clipboardDataAllocator;
 char[] clipboardSendData;
 
 static ~this() {
@@ -114,7 +118,7 @@ final class DefaultImplementation : Instance {
             dxva2.load(["dxva2.dll"]);
             shell32.load(["Shell32.dll"]);
             user32.load(["User32.dll"]);
-            
+
             if (dxva2.isLoaded) {
                 GetMonitorCapabilities = cast(typeof(GetMonitorCapabilities))dxva2.loadSymbol("GetMonitorCapabilities", false);
                 GetMonitorBrightness = cast(typeof(GetMonitorBrightness))dxva2.loadSymbol("GetMonitorCapabilities", false);
@@ -128,7 +132,7 @@ final class DefaultImplementation : Instance {
             if (user32.isLoaded) {
                 CalculatePopupWindowPosition = cast(typeof(CalculatePopupWindowPosition))user32.loadSymbol("CalculatePopupWindowPosition", false);
             } else assert(0);
-            
+
             _userInterface = allocator.make!(shared(UIInstance_WinAPI))(allocator);
 
             _mainEventSource_ = allocator.make!(shared(WinAPI_EventLoop_Source));
@@ -145,7 +149,12 @@ final class DefaultImplementation : Instance {
                 import cf.spew.event_loop.wells.glib;
 
                 x11.XkbSetDetectableAutoRepeat(x11Display(), true, null);
-                _userInterface = allocator.make!(shared(UIInstance_X11))(allocator);
+
+                Window tray = x11.XGetSelectionOwner(x11Display(), x11Atoms()._NET_SYSTEM_TRAY_S);
+                if (tray != None)
+                    _userInterface = allocator.make!(shared(UIInstance_X11_FreeDesktopNotify))(allocator);
+                else
+                    _userInterface = allocator.make!(shared(UIInstance_X11))(allocator);
 
                 // The x11 well doesn't need to know about our abstraction
                 // but it does need to get the XIC for it...
@@ -222,6 +231,8 @@ abstract class UIInstance : Management_UserInterface, Have_NotificationMessage, 
 
     shared(ISharedAllocator) taskbarCustomIconAllocator;
     shared(ImageStorage!RGBA8) taskbarCustomIcon;
+    managed!IWindow taskbarTrayWindow;
+    ThreadID taskbarTrayWindowThread;
 
     //
 
@@ -277,8 +288,7 @@ version(Windows) {
         version(none) {
             winapi.HWND taskbarIconWindow;
         }
-        managed!IWindow taskbarTrayWindow;
-        ThreadID taskbarTrayWindowThread;
+
         winapi.NOTIFYICONDATAW taskbarIconNID;
 
         size_t maxClipboardSizeV = size_t.max;
@@ -447,9 +457,9 @@ version(Windows) {
                             taskbarIconNID.hIcon = cast(shared(winapi.HICON))winapi.GetClassLongPtr(cast(winapi.HWND)taskbarIconNID.hWnd, winapi.GCL_HICON);
 
                         if (modify)
-                            winapi.Shell_NotifyIconW(winapi.NIM_MODIFY, cast(winapi.NOTIFYICONDATAW*)&taskbarIconNID); 
+                            winapi.Shell_NotifyIconW(winapi.NIM_MODIFY, cast(winapi.NOTIFYICONDATAW*)&taskbarIconNID);
                         else
-                            winapi.Shell_NotifyIconW(winapi.NIM_ADD, cast(winapi.NOTIFYICONDATAW*)&taskbarIconNID); 
+                            winapi.Shell_NotifyIconW(winapi.NIM_ADD, cast(winapi.NOTIFYICONDATAW*)&taskbarIconNID);
                         winapi.Shell_NotifyIconW(winapi.NIM_SETVERSION, cast(winapi.NOTIFYICONDATAW*)&taskbarIconNID);
                     }
                 }
@@ -471,7 +481,7 @@ version(Windows) {
                 nid.uVersion = NOTIFYICON_VERSION_4;
                 nid.uFlags = winapi.NIF_ICON | NIF_SHOWTIP | winapi.NIF_INFO | NIF_REALTIME;
                 nid.hWnd = cast(winapi.HWND)(cast()taskbarTrayWindow).__handle;
-                
+
                 size_t i;
                 foreach(c; byUTF!wchar(title)) {
                     if (i >= nid.szInfoTitle.length - 1) {
@@ -479,12 +489,12 @@ version(Windows) {
                         break;
                     } else
                         nid.szInfoTitle[i] = c;
-                    
+
                     i++;
                     if (i == title.length)
                         nid.szInfoTitle[i] = cast(wchar)0;
                 }
-                
+
                 i = 0;
                 foreach(c; byUTF!wchar(text)) {
                     if (i >= nid.szInfo.length - 1) {
@@ -492,15 +502,15 @@ version(Windows) {
                         break;
                     } else
                         nid.szInfo[i] = c;
-                    
+
                     i++;
                     if (i == text.length)
                         nid.szInfo[i] = cast(wchar)0;
                 }
-                
+
                 winapi.HDC hFrom = winapi.GetDC(null);
                 winapi.HDC hMemoryDC = winapi.CreateCompatibleDC(hFrom);
-                
+
                 scope(exit) {
                     winapi.DeleteDC(hMemoryDC);
                     winapi.ReleaseDC(null, hFrom);
@@ -508,7 +518,7 @@ version(Windows) {
 
                 if (icon !is null)
                     nid.hIcon = imageToIcon_WinAPI(icon, hMemoryDC, alloc);
-                
+
                 winapi.Shell_NotifyIconW(winapi.NIM_MODIFY, &nid);
                 winapi.Shell_NotifyIconW(winapi.NIM_MODIFY, cast(winapi.NOTIFYICONDATAW*)&taskbarIconNID);
                 winapi.DeleteObject(nid.hIcon);
@@ -519,7 +529,7 @@ version(Windows) {
     }
 }
 
-class UIInstance_X11 : UIInstance, Feature_Management_Clipboard, Feature_NotificationMessage, Feature_NotificationTray {
+class UIInstance_X11 : UIInstance, Feature_Management_Clipboard {
     import cf.spew.implementation.windowing.window_creator : WindowCreatorImpl_X11;
     import cf.spew.implementation.windowing.display : DisplayImpl_X11;
     import cf.spew.implementation.windowing.misc : GetWindows_X11, X11WindowProperty, x11ReadWindowProperty;
@@ -535,9 +545,6 @@ class UIInstance_X11 : UIInstance, Feature_Management_Clipboard, Feature_Notific
     this(shared(ISharedAllocator) allocator) shared {
         super(allocator);
         clipboardDataAllocator = allocator;
-    }
-
-    ~this() {
     }
 
     override {
@@ -681,30 +688,6 @@ class UIInstance_X11 : UIInstance, Feature_Management_Clipboard, Feature_Notific
         }
     }
 
-    // notifications
-
-    override shared(Feature_NotificationTray) __getFeatureNotificationTray() shared { return null; }
-
-    @property {
-        managed!IWindow getNotificationWindow(IAllocator alloc) shared {
-            assert(0);
-        }
-
-        void setNotificationWindow(managed!IWindow window) shared {
-            assert(0);
-        }
-    }
-
-    override shared(Feature_NotificationMessage) __getFeatureNotificationMessage() shared { return null; }
-
-    void notify(shared(ImageStorage!RGBA8) icon, dstring title, dstring text, shared(ISharedAllocator) alloc) shared {
-        assert(0);
-    }
-
-    void clearNotifications() shared {
-        assert(0);
-    }
-
     private {
         void guardClipboard() shared {
             if (clipboardReceiveWindowHandleX11 == None) {
@@ -738,6 +721,189 @@ class UIInstance_X11 : UIInstance, Feature_Management_Clipboard, Feature_Notific
             } else {
                 return managed!string.init;
             }
+        }
+    }
+}
+
+class UIInstance_X11_FreeDesktopNotify : UIInstance_X11, Feature_NotificationMessage, Feature_NotificationTray {
+    import cf.spew.event_loop.wells.x11;
+    import devisualization.bindings.x11;
+
+    Window taskbarSysTrayOwner, taskbarSysTrayWrapper;
+    Window[8] wrappersToClean;
+    ThreadID[8] wrappersToCleanThreads;
+    Visual* theVisual;
+    GC taskbarSysTrayGC;
+
+    this(shared(ISharedAllocator) allocator) shared {
+        super(allocator);
+    }
+
+    override shared(Feature_NotificationTray) __getFeatureNotificationTray() shared { return this; }
+
+    @property {
+        managed!IWindow getNotificationWindow(IAllocator alloc) shared {
+            if (cast()taskbarTrayWindow is managed!IWindow.init || taskbarTrayWindowThread != Thread.getThis().id)
+                return managed!IWindow.init;
+            else
+                return cast()taskbarTrayWindow;
+        }
+
+        void setNotificationWindow(managed!IWindow window) shared {
+            cast()taskbarTrayWindow = window;
+            __guardSysTray();
+        }
+
+        bool haveNotificationWindow() shared {
+            return cast()taskbarTrayWindow !is managed!IWindow.init;
+        }
+    }
+
+    override shared(Feature_NotificationMessage) __getFeatureNotificationMessage() shared { return null; }
+
+    void notify(shared(ImageStorage!RGBA8) icon, dstring title, dstring text, shared(ISharedAllocator) alloc) shared {
+        assert(0);
+    }
+
+    void clearNotifications() shared {
+        assert(0);
+    }
+
+    package(cf.spew.implementation) {
+        void __guardSysTray() shared {
+            import cf.spew.implementation.windowing.misc : x11WindowAttributes,
+                x11SendFreeDesktopSystemTrayMessage, FreeDesktopSystemTray;
+
+            ThreadID myThreadID = Thread.getThis().id;
+            Window trayOwner = x11.XGetSelectionOwner(x11Display(), x11Atoms()._NET_SYSTEM_TRAY_S);
+
+            foreach(i, ref whandle; wrappersToClean) {
+                if (whandle == None) continue;
+                else if (wrappersToCleanThreads[i] == myThreadID) {
+                    x11.XUnmapWindow(x11Display(), whandle);
+                    x11.XDestroyWindow(x11Display(), whandle);
+                    whandle = None;
+                }
+            }
+
+            if (taskbarSysTrayWrapper != None && (taskbarTrayWindowThread != myThreadID ||
+                trayOwner != taskbarSysTrayOwner || !haveNotificationWindow())) {
+
+                foreach(i, whandle; wrappersToClean) {
+                    if (whandle == None) {
+                        whandle = taskbarSysTrayWrapper;
+                        wrappersToCleanThreads[i] = taskbarTrayWindowThread;
+                        taskbarSysTrayWrapper = None;
+
+                        x11.XFree(cast(Visual*)theVisual);
+                        x11.XFreeGC(x11Display(), cast(GC)taskbarSysTrayGC);
+                        theVisual = null;
+                        taskbarSysTrayGC = null;
+                        goto assign;
+                    }
+                }
+
+                assert(0, "Too many old wrapper handles!");
+            }
+        assign:
+
+            if (haveNotificationWindow() && (taskbarSysTrayWrapper == None ||
+                (taskbarSysTrayOwner == None && taskbarTrayWindowThread == myThreadID))) {
+
+                taskbarTrayWindowThread = Thread.getThis().id;
+                taskbarSysTrayOwner = trayOwner;
+
+                Window wroot = x11.XRootWindow(x11Display(), x11.XDefaultScreen(x11Display()));
+                auto rootattr = x11WindowAttributes(wroot);
+                auto size = rootattr.width > rootattr.height ? rootattr.height : rootattr.width;
+
+                // create wrapper window
+
+                auto systrayVisual = x11ReadWindowProperty(x11Display(), taskbarSysTrayOwner, x11Atoms()._NET_SYSTEM_TRAY_VISUAL);
+                XVisualInfo* visualInfo;
+
+                if (systrayVisual.format == 32 && systrayVisual.numberOfItems == 1) {
+                    XVisualInfo visualTemplate;
+                    visualTemplate.visualid = *cast(VisualID*)systrayVisual.data;
+                    int allVisualsCount;
+
+                    visualInfo = x11.XGetVisualInfo(x11Display(), VisualIDMask, &visualTemplate, &allVisualsCount);
+                }
+
+                if (visualInfo is null) {
+                    theVisual = cast(shared)x11.XDefaultVisual(x11Display(), x11.XDefaultScreen(x11Display()));
+                    assert(theVisual !is null);
+
+                    XVisualInfo visualTemplate;
+                    visualTemplate.visualid = x11.XVisualIDFromVisual(cast(Visual*)theVisual);
+                    int allVisualsCount;
+
+                    visualInfo = x11.XGetVisualInfo(x11Display(), VisualIDMask, &visualTemplate, &allVisualsCount);
+
+                    assert(allVisualsCount >= 1);
+                    assert(visualTemplate.visualid == visualInfo.visualid);
+                }
+
+                if (visualInfo !is null) {
+                    XSetWindowAttributes swa;
+                    Colormap cmap;
+
+                    cmap = x11.XCreateColormap(x11Display(), wroot, visualInfo.visual, AllocNone);
+                    swa.colormap = cmap;
+                    swa.background_pixmap = None;
+                    swa.border_pixel = 0;
+                    swa.background_pixel = 0xDEFACE00;
+
+                    taskbarSysTrayWrapper = x11.XCreateWindow(x11Display(), wroot,
+                        0, 0, size, size, 0, visualInfo.depth, InputOutput,
+                        visualInfo.visual, CWBorderPixel|CWColormap|CWBackPixel, &swa);
+
+                    assert(taskbarSysTrayWrapper != None);
+                    x11.XFree(visualInfo);
+                }
+
+                // backup plan
+                if (taskbarSysTrayWrapper == None)
+                    taskbarSysTrayWrapper = x11.XCreateSimpleWindow(x11Display(), wroot, 0, 0, size, size, 0, 0, 0xDEFACE00);
+
+                // select
+                x11.XSelectInput(x11Display(), taskbarSysTrayOwner, StructureNotifyMask);
+                x11.XSelectInput(x11Display(), taskbarSysTrayWrapper, ExposureMask | ButtonPressMask | StructureNotifyMask);
+
+                // dock
+                x11SendFreeDesktopSystemTrayMessage(x11Display(), taskbarSysTrayOwner,
+                    FreeDesktopSystemTray.SYSTEM_TRAY_REQUEST_DOCK, taskbarSysTrayWrapper, 0, 0);
+
+                // map
+                x11.XSync(x11Display(), False);
+
+                // graphics context
+                taskbarSysTrayGC = cast(shared)x11.XCreateGC(x11Display(), taskbarSysTrayWrapper, 0, null);
+                assert(taskbarSysTrayGC !is null);
+            }
+        }
+
+        void drawSystray(uint width, uint height, uint* data) shared {
+            import cf.spew.implementation.windowing.misc : x11WindowAttributes, bilinearInterpolationScale;
+            import core.stdc.stdlib : malloc, free;
+
+            auto attr = x11WindowAttributes(taskbarSysTrayWrapper);
+
+            if (attr.width != width || attr.height != height) {
+                uint* temp = cast(uint*)malloc(4*attr.width*attr.height);
+
+                bilinearInterpolationScale(width, height, attr.width, attr.height, cast(ubyte[4]*)data, cast(ubyte[4]*)temp);
+
+                free(data);
+                data = temp;
+
+                width = attr.width;
+                height = attr.height;
+            }
+
+            XImage* x11Image = x11.XCreateImage(x11Display(), cast(Visual*)taskbarSysTrayGC, 24, ZPixmap, 0, cast(char*)data, width, height, 32, 0);
+            x11.XPutImage(x11Display(), cast(Window)taskbarSysTrayWrapper, cast(GC)taskbarSysTrayGC, x11Image, 0, 0, 0, 0, attr.width, attr.height);
+            x11.XDestroyImage(x11Image);
         }
     }
 }

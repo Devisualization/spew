@@ -39,7 +39,7 @@ interface Feature_Icon {
 			return (managed!(ImageStorage!RGBA8)).init;
 		else {
 			auto ret = (cast(managed!Have_Icon)self).__getFeatureIcon().getIcon();
-			return managed!(ImageStorage!RGBA8)(ret, managers(), Ownership.Secondary, self.allocator);
+			return managed!(ImageStorage!RGBA8)(ret, managers(), self.allocator);
 		}
 	}
 

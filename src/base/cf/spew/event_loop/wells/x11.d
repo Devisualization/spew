@@ -10,12 +10,16 @@ import cf.spew.events.x11;
 import stdx.allocator : ISharedAllocator, make;
 import devisualization.bindings.x11;
 
+/// If null will set to previous handler or default
 void setX11ErrorHandler(XErrorHandler handler=null) {
     if (handler is null)
+        handler = lastErrorHandler;
+    if (handler is null)
         handler = &defaultX11ErrorHandler;
-    x11.XSetErrorHandler(handler);
+    lastErrorHandler = x11.XSetErrorHandler(handler);
 }
 
+///
 Display* x11Display() {
     if (display is null)
         performInit();
@@ -23,63 +27,112 @@ Display* x11Display() {
     return display;
 }
 
+///
 XIM x11XIM() {
     x11Display();
     return xim;
 }
 
+///
 X11Atoms x11Atoms() {
     x11Display();
     return atoms;
 }
 
+/// Automatically loaded atoms
 struct X11Atoms {
+    ///
     Atom
         XdndEnter,
+        ///
         XdndPosition,
+        ///
         XdndStatus,
+        ///
         XdndTypeList,
+        ///
         XdndActionCopy,
+        ///
         XdndDrop,
+        ///
         XdndLeave,
+        ///
         XdndFinished,
+        ///
         XdndSelection,
+        ///
         XdndProxy,
+        ///
         XdndAware,
 
+        ///
         CARDINAL,
+        ///
         XA_ATOM,
+        ///
         XA_TARGETS,
+        ///
         INTEGER,
+        ///
         UTF8_STRING,
 
+        ///
         Backlight,
+        ///
         BACKLIGHT,
 
+        ///
         PRIMARY,
+        ///
         CLIPBOARD,
 
+        /// automatically adapted to your the current screen
+        _NET_SYSTEM_TRAY_S,
+        ///
+        _NET_SYSTEM_TRAY_OPCODE,
+        ///
+        _NET_SYSTEM_TRAY_VISUAL,
+
+        ///
         WM_DELETE_WINDOW,
+        ///
         _NET_WM_ICON,
+        ///
         _MOTIF_WM_HINTS,
+        ///
         _NET_WM_ALLOWED_ACTIONS,
+        ///
         _NET_WM_STATE,
 
+        ///
         _NET_WM_WINDOW_TYPE_NORMAL,
+        ///
         _NET_WM_WINDOW_TYPE_UTILITY,
 
+        ///
         _NET_WM_STATE_STICKY,
+        ///
         _NET_WM_STATE_MODAL,
+        ///
         _NET_WM_STATE_ABOVE,
+        ///
         _NET_WM_STATE_FULLSCREEN,
 
+        ///
         _NET_WM_ACTION_FULLSCREEN,
+        ///
         _NET_WM_ACTION_CLOSE,
+        ///
         _NET_WM_ACTION_MINIMIZE,
+        ///
         _NET_WM_ACTION_RESIZE,
+        ///
         _NET_WM_ACTION_MOVE,
+        ///
         _NET_WM_ACTION_ABOVE,
+        ///
         _NET_WM_ACTION_MAXIMIZE_HORZ,
+        ///
         _NET_WM_ACTION_MAXIMIZE_VERT;
 }
 
@@ -87,8 +140,11 @@ private {
     Display* display;
     XIM xim;
     X11Atoms atoms;
+    XErrorHandler lastErrorHandler;
 
     void performInit() {
+        import std.format : sformat;
+
         if (x11Loader is X11Loader.init) {
             x11Loader = X11Loader(null);
             setX11ErrorHandler(null);
@@ -112,11 +168,19 @@ private {
         }
 
         static foreach(m; __traits(allMembers, X11Atoms)) {
-            mixin("atoms." ~ m ~ " = x11.XInternAtom(x11Display(), cast(char*)\"" ~ m ~ "\".ptr, false);");
+            mixin("atoms." ~ m ~ " = x11.XInternAtom(x11Display(), cast(char*)\"" ~ m ~ "\".ptr, true);");
         }
 
-        atoms.XA_ATOM = x11.XInternAtom(x11Display(), cast(char*)"ATOM".ptr, false);
-        atoms.XA_TARGETS = x11.XInternAtom(x11Display(), cast(char*)"TARGETS".ptr, false);
+        atoms.XA_ATOM = x11.XInternAtom(x11Display(), cast(char*)"ATOM".ptr, true);
+        atoms.XA_TARGETS = x11.XInternAtom(x11Display(), cast(char*)"TARGETS".ptr, true);
+
+        char[256] buffer;
+
+        buffer[] = 0;
+        buffer[0 .. "_NET_SYSTEM_TRAY_S".length] = "_NET_SYSTEM_TRAY_S"[];
+        buffer["_NET_SYSTEM_TRAY_S".length .. $].sformat!"%d"(x11.XDefaultScreen(x11Display()));
+        atoms._NET_SYSTEM_TRAY_S = x11.XInternAtom(x11Display(), buffer.ptr, true);
+
     }
 
     extern(C) int defaultX11ErrorHandler(Display* d, XErrorEvent* err) {

@@ -18,46 +18,46 @@ import derelict.util.sharedlib;
 import core.stdc.config : c_long, c_ulong;
 
 version(Windows) {
-	public import winapi = core.sys.windows.windows;
+    public import winapi = core.sys.windows.windows;
 
-	enum WindowDWStyles : winapi.DWORD {
-		Dialog = winapi.WS_OVERLAPPED | winapi.WS_CAPTION | winapi.WS_SYSMENU | winapi.WS_THICKFRAME | winapi.WS_MINIMIZEBOX | winapi.WS_MAXIMIZEBOX,
-		DialogEx = winapi.WS_EX_ACCEPTFILES | winapi.WS_EX_APPWINDOW,
+    enum WindowDWStyles : winapi.DWORD {
+        Dialog = winapi.WS_OVERLAPPED | winapi.WS_CAPTION | winapi.WS_SYSMENU | winapi.WS_THICKFRAME | winapi.WS_MINIMIZEBOX | winapi.WS_MAXIMIZEBOX,
+        DialogEx = winapi.WS_EX_ACCEPTFILES | winapi.WS_EX_APPWINDOW,
 
-		Borderless = winapi.WS_OVERLAPPED | winapi.WS_CAPTION | winapi.WS_SYSMENU | winapi.WS_BORDER | winapi.WS_MINIMIZEBOX,
-		BorderlessEx = winapi.WS_EX_ACCEPTFILES | winapi.WS_EX_APPWINDOW,
+        Borderless = winapi.WS_OVERLAPPED | winapi.WS_CAPTION | winapi.WS_SYSMENU | winapi.WS_BORDER | winapi.WS_MINIMIZEBOX,
+        BorderlessEx = winapi.WS_EX_ACCEPTFILES | winapi.WS_EX_APPWINDOW,
 
-		Popup = winapi.WS_POPUPWINDOW | winapi.WS_CAPTION | winapi.WS_SYSMENU | winapi.WS_BORDER | winapi.WS_MINIMIZEBOX,
-		PopupEx = winapi.WS_EX_ACCEPTFILES | winapi.WS_EX_APPWINDOW | winapi.WS_EX_TOPMOST,
+        Popup = winapi.WS_POPUPWINDOW | winapi.WS_CAPTION | winapi.WS_SYSMENU | winapi.WS_BORDER | winapi.WS_MINIMIZEBOX,
+        PopupEx = winapi.WS_EX_ACCEPTFILES | winapi.WS_EX_APPWINDOW | winapi.WS_EX_TOPMOST,
 
-		Fullscreen = winapi.WS_POPUP | winapi.WS_CLIPCHILDREN | winapi.WS_CLIPSIBLINGS,
-		FullscreenEx = winapi.WS_EX_APPWINDOW | winapi.WS_EX_TOPMOST,
+        Fullscreen = winapi.WS_POPUP | winapi.WS_CLIPCHILDREN | winapi.WS_CLIPSIBLINGS,
+        FullscreenEx = winapi.WS_EX_APPWINDOW | winapi.WS_EX_TOPMOST,
 
-		NoDecorations = winapi.WS_POPUP,
-		NoDecorationsEx = winapi.WS_EX_TOPMOST | winapi.WS_EX_TRANSPARENT
-	}
+        NoDecorations = winapi.WS_POPUP,
+        NoDecorationsEx = winapi.WS_EX_TOPMOST | winapi.WS_EX_TRANSPARENT
+    }
 
-	static wstring ClassNameW = __MODULE__ ~ ":Class"w;
+    static wstring ClassNameW = __MODULE__ ~ ":Class"w;
 
-	struct PHYSICAL_MONITOR {
-		winapi.HANDLE hPhysicalMonitor;
-		winapi.WCHAR[PHYSICAL_MONITOR_DESCRIPTION_SIZE] szPhysicalMonitorDescription;
-	}
+    struct PHYSICAL_MONITOR {
+        winapi.HANDLE hPhysicalMonitor;
+        winapi.WCHAR[PHYSICAL_MONITOR_DESCRIPTION_SIZE] szPhysicalMonitorDescription;
+    }
 
-	enum {
-		PHYSICAL_MONITOR_DESCRIPTION_SIZE = 128,
-		MC_CAPS_BRIGHTNESS = 0x00000002,
+    enum {
+        PHYSICAL_MONITOR_DESCRIPTION_SIZE = 128,
+        MC_CAPS_BRIGHTNESS = 0x00000002,
 
-		NOTIFYICON_VERSION_4 = 4,
-		NIF_SHOWTIP = 0x00000080,
-		NIF_REALTIME = 0x00000040,
-	}
+        NOTIFYICON_VERSION_4 = 4,
+        NIF_SHOWTIP = 0x00000080,
+        NIF_REALTIME = 0x00000040,
+    }
 
-	extern(Windows) {
-		// dxva2
-		winapi.BOOL function(winapi.HANDLE hMonitor, winapi.LPDWORD pdwMonitorCapabilities, winapi.LPDWORD pdwSupportedColorTemperatures) GetMonitorCapabilities;
-		winapi.BOOL function(winapi.HANDLE hMonitor, winapi.LPDWORD pdwMinimumBrightness, winapi.LPDWORD pdwCurrentBrightness, winapi.LPDWORD pdwMaximumBrightness) GetMonitorBrightness;
-		winapi.BOOL function(winapi.HMONITOR hMonitor, winapi.DWORD dwPhysicalMonitorArraySize, PHYSICAL_MONITOR* pPhysicalMonitorArray) GetPhysicalMonitorsFromHMONITOR;
+    extern(Windows) {
+        // dxva2
+        winapi.BOOL function(winapi.HANDLE hMonitor, winapi.LPDWORD pdwMonitorCapabilities, winapi.LPDWORD pdwSupportedColorTemperatures) GetMonitorCapabilities;
+        winapi.BOOL function(winapi.HANDLE hMonitor, winapi.LPDWORD pdwMinimumBrightness, winapi.LPDWORD pdwCurrentBrightness, winapi.LPDWORD pdwMaximumBrightness) GetMonitorBrightness;
+        winapi.BOOL function(winapi.HMONITOR hMonitor, winapi.DWORD dwPhysicalMonitorArraySize, PHYSICAL_MONITOR* pPhysicalMonitorArray) GetPhysicalMonitorsFromHMONITOR;
 
         // shell32
         winapi.HRESULT function(NOTIFYICONIDENTIFIER*, winapi.RECT*) Shell_NotifyIconGetRect;
@@ -68,371 +68,371 @@ version(Windows) {
     
     __gshared SharedLib dxva2, shell32, user32;
 
-	//
+    //
 
-	ImageStorage!RGB8 screenshotImpl_WinAPI(IAllocator alloc, winapi.HDC hFrom, uint width, uint height) {
-		winapi.HDC hMemoryDC = winapi.CreateCompatibleDC(hFrom);
-		winapi.HBITMAP hBitmap = winapi.CreateCompatibleBitmap(hFrom, width, height);
+    ImageStorage!RGB8 screenshotImpl_WinAPI(IAllocator alloc, winapi.HDC hFrom, uint width, uint height) {
+        winapi.HDC hMemoryDC = winapi.CreateCompatibleDC(hFrom);
+        winapi.HBITMAP hBitmap = winapi.CreateCompatibleBitmap(hFrom, width, height);
 
-		winapi.HBITMAP hOldBitmap = winapi.SelectObject(hMemoryDC, hBitmap);
-		winapi.BitBlt(hMemoryDC, 0, 0, width, height, hFrom, 0, 0, winapi.SRCCOPY);
+        winapi.HBITMAP hOldBitmap = winapi.SelectObject(hMemoryDC, hBitmap);
+        winapi.BitBlt(hMemoryDC, 0, 0, width, height, hFrom, 0, 0, winapi.SRCCOPY);
 
-		auto storage = bitmapToImage_WinAPI(hBitmap, hMemoryDC, vec2!size_t(width, height), alloc);
+        auto storage = bitmapToImage_WinAPI(hBitmap, hMemoryDC, vec2!size_t(width, height), alloc);
 
-		hBitmap = winapi.SelectObject(hMemoryDC, hOldBitmap);
-		winapi.DeleteDC(hMemoryDC);
+        hBitmap = winapi.SelectObject(hMemoryDC, hOldBitmap);
+        winapi.DeleteDC(hMemoryDC);
 
-		return storage;
-	}
+        return storage;
+    }
 
-	ImageStorage!RGB8 bitmapToImage_WinAPI(winapi.HBITMAP hBitmap, winapi.HDC hMemoryDC, vec2!size_t size_, IAllocator alloc) {
-		import devisualization.image.storage.base : ImageStorageHorizontal;
-		import devisualization.image.interfaces : imageObject;
+    ImageStorage!RGB8 bitmapToImage_WinAPI(winapi.HBITMAP hBitmap, winapi.HDC hMemoryDC, vec2!size_t size_, IAllocator alloc) {
+        import devisualization.image.storage.base : ImageStorageHorizontal;
+        import devisualization.image.interfaces : imageObject;
 
-		size_t dwBmpSize = ((size_.x * 32 + 31) / 32) * 4 * size_.y;
-		ubyte[] buffer = alloc.makeArray!ubyte(dwBmpSize);
-		auto storage = imageObject!(ImageStorageHorizontal!RGB8)(size_.x, size_.y, alloc);
+        size_t dwBmpSize = ((size_.x * 32 + 31) / 32) * 4 * size_.y;
+        ubyte[] buffer = alloc.makeArray!ubyte(dwBmpSize);
+        auto storage = imageObject!(ImageStorageHorizontal!RGB8)(size_.x, size_.y, alloc);
 
-		winapi.BITMAPINFOHEADER bi;
+        winapi.BITMAPINFOHEADER bi;
 
-		bi.biSize = winapi.BITMAPINFOHEADER.sizeof;
-		bi.biWidth = cast(int)size_.x;
-		bi.biHeight = cast(int)size_.y;
-		bi.biPlanes = 1;
-		bi.biBitCount = 32;
-		bi.biCompression = winapi.BI_RGB;
-		bi.biSizeImage = 0;
-		bi.biXPelsPerMeter = 0;
-		bi.biYPelsPerMeter = 0;
-		bi.biClrUsed = 0;
-		bi.biClrImportant = 0;
+        bi.biSize = winapi.BITMAPINFOHEADER.sizeof;
+        bi.biWidth = cast(int)size_.x;
+        bi.biHeight = cast(int)size_.y;
+        bi.biPlanes = 1;
+        bi.biBitCount = 32;
+        bi.biCompression = winapi.BI_RGB;
+        bi.biSizeImage = 0;
+        bi.biXPelsPerMeter = 0;
+        bi.biYPelsPerMeter = 0;
+        bi.biClrUsed = 0;
+        bi.biClrImportant = 0;
 
-		winapi.BITMAPINFO bitmapInfo;
-		bitmapInfo.bmiHeader = bi;
+        winapi.BITMAPINFO bitmapInfo;
+        bitmapInfo.bmiHeader = bi;
 
-		winapi.GetDIBits(hMemoryDC, hBitmap, 0, cast(int)size_.y, buffer.ptr, &bitmapInfo, winapi.DIB_RGB_COLORS);
+        winapi.GetDIBits(hMemoryDC, hBitmap, 0, cast(int)size_.y, buffer.ptr, &bitmapInfo, winapi.DIB_RGB_COLORS);
 
-		size_t x;
-		size_t y = size_.y-1;
-		for(size_t i = 0; i < buffer.length; i += 4) {
-			RGB8 c = RGB8(buffer[i+2], buffer[i+1], buffer[i]);
+        size_t x;
+        size_t y = size_.y-1;
+        for(size_t i = 0; i < buffer.length; i += 4) {
+            RGB8 c = RGB8(buffer[i+2], buffer[i+1], buffer[i]);
 
-			storage[x, y] = c;
+            storage[x, y] = c;
 
-			x++;
-			if (x == size_.x) {
-				x = 0;
-				if (y == 0)
-					break;
-				y--;
-			}
-		}
+            x++;
+            if (x == size_.x) {
+                x = 0;
+                if (y == 0)
+                    break;
+                y--;
+            }
+        }
 
-		alloc.dispose(buffer);
-		return storage;
-	}
+        alloc.dispose(buffer);
+        return storage;
+    }
 
-	ImageStorage!RGBA8 bitmapToAlphaImage_WinAPI(winapi.HBITMAP hBitmap, winapi.HDC hMemoryDC, vec2!size_t size_, IAllocator alloc) {
-		import devisualization.image.storage.base : ImageStorageHorizontal;
-		import devisualization.image.interfaces : imageObject;
+    ImageStorage!RGBA8 bitmapToAlphaImage_WinAPI(winapi.HBITMAP hBitmap, winapi.HDC hMemoryDC, vec2!size_t size_, IAllocator alloc) {
+        import devisualization.image.storage.base : ImageStorageHorizontal;
+        import devisualization.image.interfaces : imageObject;
 
-		size_t dwBmpSize = ((size_.x * 32 + 31) / 32) * 4 * size_.y;
-		ubyte[] buffer = alloc.makeArray!ubyte(dwBmpSize);
-		auto storage = imageObject!(ImageStorageHorizontal!RGBA8)(size_.x, size_.y, alloc);
+        size_t dwBmpSize = ((size_.x * 32 + 31) / 32) * 4 * size_.y;
+        ubyte[] buffer = alloc.makeArray!ubyte(dwBmpSize);
+        auto storage = imageObject!(ImageStorageHorizontal!RGBA8)(size_.x, size_.y, alloc);
 
-		winapi.BITMAPINFOHEADER bi;
+        winapi.BITMAPINFOHEADER bi;
 
-		bi.biSize = winapi.BITMAPINFOHEADER.sizeof;
-		bi.biWidth = cast(int)size_.x;
-		bi.biHeight = cast(int)size_.y;
-		bi.biPlanes = 1;
-		bi.biBitCount = 32;
-		bi.biCompression = winapi.BI_RGB;
-		bi.biSizeImage = 0;
-		bi.biXPelsPerMeter = 0;
-		bi.biYPelsPerMeter = 0;
-		bi.biClrUsed = 0;
-		bi.biClrImportant = 0;
+        bi.biSize = winapi.BITMAPINFOHEADER.sizeof;
+        bi.biWidth = cast(int)size_.x;
+        bi.biHeight = cast(int)size_.y;
+        bi.biPlanes = 1;
+        bi.biBitCount = 32;
+        bi.biCompression = winapi.BI_RGB;
+        bi.biSizeImage = 0;
+        bi.biXPelsPerMeter = 0;
+        bi.biYPelsPerMeter = 0;
+        bi.biClrUsed = 0;
+        bi.biClrImportant = 0;
 
-		winapi.BITMAPINFO bitmapInfo;
-		bitmapInfo.bmiHeader = bi;
+        winapi.BITMAPINFO bitmapInfo;
+        bitmapInfo.bmiHeader = bi;
 
-		winapi.GetDIBits(hMemoryDC, hBitmap, 0, cast(int)size_.y, buffer.ptr, &bitmapInfo, winapi.DIB_RGB_COLORS);
+        winapi.GetDIBits(hMemoryDC, hBitmap, 0, cast(int)size_.y, buffer.ptr, &bitmapInfo, winapi.DIB_RGB_COLORS);
 
-		size_t x;
-		size_t y = size_.y-1;
-		for(size_t i = 0; i < buffer.length; i += 4) {
-			RGBA8 c = RGBA8(buffer[i+2], buffer[i+1], buffer[i], 255);
+        size_t x;
+        size_t y = size_.y-1;
+        for(size_t i = 0; i < buffer.length; i += 4) {
+            RGBA8 c = RGBA8(buffer[i+2], buffer[i+1], buffer[i], 255);
 
-			storage[x, y] = c;
+            storage[x, y] = c;
 
-			x++;
-			if (x == size_.x) {
-				x = 0;
-				if (y == 0)
-					break;
-				y--;
-			}
-		}
+            x++;
+            if (x == size_.x) {
+                x = 0;
+                if (y == 0)
+                    break;
+                y--;
+            }
+        }
 
-		alloc.dispose(buffer);
-		return storage;
-	}
+        alloc.dispose(buffer);
+        return storage;
+    }
 
-	winapi.HBITMAP imageToBitmap_WinAPI(ImageStorage!RGB8 from, winapi.HDC hMemoryDC, IAllocator alloc) {
-		size_t dwBmpSize = ((from.width * 32 + 31) / 32) * 4 * from.height;
-		ubyte[] buffer = alloc.makeArray!ubyte(dwBmpSize);
+    winapi.HBITMAP imageToBitmap_WinAPI(ImageStorage!RGB8 from, winapi.HDC hMemoryDC, IAllocator alloc) {
+        size_t dwBmpSize = ((from.width * 32 + 31) / 32) * 4 * from.height;
+        ubyte[] buffer = alloc.makeArray!ubyte(dwBmpSize);
 
-		winapi.HICON ret;
+        winapi.HICON ret;
 
-		size_t x;
-		size_t y = from.height-1;
-		for(size_t i = 0; i < buffer.length; i += 4) {
-			RGB8 c = from[x, y];
+        size_t x;
+        size_t y = from.height-1;
+        for(size_t i = 0; i < buffer.length; i += 4) {
+            RGB8 c = from[x, y];
 
-			buffer[i] = c.b.value;
-			buffer[i+1] = c.g.value;
-			buffer[i+2] = c.r.value;
-			buffer[i+3] = 255;
+            buffer[i] = c.b.value;
+            buffer[i+1] = c.g.value;
+            buffer[i+2] = c.r.value;
+            buffer[i+3] = 255;
 
-			x++;
-			if (x == from.width) {
-				x = 0;
-				if (y == 0)
-					break;
-				y--;
-			}
-		}
+            x++;
+            if (x == from.width) {
+                x = 0;
+                if (y == 0)
+                    break;
+                y--;
+            }
+        }
 
-		winapi.HBITMAP hBitmap = winapi.CreateBitmap(cast(uint)from.width, cast(uint)from.height, 1, 32, buffer.ptr);
-		alloc.dispose(buffer);
-		return hBitmap;
-	}
+        winapi.HBITMAP hBitmap = winapi.CreateBitmap(cast(uint)from.width, cast(uint)from.height, 1, 32, buffer.ptr);
+        alloc.dispose(buffer);
+        return hBitmap;
+    }
 
-	winapi.HBITMAP imageToAlphaBitmap_WinAPI(ImageStorage!RGBA8 from, winapi.HDC hMemoryDC, IAllocator alloc) {
-		size_t dwBmpSize = ((from.width * 32 + 31) / 32) * 4 * from.height;
-		ubyte[] buffer = alloc.makeArray!ubyte(dwBmpSize);
+    winapi.HBITMAP imageToAlphaBitmap_WinAPI(ImageStorage!RGBA8 from, winapi.HDC hMemoryDC, IAllocator alloc) {
+        size_t dwBmpSize = ((from.width * 32 + 31) / 32) * 4 * from.height;
+        ubyte[] buffer = alloc.makeArray!ubyte(dwBmpSize);
 
-		winapi.HICON ret;
+        winapi.HICON ret;
 
-		size_t x;
-		size_t y = from.height-1;
-		for(size_t i = 0; i < buffer.length; i += 4) {
-			RGBA8 c = from[x, y];
+        size_t x;
+        size_t y = from.height-1;
+        for(size_t i = 0; i < buffer.length; i += 4) {
+            RGBA8 c = from[x, y];
 
-			buffer[i] = c.b.value;
-			buffer[i+1] = c.g.value;
-			buffer[i+2] = c.r.value;
-			buffer[i+3] = c.a.value;
+            buffer[i] = c.b.value;
+            buffer[i+1] = c.g.value;
+            buffer[i+2] = c.r.value;
+            buffer[i+3] = c.a.value;
 
-			x++;
-			if (x == from.width) {
-				x = 0;
-				if (y == 0)
-					break;
-				y--;
-			}
-		}
+            x++;
+            if (x == from.width) {
+                x = 0;
+                if (y == 0)
+                    break;
+                y--;
+            }
+        }
 
-		winapi.HBITMAP hBitmap = winapi.CreateBitmap(cast(uint)from.width, cast(uint)from.height, 1, 32, buffer.ptr);
-		alloc.dispose(buffer);
-		return hBitmap;
-	}
+        winapi.HBITMAP hBitmap = winapi.CreateBitmap(cast(uint)from.width, cast(uint)from.height, 1, 32, buffer.ptr);
+        alloc.dispose(buffer);
+        return hBitmap;
+    }
 
-	winapi.HBITMAP imageToAlphaBitmap_WinAPI(shared(ImageStorage!RGBA8) from, winapi.HDC hMemoryDC, shared(ISharedAllocator) alloc) {
-		size_t dwBmpSize = ((from.width * 32 + 31) / 32) * 4 * from.height;
-		ubyte[] buffer = alloc.makeArray!ubyte(dwBmpSize);
+    winapi.HBITMAP imageToAlphaBitmap_WinAPI(shared(ImageStorage!RGBA8) from, winapi.HDC hMemoryDC, shared(ISharedAllocator) alloc) {
+        size_t dwBmpSize = ((from.width * 32 + 31) / 32) * 4 * from.height;
+        ubyte[] buffer = alloc.makeArray!ubyte(dwBmpSize);
 
-		winapi.HICON ret;
+        winapi.HICON ret;
 
-		size_t x;
-		size_t y = from.height-1;
-		for(size_t i = 0; i < buffer.length; i += 4) {
-			RGBA8 c = from[x, y];
+        size_t x;
+        size_t y = from.height-1;
+        for(size_t i = 0; i < buffer.length; i += 4) {
+            RGBA8 c = from[x, y];
 
-			buffer[i] = c.b.value;
-			buffer[i+1] = c.g.value;
-			buffer[i+2] = c.r.value;
-			buffer[i+3] = c.a.value;
+            buffer[i] = c.b.value;
+            buffer[i+1] = c.g.value;
+            buffer[i+2] = c.r.value;
+            buffer[i+3] = c.a.value;
 
-			x++;
-			if (x == from.width) {
-				x = 0;
-				if (y == 0)
-					break;
-				y--;
-			}
-		}
+            x++;
+            if (x == from.width) {
+                x = 0;
+                if (y == 0)
+                    break;
+                y--;
+            }
+        }
 
-		winapi.HBITMAP hBitmap = winapi.CreateBitmap(cast(uint)from.width, cast(uint)from.height, 1, 32, buffer.ptr);
-		alloc.dispose(buffer);
-		return hBitmap;
-	}
+        winapi.HBITMAP hBitmap = winapi.CreateBitmap(cast(uint)from.width, cast(uint)from.height, 1, 32, buffer.ptr);
+        alloc.dispose(buffer);
+        return hBitmap;
+    }
 
-	winapi.HICON imageToIcon_WinAPI(ImageStorage!RGBA8 from, winapi.HDC hMemoryDC, IAllocator alloc) {
-		winapi.HBITMAP hBitmap = imageToAlphaBitmap_WinAPI(from, hMemoryDC, alloc);
-		winapi.HICON ret = bitmapToIcon_WinAPI(hBitmap, hMemoryDC, vec2!size_t(from.width, from.height));
+    winapi.HICON imageToIcon_WinAPI(ImageStorage!RGBA8 from, winapi.HDC hMemoryDC, IAllocator alloc) {
+        winapi.HBITMAP hBitmap = imageToAlphaBitmap_WinAPI(from, hMemoryDC, alloc);
+        winapi.HICON ret = bitmapToIcon_WinAPI(hBitmap, hMemoryDC, vec2!size_t(from.width, from.height));
 
-		scope(exit)
-			winapi.DeleteObject(hBitmap);
+        scope(exit)
+            winapi.DeleteObject(hBitmap);
 
-		return ret;
-	}
+        return ret;
+    }
 
-	winapi.HICON imageToIcon_WinAPI(shared(ImageStorage!RGBA8) from, winapi.HDC hMemoryDC, shared(ISharedAllocator) alloc) {
-		winapi.HBITMAP hBitmap = imageToAlphaBitmap_WinAPI(from, hMemoryDC, alloc);
-		winapi.HICON ret = bitmapToIcon_WinAPI(hBitmap, hMemoryDC, vec2!size_t(from.width, from.height));
+    winapi.HICON imageToIcon_WinAPI(shared(ImageStorage!RGBA8) from, winapi.HDC hMemoryDC, shared(ISharedAllocator) alloc) {
+        winapi.HBITMAP hBitmap = imageToAlphaBitmap_WinAPI(from, hMemoryDC, alloc);
+        winapi.HICON ret = bitmapToIcon_WinAPI(hBitmap, hMemoryDC, vec2!size_t(from.width, from.height));
 
-		scope(exit)
-			winapi.DeleteObject(hBitmap);
+        scope(exit)
+            winapi.DeleteObject(hBitmap);
 
-		return ret;
-	}
+        return ret;
+    }
 
-	winapi.HICON bitmapToIcon_WinAPI(winapi.HBITMAP hBitmap, winapi.HDC hMemoryDC, vec2!size_t size_) {
-		winapi.HICON ret;
-		winapi.HBITMAP hbmMask = winapi.CreateCompatibleBitmap(hMemoryDC, cast(uint)size_.x, cast(uint)size_.y);
+    winapi.HICON bitmapToIcon_WinAPI(winapi.HBITMAP hBitmap, winapi.HDC hMemoryDC, vec2!size_t size_) {
+        winapi.HICON ret;
+        winapi.HBITMAP hbmMask = winapi.CreateCompatibleBitmap(hMemoryDC, cast(uint)size_.x, cast(uint)size_.y);
 
-		winapi.ICONINFO ii;
-		ii.fIcon = true;
-		ii.hbmColor = hBitmap;
-		ii.hbmMask = hbmMask;
+        winapi.ICONINFO ii;
+        ii.fIcon = true;
+        ii.hbmColor = hBitmap;
+        ii.hbmMask = hbmMask;
 
-		ret = winapi.CreateIconIndirect(&ii);
+        ret = winapi.CreateIconIndirect(&ii);
 
-		winapi.DeleteObject(hbmMask);
+        winapi.DeleteObject(hbmMask);
 
-		return ret;
-	}
+        return ret;
+    }
 
-	winapi.HBITMAP resizeBitmap_WinAPI(winapi.HBITMAP hBitmap, winapi.HDC hDC, vec2!size_t toSize, vec2!size_t fromSize) {
-		winapi.HDC hMemDC1 = winapi.CreateCompatibleDC(hDC);
-		winapi.HBITMAP hBitmap1 = winapi.CreateCompatibleBitmap(hDC, cast(int)toSize.x, cast(int)toSize.y);
-		winapi.HGDIOBJ hOld1 = winapi.SelectObject(hMemDC1, hBitmap1);
+    winapi.HBITMAP resizeBitmap_WinAPI(winapi.HBITMAP hBitmap, winapi.HDC hDC, vec2!size_t toSize, vec2!size_t fromSize) {
+        winapi.HDC hMemDC1 = winapi.CreateCompatibleDC(hDC);
+        winapi.HBITMAP hBitmap1 = winapi.CreateCompatibleBitmap(hDC, cast(int)toSize.x, cast(int)toSize.y);
+        winapi.HGDIOBJ hOld1 = winapi.SelectObject(hMemDC1, hBitmap1);
 
-		winapi.HDC hMemDC2 = winapi.CreateCompatibleDC(hDC);
-		winapi.HGDIOBJ hOld2 = winapi.SelectObject(hMemDC2, hBitmap);
+        winapi.HDC hMemDC2 = winapi.CreateCompatibleDC(hDC);
+        winapi.HGDIOBJ hOld2 = winapi.SelectObject(hMemDC2, hBitmap);
 
-		winapi.BITMAP bitmap;
-		winapi.GetObjectW(hBitmap, winapi.BITMAP.sizeof, &bitmap);
+        winapi.BITMAP bitmap;
+        winapi.GetObjectW(hBitmap, winapi.BITMAP.sizeof, &bitmap);
 
-		winapi.StretchBlt(hMemDC1, 0, 0, cast(int)toSize.x, cast(int)toSize.y, hMemDC2, 0, 0, cast(int)fromSize.x, cast(int)fromSize.y, winapi.SRCCOPY);
+        winapi.StretchBlt(hMemDC1, 0, 0, cast(int)toSize.x, cast(int)toSize.y, hMemDC2, 0, 0, cast(int)fromSize.x, cast(int)fromSize.y, winapi.SRCCOPY);
 
-		winapi.SelectObject(hMemDC1, hOld1);
-		winapi.SelectObject(hMemDC2, hOld2);
-		winapi.DeleteDC(hMemDC1);
-		winapi.DeleteDC(hMemDC2);
+        winapi.SelectObject(hMemDC1, hOld1);
+        winapi.SelectObject(hMemDC2, hOld2);
+        winapi.DeleteDC(hMemDC1);
+        winapi.DeleteDC(hMemDC2);
 
-		return hBitmap1;
-	}
+        return hBitmap1;
+    }
 
-	struct GetDisplays_WinAPI {
+    struct GetDisplays_WinAPI {
         import cf.spew.implementation.instance : UIInstance;
-		IAllocator alloc;
-		shared(UIInstance) uiInstance;
+        IAllocator alloc;
+        shared(UIInstance) uiInstance;
 
-		HandleAppender!IDisplay displays;
+        HandleAppender!IDisplay displays;
 
-		void call() {
-			displays = HandleAppender!IDisplay(alloc);
-			winapi.EnumDisplayMonitors(null, null, &callbackGetDisplays_WinAPI, cast(winapi.LPARAM)cast(void*)&this);
-		}
-	}
+        void call() {
+            displays = HandleAppender!IDisplay(alloc);
+            winapi.EnumDisplayMonitors(null, null, &callbackGetDisplays_WinAPI, cast(winapi.LPARAM)cast(void*)&this);
+        }
+    }
 
-	struct GetPrimaryDisplay_WinAPI {
+    struct GetPrimaryDisplay_WinAPI {
         import cf.spew.implementation.instance : UIInstance;
-		IAllocator alloc;
-		shared(UIInstance) uiInstance;
+        IAllocator alloc;
+        shared(UIInstance) uiInstance;
 
-		IDisplay display;
+        IDisplay display;
 
-		void call() {
-			winapi.EnumDisplayMonitors(null, null, &callbackGetPrimaryDisplay_WinAPI, cast(winapi.LPARAM)cast(void*)&this);
-		}
-	}
+        void call() {
+            winapi.EnumDisplayMonitors(null, null, &callbackGetPrimaryDisplay_WinAPI, cast(winapi.LPARAM)cast(void*)&this);
+        }
+    }
 
-	struct GetWindows_WinAPI {
+    struct GetWindows_WinAPI {
         import cf.spew.implementation.instance : UIInstance;
-		IAllocator alloc;
+        IAllocator alloc;
 
-		shared(UIInstance) uiInstance;
-		IDisplay display;
+        shared(UIInstance) uiInstance;
+        IDisplay display;
 
-		HandleAppender!IWindow windows;
+        HandleAppender!IWindow windows;
 
-		void call() {
-			windows = HandleAppender!IWindow(alloc);
-			winapi.EnumWindows(&callbackGetWindows_WinAPI, cast(winapi.LPARAM)&this);
-		}
-	}
+        void call() {
+            windows = HandleAppender!IWindow(alloc);
+            winapi.EnumWindows(&callbackGetWindows_WinAPI, cast(winapi.LPARAM)&this);
+        }
+    }
 
-	extern(Windows) {
-		int callbackGetDisplays_WinAPI(winapi.HMONITOR hMonitor, winapi.HDC, winapi.LPRECT, winapi.LPARAM lParam) nothrow {
-			import cf.spew.implementation.windowing.display;
-			GetDisplays_WinAPI* ctx = cast(GetDisplays_WinAPI*)lParam;
+    extern(Windows) {
+        int callbackGetDisplays_WinAPI(winapi.HMONITOR hMonitor, winapi.HDC, winapi.LPRECT, winapi.LPARAM lParam) nothrow {
+            import cf.spew.implementation.windowing.display;
+            GetDisplays_WinAPI* ctx = cast(GetDisplays_WinAPI*)lParam;
 
-			try {
-				DisplayImpl_WinAPI display = ctx.alloc.make!DisplayImpl_WinAPI(hMonitor, ctx.alloc, ctx.uiInstance);
-				ctx.displays.add(display);
-			} catch (Exception e) {}
+            try {
+                DisplayImpl_WinAPI display = ctx.alloc.make!DisplayImpl_WinAPI(hMonitor, ctx.alloc, ctx.uiInstance);
+                ctx.displays.add(display);
+            } catch (Exception e) {}
 
-			return true;
-		}
+            return true;
+        }
 
-		int callbackGetPrimaryDisplay_WinAPI(winapi.HMONITOR hMonitor, winapi.HDC, winapi.LPRECT, winapi.LPARAM lParam) nothrow {
-			import cf.spew.implementation.windowing.display;
-			GetPrimaryDisplay_WinAPI* ctx = cast(GetPrimaryDisplay_WinAPI*)lParam;
+        int callbackGetPrimaryDisplay_WinAPI(winapi.HMONITOR hMonitor, winapi.HDC, winapi.LPRECT, winapi.LPARAM lParam) nothrow {
+            import cf.spew.implementation.windowing.display;
+            GetPrimaryDisplay_WinAPI* ctx = cast(GetPrimaryDisplay_WinAPI*)lParam;
 
-			winapi.MONITORINFOEXA info;
-			info.cbSize = winapi.MONITORINFOEXA.sizeof;
-			winapi.GetMonitorInfoA(hMonitor, &info);
+            winapi.MONITORINFOEXA info;
+            info.cbSize = winapi.MONITORINFOEXA.sizeof;
+            winapi.GetMonitorInfoA(hMonitor, &info);
 
-			if ((info.dwFlags & winapi.MONITORINFOF_PRIMARY) != winapi.MONITORINFOF_PRIMARY) {
-				return true;
-			}
+            if ((info.dwFlags & winapi.MONITORINFOF_PRIMARY) != winapi.MONITORINFOF_PRIMARY) {
+                return true;
+            }
 
-			try {
-				ctx.display = ctx.alloc.make!DisplayImpl_WinAPI(hMonitor, ctx.alloc, ctx.uiInstance);
-				return false;
-			} catch (Exception e) {}
-			return true;
-		}
+            try {
+                ctx.display = ctx.alloc.make!DisplayImpl_WinAPI(hMonitor, ctx.alloc, ctx.uiInstance);
+                return false;
+            } catch (Exception e) {}
+            return true;
+        }
 
-		int callbackGetWindows_WinAPI(winapi.HWND hwnd, winapi.LPARAM lParam) nothrow {
-			import cf.spew.implementation.windowing.window;
-			GetWindows_WinAPI* ctx = cast(GetWindows_WinAPI*)lParam;
+        int callbackGetWindows_WinAPI(winapi.HWND hwnd, winapi.LPARAM lParam) nothrow {
+            import cf.spew.implementation.windowing.window;
+            GetWindows_WinAPI* ctx = cast(GetWindows_WinAPI*)lParam;
 
-			if (!winapi.IsWindowVisible(hwnd))
-				return true;
+            if (!winapi.IsWindowVisible(hwnd))
+                return true;
 
-			winapi.RECT rect;
-			winapi.GetWindowRect(hwnd, &rect);
+            winapi.RECT rect;
+            winapi.GetWindowRect(hwnd, &rect);
 
-			if (rect.right - rect.left == 0 || rect.bottom - rect.top == 0)
-				return true;
+            if (rect.right - rect.left == 0 || rect.bottom - rect.top == 0)
+                return true;
 
-			try {
-				WindowImpl_WinAPI window = ctx.alloc.make!WindowImpl_WinAPI(hwnd, cast(IContext)null, ctx.alloc, ctx.uiInstance);
+            try {
+                WindowImpl_WinAPI window = ctx.alloc.make!WindowImpl_WinAPI(hwnd, cast(IContext)null, ctx.alloc, ctx.uiInstance);
 
-				if (ctx.display is null) {
-					ctx.windows.add(window);
-				} else {
-					auto display2 = window.display;
-					if (display2 is null) {
-						ctx.alloc.dispose(window);
-						return true;
-					}
+                if (ctx.display is null) {
+                    ctx.windows.add(window);
+                } else {
+                    auto display2 = window.display;
+                    if (display2 is null) {
+                        ctx.alloc.dispose(window);
+                        return true;
+                    }
 
-					if (display2.name == ctx.display.name)
-						ctx.windows.add(window);
-					else
-						ctx.alloc.dispose(window);
-				}
-			} catch(Exception e) {}
+                    if (display2.name == ctx.display.name)
+                        ctx.windows.add(window);
+                    else
+                        ctx.alloc.dispose(window);
+                }
+            } catch(Exception e) {}
 
-			return true;
-		}
-	}
+            return true;
+        }
+    }
 
     struct NOTIFYICONIDENTIFIER {
         winapi.DWORD cbSize;
@@ -452,141 +452,137 @@ version(Windows) {
 }
 
 struct HandleAppender(Handle) {
-	IAllocator alloc;
+    IAllocator alloc;
 
-	Handle[] array;
-	size_t toUse;
+    Handle[] array;
+    size_t toUse;
 
-	void add(Handle handle) {
-		if (toUse == 0) {
-			if (array.length == 0) {
-				alloc.makeArray!Handle(64);
-				toUse = 64;
-			} else {
-				alloc.expandArray(array, 8);
-				toUse = 8;
-			}
-		}
+    void add(Handle handle) {
+        if (toUse == 0) {
+            if (array.length == 0) {
+                alloc.makeArray!Handle(64);
+                toUse = 64;
+            } else {
+                alloc.expandArray(array, 8);
+                toUse = 8;
+            }
+        }
 
-		array[$-(toUse--)] = handle;
-	}
+        array[$-(toUse--)] = handle;
+    }
 
-	Handle[] get() {
-		return array[0 .. $-toUse];
-	}
+    Handle[] get() {
+        return array[0 .. $-toUse];
+    }
 
-	alias get this;
+    alias get this;
 }
 
 struct GetWindows_X11 {
     import cf.spew.implementation.instance : UIInstance;
-	import cf.spew.implementation.windowing.display;
-	import devisualization.bindings.x11;
-	import cf.spew.event_loop.wells.x11;
+    import cf.spew.implementation.windowing.display;
+    import devisualization.bindings.x11;
+    import cf.spew.event_loop.wells.x11;
 
-	IAllocator alloc;
-	shared(UIInstance) uiInstance;
-	DisplayImpl_X11 display;
+    IAllocator alloc;
+    shared(UIInstance) uiInstance;
+    DisplayImpl_X11 display;
 
-	HandleAppender!IWindow windows;
+    HandleAppender!IWindow windows;
 
-	void call() {
-		windows = HandleAppender!IWindow(alloc);
-		Window rootWindow = x11.XDefaultRootWindow(x11Display());
-		process(rootWindow);
-	}
+    void call() {
+        windows = HandleAppender!IWindow(alloc);
+        Window rootWindow = x11.XDefaultRootWindow(x11Display());
+        process(rootWindow);
+    }
 
-	private void process(Window rootWindow) {
-		import cf.spew.implementation.windowing.window;
+    private void process(Window rootWindow) {
+        import cf.spew.implementation.windowing.window;
 
-		Window unused1, unused2;
-		Window* childWindows;
-		uint childCount;
+        Window unused1, unused2;
+        Window* childWindows;
+        uint childCount;
 
-		x11.XQueryTree(x11Display(), rootWindow, &unused1, &unused2, &childWindows, &childCount);
+        x11.XQueryTree(x11Display(), rootWindow, &unused1, &unused2, &childWindows, &childCount);
 
-		foreach(i; 0 .. childCount) {
-			XWindowAttributes attribs;
-			x11.XGetWindowAttributes(x11Display(), childWindows[i],&attribs);
+        foreach(i; 0 .. childCount) {
+            XWindowAttributes attribs;
+            x11.XGetWindowAttributes(x11Display(), childWindows[i],&attribs);
 
-			if (display !is null) {
-				if ((attribs.x >= display.x && attribs.x < display.x + display.width) &&
-					(attribs.y >= display.y && attribs.y < display.y + display.height)) {
-					// is on this display
-				} else
-					continue;
-			}
+            if (display !is null) {
+                if ((attribs.x >= display.x && attribs.x < display.x + display.width) &&
+                    (attribs.y >= display.y && attribs.y < display.y + display.height)) {
+                    // is on this display
+                } else
+                    continue;
+            }
 
-			WindowImpl_X11 window = alloc.make!WindowImpl_X11(childWindows[i], cast(IContext)null, alloc, uiInstance);
-			windows.add(window);
+            WindowImpl_X11 window = alloc.make!WindowImpl_X11(childWindows[i], cast(IContext)null, alloc, uiInstance);
+            windows.add(window);
 
-			process(childWindows[i]);
-		}
+            process(childWindows[i]);
+        }
 
-		if (childWindows !is null) {
-			x11.XFree(childWindows);
-		}
-	}
+        if (childWindows !is null) {
+            x11.XFree(childWindows);
+        }
+    }
 }
 
 x11b.XWindowAttributes x11WindowAttributes(x11b.Window window) {
-	import devisualization.bindings.x11;
-	import cf.spew.event_loop.wells.x11;
+    import devisualization.bindings.x11;
+    import cf.spew.event_loop.wells.x11;
 
-	int x, y;
-	Window unused;
-	XWindowAttributes ret;
+    int x, y;
+    Window unused;
+    XWindowAttributes ret;
 
-	Window rootWindow = x11.XDefaultRootWindow(x11Display());
-	x11.XTranslateCoordinates(x11Display(), window, rootWindow, 0, 0, &x, &y, &unused);
-	x11.XGetWindowAttributes(x11Display(), window, &ret);
+    Window rootWindow = x11.XDefaultRootWindow(x11Display());
+    x11.XTranslateCoordinates(x11Display(), window, rootWindow, 0, 0, &x, &y, &unused);
+    x11.XGetWindowAttributes(x11Display(), window, &ret);
 
-	// fixes the coordinates to the correct root instead of parent.
-	ret.x = x - ret.x;
-	ret.y = y - ret.y;
-	return ret;
+    // fixes the coordinates to the correct root instead of parent.
+    ret.x = x - ret.x;
+    ret.y = y - ret.y;
+    return ret;
 }
 
 enum {
-	XC_watch = 150,
-	XC_hand1 = 58,
-	XC_left_ptr = 68,
-	XC_X_cursor = 0,
-	XC_top_left_corner = 134,
-	XC_top_right_corner = 136,
-	XC_left_side = 70,
-	XC_top_side = 138,
-	XC_right_side = 196,
-	XC_bottom_left_corner = 12,
-	XC_bottom_side = 16,
-	XC_bottom_right_corner = 14,
-	XC_xterm = 152
+    XC_watch = 150,
+    XC_hand1 = 58,
+    XC_left_ptr = 68,
+    XC_X_cursor = 0,
+    XC_top_left_corner = 134,
+    XC_top_right_corner = 136,
+    XC_left_side = 70,
+    XC_top_side = 138,
+    XC_right_side = 196,
+    XC_bottom_left_corner = 12,
+    XC_bottom_side = 16,
+    XC_bottom_right_corner = 14,
+    XC_xterm = 152
 }
 
 struct X11WindowProperty {
-	import core.stdc.config : c_ulong;
-
-	x11b.Atom type;
-	int format;
-	c_ulong numberOfItems;
-	ubyte* data;
+    x11b.Atom type;
+    int format;
+    c_ulong numberOfItems;
+    ubyte* data;
 }
 
 X11WindowProperty x11ReadWindowProperty(x11b.Display* display, x11b.Window window, x11b.Atom property) {
-	import core.stdc.config : c_ulong;
+    c_ulong readByteCount = 1024;
+    X11WindowProperty ret;
 
-	c_ulong readByteCount = 1024;
-	X11WindowProperty ret;
+    while(readByteCount > 0)
+    {
+        if (ret.data !is null) x11b.x11.XFree(ret.data);
+        ret.data = null;
+        x11b.x11.XGetWindowProperty(display, window, property, 0, readByteCount, false, x11b.AnyPropertyType, &ret.type,
+            &ret.format, &ret.numberOfItems, &readByteCount, &ret.data);
+    }
 
-	while(readByteCount > 0)
-	{
-		if (ret.data !is null) x11b.x11.XFree(ret.data);
-		ret.data = null;
-		x11b.x11.XGetWindowProperty(display, window, property, 0, readByteCount, false, x11b.AnyPropertyType, &ret.type,
-			&ret.format, &ret.numberOfItems, &readByteCount, &ret.data);
-	}
-
-	return ret;
+    return ret;
 }
 
 struct Motif_WMHints {
@@ -629,4 +625,67 @@ enum WindowX11Styles : Motif_WMHints {
         MWM_DECOR_MINIMIZE | MWM_DECOR_BORDER | MWM_DECOR_TITLE),
     Fullscreen = Motif_WMHints(MWM_HINTS_FUNCTIONS | MWM_HINTS_DECORATIONS, 0, 0),
     NoDecorations = Motif_WMHints(MWM_HINTS_FUNCTIONS | MWM_HINTS_DECORATIONS, 0, 0),
+}
+
+enum FreeDesktopSystemTray {
+    SYSTEM_TRAY_REQUEST_DOCK = 0,
+    SYSTEM_TRAY_BEGIN_MESSAGE = 1,
+    SYSTEM_TRAY_CANCEL_MESSAGE = 2
+}
+
+void x11SendFreeDesktopSystemTrayMessage(x11b.Display* display, x11b.Window tray,
+    c_long message, c_long data1, c_long data2, c_long data3) {
+    import cf.spew.event_loop.wells.x11;
+
+    x11b.XEvent ev;
+    ev.xclient.type = x11b.ClientMessage;
+    ev.xclient.window = tray;
+    ev.xclient.message_type = x11Atoms()._NET_SYSTEM_TRAY_OPCODE;
+    ev.xclient.format = 32;
+    ev.xclient.data.l[0] = x11b.CurrentTime;
+    ev.xclient.data.l[1] = message;
+    ev.xclient.data.l[2] = data1;
+    ev.xclient.data.l[3] = data2;
+    ev.xclient.data.l[4] = data3;
+
+    x11b.x11.XSendEvent(display, tray, x11b.False, x11b.NoEventMask, &ev);
+    x11b.x11.XSync(display, x11b.False);
+}
+
+// http://rosettacode.org/wiki/Bilinear_interpolation
+void bilinearInterpolationScale(size_t Components, T)(T w0, T h0, T w1, T h1, ubyte[Components]* source, ubyte[Components]* destination) {
+    if (w0 == 1 && h0 == 1) {
+        destination[w1*h1] = source[0];
+        return;
+    }
+
+    static ubyte lerp(ubyte a, ubyte b, float c) {
+        return cast(ubyte)(a+(b-a)*c);
+    }
+
+    static ubyte blerp(ubyte p00, ubyte p10, ubyte p01, ubyte p11, float tx, float ty) {
+        return lerp(lerp(p00, p10, tx), lerp(p01, p11, tx), ty);
+    }
+
+    foreach(y; 0 .. h1) {
+        foreach(x; 0 .. w1) {
+            float rx = x / cast(float)(w1 * (w0 - 1));
+            float ry = y / cast(float)(h1 * (h0 - 1));
+
+            T rxi = cast(T)rx;
+            T ryi = cast(T)ry;
+
+            ubyte[Components] temp;
+            ubyte[Components] p00 = source[rxi + (ryi * w0)];
+            ubyte[Components] p10 = source[rxi + (ryi * w0) + 1];
+            ubyte[Components] p01 = source[rxi + ((ryi + 1) * w0)];
+            ubyte[Components] p11 = source[rxi + ((ryi + 1) * w0) + 1];
+
+            static foreach(Component; 0 .. Components) {
+                temp[Component] = blerp(p00[Component], p10[Component], p01[Component], p11[Component], rx - rxi, ry - ryi);
+            }
+
+            destination[x + (y * w1)] = temp;
+        }
+    }
 }

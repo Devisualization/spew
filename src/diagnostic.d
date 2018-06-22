@@ -18,7 +18,7 @@ import cf.spew.ui.features.clipboard;
 import cf.spew.miscellaneous;
 
 enum : bool {
-    Enable_Test_Window = true,
+    Enable_Test_Window = false,
     Enable_Test_TCP = true,
     Enable_Test_UDP = true,
     Enable_Test_FileSystemWatch = true,
@@ -374,7 +374,7 @@ void notificationTrayTest() {
     auto creator = Instance.current.ui.createWindow();
     if (creator.isNull) return;
 
-    creator.style = WindowStyle.Popup;
+    creator.style = WindowStyle.NoDecorations;
     creator.assignVRamContext;
     creator.size = vec2!ushort(cast(short)100, cast(short)200);
     creator.icon = icon;
@@ -386,7 +386,7 @@ void notificationTrayTest() {
         writeln("onVisible:: notification tray flyout");
         stdout.flush;
 
-        Instance.current.ui.notify(cast(shared(ImageStorage!RGBA8))null, "Hi!", "my text here");
+        //Instance.current.ui.notify(cast(shared(ImageStorage!RGBA8))null, "Hi!", "my text here");
     };
 
     notificationWindow.events.onInvisible = () {

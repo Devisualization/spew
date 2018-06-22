@@ -13,6 +13,7 @@ public import std.experimental.containers.list;
 public import std.experimental.containers.map;
 public import stdx.allocator : IAllocator, processAllocator, theAllocator, dispose, make, makeArray, expandArray, shrinkArray;
 public import devisualization.util.core.memory.managed;
+import core.stdc.config : c_ulong;
 
 abstract class EventLoopConsumerImpl : EventLoopConsumer {
     import cf.spew.events.windowing;
@@ -368,6 +369,7 @@ version(Windows) {
 class EventLoopConsumerImpl_X11 : EventLoopConsumerImpl {
     import cf.spew.events.windowing;
     import cf.spew.implementation.windowing.window;
+    import cf.spew.implementation.windowing.display;
     import cf.spew.implementation.windowing.misc;
     import cf.spew.implementation.instance;
     import cf.spew.events.x11;
@@ -387,6 +389,136 @@ class EventLoopConsumerImpl_X11 : EventLoopConsumerImpl {
 
     override bool processEvent(ref Event event) shared {
         import core.stdc.string : strlen;
+        import core.stdc.stdlib : malloc;
+
+        if (shared(UIInstance_X11_FreeDesktopNotify) uiInstance2 = cast(shared(UIInstance_X11_FreeDesktopNotify))uiInstance) {
+            if (event.wellData1Value == uiInstance2.taskbarSysTrayOwner) {
+                if (event.type == X11_Events_Types.DestroyNotify) {
+                    uiInstance2.taskbarSysTrayOwner = x11b.None;
+                }
+            }
+            uiInstance2.__guardSysTray();
+
+            if (uiInstance.haveNotificationWindow() &&
+                event.wellData1Value == uiInstance2.taskbarSysTrayWrapper) {
+
+                switch(event.type) {
+                    case Windowing_Events_Types.Window_CursorAction:
+                        if ((cast()uiInstance.taskbarTrayWindow).visible) {
+                            (cast()uiInstance.taskbarTrayWindow).hide();
+                        } else {
+                            // attr.x, attr.y
+
+                            auto attr = x11WindowAttributes(cast()uiInstance2.taskbarSysTrayWrapper);
+                            int x1 = attr.x;
+                            int y1 = attr.y;
+                            int w1 = attr.width;
+                            int h1 = attr.height;
+                            attr = x11WindowAttributes(cast(x11b.Window)(cast()uiInstance2.taskbarTrayWindow).__handle);
+                            int x2 = attr.x;
+                            int y2 = attr.y;
+                            int w2 = attr.width;
+                            int h2 = attr.height;
+
+                            auto allDisplays = uiInstance.displays();
+                            foreach(IDisplay d; allDisplays) {
+                                DisplayImpl_X11 display = cast(DisplayImpl_X11)d;
+                                if (display is null) continue;
+
+                                if (x2 >= display.x && x2 < display.x + display.width &&
+                                    y2 >= display.y && y2 < display.y + display.height) {
+
+                                    int dwl = x1 - display.x;
+                                    int dwr = (display.x + display.width) - x1;
+                                    int dht = y1 - display.y;
+                                    int dhb = (display.y + display.height) - y1;
+
+                                    (cast()uiInstance.taskbarTrayWindow).show();
+                                    if (dwl < dwr) {
+                                        // |--.-----|
+
+                                        if (dht < dhb) {
+                                            // -\ |-.---|
+                                            if (dht < dwl)
+                                                (cast()uiInstance.taskbarTrayWindow).location = vec2!int(x1, y1+h1);
+                                            else
+                                                (cast()uiInstance.taskbarTrayWindow).location = vec2!int(x1+w1, y1);
+                                        } else {
+                                            // -/ |-.---|
+                                            if (dhb < dwr)
+                                                (cast()uiInstance.taskbarTrayWindow).location = vec2!int(x1, y1-h2);
+                                            else
+                                                (cast()uiInstance.taskbarTrayWindow).location = vec2!int(x1+w1, (y1+h1)-h2);
+                                        }
+                                    } else {
+                                        // |-----.--|
+
+                                        if (dht < dhb) {
+                                            // -\ |-.---|
+                                            if (dht < dwl)
+                                                (cast()uiInstance.taskbarTrayWindow).location = vec2!int(x1+w1, y1+h1);
+                                            else
+                                                (cast()uiInstance.taskbarTrayWindow).location = vec2!int(x1, y1);
+                                        } else {
+                                            // -/ |-.---|
+                                            if (dhb < dwr)
+                                                (cast()uiInstance.taskbarTrayWindow).location = vec2!int((x1+w1)-w2, y1-h2);
+                                            else
+                                                (cast()uiInstance.taskbarTrayWindow).location = vec2!int(x1-w2, y1-h1);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        return true;
+
+                    case X11_Events_Types.Expose:
+                        x11b.Window whandle = cast(x11b.Window)(cast()uiInstance.taskbarTrayWindow).__handle;
+                        x11b.Atom net_wm_icon = x11Atoms()._NET_WM_ICON;
+                        x11b.Atom cardinal = x11Atoms().CARDINAL;
+
+                        X11WindowProperty prop = x11ReadWindowProperty(x11Display(), whandle, net_wm_icon);
+                        scope(exit) if (prop.data !is null) x11b.x11.XFree(prop.data);
+
+                        ubyte[] imageData;
+                        uint width, height;
+
+                        if (prop.format == 32 && prop.type == cardinal && prop.data !is null && prop.numberOfItems > 1) {
+                            c_ulong* source = cast(c_ulong*)prop.data;
+                            width = cast(uint)source[0];
+                            height = cast(uint)source[1];
+
+                            if ((width*height)+2 == prop.numberOfItems) {
+                                imageData = (cast(ubyte*)malloc(4*width*height))[0 .. 4*width*height];
+                                size_t offset=2, offset2=0;
+
+                                foreach(y; 0 .. height) {
+                                    foreach(x; 0 .. width) {
+                                        auto p = source[offset++];
+                                        imageData[offset2++] = cast(ubyte)p;
+                                        imageData[offset2++] = cast(ubyte)(p >> 8);
+                                        imageData[offset2++] = cast(ubyte)(p >> 16);
+                                        imageData[offset2++] = cast(ubyte)(p >> 24);
+                                    }
+                                }
+                            }
+                        }
+
+                        if (imageData.length == 0) {
+                            imageData = (cast(ubyte*)malloc(4))[0 .. 1];
+                            *cast(uint*)imageData.ptr = 0xCEDEFA00;
+                            width = 1;
+                            height = 1;
+                        }
+
+                        uiInstance2.drawSystray(width, height, cast(uint*)imageData.ptr);
+                        return true;
+
+                    default:
+                        return false;
+                }
+            }
+        }
 
         if (event.wellData1Value == clipboardSendWindowHandleX11) {
             if (event.type == X11_Events_Types.Raw) {
