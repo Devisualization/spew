@@ -92,6 +92,8 @@ struct X11Atoms {
         _NET_SYSTEM_TRAY_OPCODE,
         ///
         _NET_SYSTEM_TRAY_VISUAL,
+        ///
+        _NET_SYSTEM_TRAY_MESSAGE_DATA,
 
         ///
         WM_DELETE_WINDOW,

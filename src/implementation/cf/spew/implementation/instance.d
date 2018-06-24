@@ -728,12 +728,15 @@ class UIInstance_X11 : UIInstance, Feature_Management_Clipboard {
 class UIInstance_X11_FreeDesktopNotify : UIInstance_X11, Feature_NotificationMessage, Feature_NotificationTray {
     import cf.spew.event_loop.wells.x11;
     import devisualization.bindings.x11;
+    import cf.spew.implementation.windowing.misc : x11WindowAttributes,
+                x11SendFreeDesktopSystemTrayMessage, FreeDesktopSystemTray;
 
     Window taskbarSysTrayOwner, taskbarSysTrayWrapper;
     Window[8] wrappersToClean;
     ThreadID[8] wrappersToCleanThreads;
     Visual* theVisual;
     GC taskbarSysTrayGC;
+    uint bubbleIdNum;
 
     this(shared(ISharedAllocator) allocator) shared {
         super(allocator);
@@ -759,21 +762,85 @@ class UIInstance_X11_FreeDesktopNotify : UIInstance_X11, Feature_NotificationMes
         }
     }
 
-    override shared(Feature_NotificationMessage) __getFeatureNotificationMessage() shared { return null; }
+    override shared(Feature_NotificationMessage) __getFeatureNotificationMessage() shared { return this; }
 
     void notify(shared(ImageStorage!RGBA8) icon, dstring title, dstring text, shared(ISharedAllocator) alloc) shared {
-        assert(0);
+        import std.utf : byChar, codeLength;
+        import std.range : drop;
+
+        size_t titleL = title.codeLength!char;
+        size_t textL = text.codeLength!char;
+        size_t offset;
+        bool sentNewLine;
+
+        size_t fullLen = titleL + textL;
+        if (title.length > 0 && title[$-1] != '\n') {
+            fullLen++;
+            sentNewLine = true;
+        }
+
+        // SYSTEM_TRAY_BEGIN_MESSAGE
+        //    l[2] contains the timeout in thousandths of a second or zero for infinite timeout
+        //    l[3] contains the length of the message string in bytes, not including any nul bytes
+        //    l[4] contains an ID number for the message. This ID number should never be reused by the same tray icon.
+        x11SendFreeDesktopSystemTrayMessage(x11Display(), taskbarSysTrayOwner,
+            FreeDesktopSystemTray.SYSTEM_TRAY_BEGIN_MESSAGE, 0, cast(uint)fullLen, bubbleIdNum);
+        bubbleIdNum = bubbleIdNum + 1;
+
+        // _NET_SYSTEM_TRAY_MESSAGE_DATA
+        //    must have their window field set to the window ID of the tray icon, and have a format of 8
+
+        offset = 0;
+        while(offset < titleL) {
+            XEvent ev;
+            ev.xclient.type = ClientMessage;
+            ev.xclient.window = taskbarSysTrayOwner;
+            ev.xclient.message_type = x11Atoms()._NET_SYSTEM_TRAY_MESSAGE_DATA;
+            ev.xclient.format = 8;
+
+            size_t offset2;
+            foreach(c; title.byChar.drop(offset)) {
+                ev.xclient.data.b[offset2++] = c;
+                if (offset2 == 20) break;
+                offset++;
+            }
+
+            if (offset2 < 20 && offset == titleL) {
+                ev.xclient.data.b[offset2++] = '\n';
+                sentNewLine = true;
+            }
+
+            x11.XSendEvent(x11Display(), taskbarSysTrayOwner, False, NoEventMask, &ev);
+        }
+
+        offset = 0;
+        while(offset < textL) {
+            XEvent ev;
+            ev.xclient.type = ClientMessage;
+            ev.xclient.window = taskbarSysTrayOwner;
+            ev.xclient.message_type = x11Atoms()._NET_SYSTEM_TRAY_MESSAGE_DATA;
+            ev.xclient.format = 8;
+
+            size_t offset2;
+
+            if (offset == 0 && !sentNewLine) {
+                ev.xclient.data.b[offset2++] = '\n';
+            }
+
+            foreach(c; text.byChar.drop(offset)) {
+                ev.xclient.data.b[offset2++] = c;
+                if (offset2 == 20) break;
+                offset++;
+            }
+
+            x11.XSendEvent(x11Display(), taskbarSysTrayOwner, False, NoEventMask, &ev);
+        }
     }
 
-    void clearNotifications() shared {
-        assert(0);
-    }
+    void clearNotifications() shared {}
 
     package(cf.spew.implementation) {
         void __guardSysTray() shared {
-            import cf.spew.implementation.windowing.misc : x11WindowAttributes,
-                x11SendFreeDesktopSystemTrayMessage, FreeDesktopSystemTray;
-
             ThreadID myThreadID = Thread.getThis().id;
             Window trayOwner = x11.XGetSelectionOwner(x11Display(), x11Atoms()._NET_SYSTEM_TRAY_S);
 
@@ -857,6 +924,7 @@ class UIInstance_X11_FreeDesktopNotify : UIInstance_X11, Feature_NotificationMes
                     taskbarSysTrayWrapper = x11.XCreateWindow(x11Display(), wroot,
                         0, 0, size, size, 0, visualInfo.depth, InputOutput,
                         visualInfo.visual, CWBorderPixel|CWColormap|CWBackPixel, &swa);
+                    bubbleIdNum = 0;
 
                     assert(taskbarSysTrayWrapper != None);
                     x11.XFree(visualInfo);

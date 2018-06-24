@@ -891,12 +891,7 @@ final class WindowImpl_X11 : WindowImpl,
 
         void location(vec2!int point) {
             if (isClosed) return;
-            if (!visible) {
-                show();
-                x11.XMoveWindow(x11Display(), whandle, point.x, point.y);
-                hide();
-            } else
-                x11.XMoveWindow(x11Display(), whandle, point.x, point.y);
+            x11.XMoveWindow(x11Display(), whandle, point.x, point.y);
             x11.XFlush(x11Display());
         }
 
@@ -908,12 +903,7 @@ final class WindowImpl_X11 : WindowImpl,
 
         void size(vec2!uint point) {
             if (isClosed) return;
-            if (!visible) {
-                show();
-                x11.XResizeWindow(x11Display(), whandle, point.x, point.y);
-                hide();
-            } else
-                x11.XResizeWindow(x11Display(), whandle, point.x, point.y);
+            x11.XResizeWindow(x11Display(), whandle, point.x, point.y);
             x11.XFlush(x11Display());
         }
     }
@@ -921,11 +911,13 @@ final class WindowImpl_X11 : WindowImpl,
     void hide() {
         if (isClosed) return;
         x11.XUnmapWindow(x11Display(), whandle);
+        x11.XFlush(x11Display());
     }
 
     void show() {
         if (isClosed) return;
         x11.XMapWindow(x11Display(), whandle);
+        x11.XFlush(x11Display());
     }
 
     Feature_Window_ScreenShot __getFeatureScreenShot() {

@@ -386,7 +386,7 @@ void notificationTrayTest() {
         writeln("onVisible:: notification tray flyout");
         stdout.flush;
 
-        //Instance.current.ui.notify(cast(shared(ImageStorage!RGBA8))null, "Hi!", "my text here");
+        Instance.current.ui.notify(cast(shared(ImageStorage!RGBA8))null, "Hi!", "my text here");
     };
 
     notificationWindow.events.onInvisible = () {
