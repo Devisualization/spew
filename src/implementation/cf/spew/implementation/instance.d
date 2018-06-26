@@ -725,6 +725,9 @@ class UIInstance_X11 : UIInstance, Feature_Management_Clipboard {
     }
 }
 
+// https://standards.freedesktop.org/systemtray-spec/systemtray-spec-0.3.html#idm139990069470464
+// https://standards.freedesktop.org/xembed-spec/xembed-spec-latest.html
+// http://distro.ibiblio.org/vectorlinux/Uelsk8s/GAMBAS/gambas-svn/gambas2/gb.gtk/src/gtrayicon.cpp
 class UIInstance_X11_FreeDesktopNotify : UIInstance_X11, Feature_NotificationMessage, Feature_NotificationTray {
     import cf.spew.event_loop.wells.x11;
     import devisualization.bindings.x11;

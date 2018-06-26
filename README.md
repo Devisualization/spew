@@ -30,6 +30,7 @@ Warning: Windows 64bit for dmd is currently bugged when using the diagnostic cod
     - [ ] Cocoa
 	- [x] LibUV
     - [x] GLIB
+    - [ ] D-Bus (system-d)
   - [ ] Consumers:
     - [x] X11
     - [x] WinAPI
@@ -49,7 +50,7 @@ Warning: Windows 64bit for dmd is currently bugged when using the diagnostic cod
 - [x] File system
   - [x] Watcher
       - [x] LibUV
-      - [ ] Fallback?
+      - [ ] Fallback
 - [x] Timer
   - [x] WinAPI
   - [x] LibUV
@@ -59,6 +60,8 @@ Warning: Windows 64bit for dmd is currently bugged when using the diagnostic cod
     - [x] Core
     - [ ] Features:
        - [ ] notifications
+          - [x] FreeDesktop
+          - [ ] D-Bus org.freedesktop.Notifications
        - [x] cursor
        - [x] icon
        - [x] screenshot
