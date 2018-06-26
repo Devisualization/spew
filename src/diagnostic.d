@@ -18,7 +18,7 @@ import cf.spew.ui.features.clipboard;
 import cf.spew.miscellaneous;
 
 enum : bool {
-    Enable_Test_Window = false,
+    Enable_Test_Window = true,
     Enable_Test_TCP = true,
     Enable_Test_UDP = true,
     Enable_Test_FileSystemWatch = true,

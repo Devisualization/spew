@@ -735,7 +735,7 @@ final class WindowImpl_X11 : WindowImpl,
 
     @disable this(shared(UIInstance) instance);
 
-    bool isClosed, supportsXDND;
+    bool isClosed, supportsXDND, stateOfVisibleCall;
     Window whandle;
     XIC xic;
 

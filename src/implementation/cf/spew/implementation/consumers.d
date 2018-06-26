@@ -600,7 +600,17 @@ class EventLoopConsumerImpl_X11 : EventLoopConsumerImpl {
                             return super.processEvent(temp);
                         }
                         return true;
+                    case Windowing_Events_Types.Window_Hide:
+                        w.stateOfVisibleCall = false;
+                        tryFunc(w2.onInvisibleDel);
+                        return true;
+
                     case X11_Events_Types.Expose:
+                        if (!w.stateOfVisibleCall) {
+                            tryFunc(w2.onVisibleDel);
+                            w.stateOfVisibleCall = true;
+                        }
+
                         return handlePaint(event, w, w2);
                     case X11_Events_Types.DestroyNotify:
                         tryFunc(w2.onCloseDel);
