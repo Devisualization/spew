@@ -107,6 +107,12 @@ final class DefaultImplementation : Instance {
             _eventLoop.manager.addSources(LibUVEventLoopSource.instance);
         }
 
+        // linux EPoll support
+        version(linux) {
+            import cf.spew.event_loop.wells.epoll;
+            _eventLoop.manager.addSources(EpollEventLoopSource.instance);
+        }
+
         version(Windows) {
             import cf.spew.event_loop.wells.winapi;
             import cf.spew.implementation.windowing.misc : dxva2, shell32, user32,

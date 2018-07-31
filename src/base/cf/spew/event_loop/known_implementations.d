@@ -9,18 +9,21 @@ import cf.spew.events.defs : EventSource;
  * 
  */
 enum EventSources {
-	///
-	Prefix = EventSource.from("s_"),
-
-	///
-	WinAPI = EventSource.from("s_winapi"),
-	///
-	X11 = EventSource.from("s_x11"),
-	///
-	Cocoa = EventSource.from("s_cocoa"),
+    ///
+    Prefix = EventSource.from("s_"),
 
     ///
-	LibUV = EventSource.from("s_libuv"),
+    WinAPI = EventSource.from("s_winapi"),
+    ///
+    X11 = EventSource.from("s_x11"),
+    ///
+    Cocoa = EventSource.from("s_cocoa"),
+
+    ///
+    LibUV = EventSource.from("s_libuv"),
     ///
     Glib = EventSource.from("s_glib"),
+
+    /// Linux
+    Epoll = EventSource.from("s_epoll"),
 }
