@@ -24,6 +24,9 @@ enum EventSources {
     ///
     Glib = EventSource.from("s_glib"),
 
+    /// Posix
+    Poll = EventSource.from("s_poll"),
+
     /// Linux
     Epoll = EventSource.from("s_epoll"),
 }

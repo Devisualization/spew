@@ -25,7 +25,13 @@ final class PollEventLoopSource : EventLoopSource {
         ///
         string description() shared { return "Implements support for FILE* polling via (e)poll. Singleton but threaded."; }
         ///
-        EventSource identifier() shared { return EventSources.Epoll; }
+        EventSource identifier() shared {
+            version(linux) {
+                return EventSources.Epoll;
+            } else {
+                return EventSources.Poll;
+            }
+        }
     }
 
     /// To get a specific allocator for this thread, call nextEventGenerator before the event loop does.
