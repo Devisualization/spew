@@ -30,6 +30,7 @@ Warning: Windows 64bit for dmd is currently bugged when using the diagnostic cod
     - [ ] Cocoa
 	- [x] LibUV
     - [x] GLIB
+    - [ ] Poll (posix)
     - [x] Epoll (linux)
     - [ ] D-Bus (system-d)
   - [ ] Consumers:
