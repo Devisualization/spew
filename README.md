@@ -30,6 +30,7 @@ Warning: Windows 64bit for dmd is currently bugged when using the diagnostic cod
     - [ ] Cocoa
 	- [x] LibUV
     - [x] GLIB
+    - [x] Epoll (linux)
     - [ ] D-Bus (system-d)
   - [ ] Consumers:
     - [x] X11
@@ -46,7 +47,6 @@ Warning: Windows 64bit for dmd is currently bugged when using the diagnostic cod
 		- [ ] Local Fallback
 		- [x] Remote LibUV
 		- [ ] Remote Fallback
-- [ ] Threading
 - [x] File system
   - [x] Watcher
       - [x] LibUV
