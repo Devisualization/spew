@@ -109,8 +109,8 @@ final class DefaultImplementation : Instance {
 
         // linux EPoll support
         version(linux) {
-            import cf.spew.event_loop.wells.epoll;
-            _eventLoop.manager.addSources(EpollEventLoopSource.instance);
+            import cf.spew.event_loop.wells.poll;
+            _eventLoop.manager.addSources(PollEventLoopSource.instance);
         }
 
         version(Windows) {
