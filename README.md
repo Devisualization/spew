@@ -102,6 +102,8 @@ __Short list of won't-implement__:
 	- DirectX
 	- Vulkan
 	- Metal
+- Input
+	- Game controllers, I suggest you to use a library like [libstem_gamepad](https://github.com/ThemsAllTook/libstem_gamepad) or [NVGamepad](https://developer.nvidia.com/cross-platform-gamepad-api).
 
 ## License
 Boost
