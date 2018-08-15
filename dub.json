@@ -22,19 +22,22 @@
 			"importPaths": ["src/base"],
 
 			"excludedSourceFiles": ["src/diagnostic.d"],
-			"targetType": "sourceLibrary",
+			"targetType": "library",
 			"dependencies": {
 				"de_image:base": "~>1.1.0",
 				"emsi_containers": "*",
-				"de_bindings:libuv": "~>0.5.0",
-				"de_bindings:x11": "*",
-                "de_bindings:libnotify": "*",
+				"de_bindings:libuv": "~>0.5.1",
+				"de_bindings:libnotify": "*",
 				"spew:utils": "*",
 				"stdx-allocator": "*"
+			},
+			"dependencies-Posix": {
+			    "de_bindings:x11": "*"
 			}
 		},
 		{
 			"name": "implementation",
+			"sourceFiles": ["src/base/cf/spew/instance.d"],
 			"sourcePaths": ["src/implementation"],
 			"importPaths": ["src/implementation"],
 			"versions-windows": ["IE5"],

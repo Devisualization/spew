@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Notification tray support for an application.
  *
  * Copyright: <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
@@ -24,17 +24,18 @@ interface Feature_NotificationTray {
 
 /**
  * Retrieve the applications notification tray window
- * 
+ *
  * If the window is not owned by the calling thread, it will return null.
- * 
+ *
  * Params:
  *      self    =   The platform instance
  *      alloc   =   The allocator to allocate/deallocate during creation
- * 
+ *
  * Returns:
  *      The notification tray window if owned by this thread
  */
-managed!IWindow notificationTrayWindow(shared(Management_UserInterface) self, IAllocator alloc=theAllocator) {
+managed!IWindow notificationTrayWindow(shared(Management_UserInterface) self,
+        IAllocator alloc = theAllocator) {
     if (self is null)
         return managed!IWindow.init;
     if (shared(Have_NotificationTray) ss = cast(shared(Have_NotificationTray))self) {
@@ -47,7 +48,7 @@ managed!IWindow notificationTrayWindow(shared(Management_UserInterface) self, IA
 
 /**
  * Assigns the applications notification tray window
- * 
+ *
  * Params:
  *      self    =   The platform instance
  *      to      =   The window to assign as
@@ -64,7 +65,7 @@ void notificationTrayWindow(shared(Management_UserInterface) self, managed!IWind
 
 /**
  * Removes the assigned notification tray window
- * 
+ *
  * Params:
  *      self    =   The platform instance
  */
@@ -80,10 +81,10 @@ void removeNotificationTrayWindow(shared(Management_UserInterface) self) {
 
 /**
  * Does the given platform support the notification tray?
- * 
+ *
  * Params:
  *      self    =   The platform instance
- * 
+ *
  * Returns:
  *      If the platform supports notifications
  */
@@ -98,10 +99,10 @@ void removeNotificationTrayWindow(shared(Management_UserInterface) self) {
 
 /**
  * Does the given have a notification window assigned?
- * 
+ *
  * Params:
  *      self    =   The platform instance
- * 
+ *
  * Returns:
  *      If the platform has a notification window assigned
  */

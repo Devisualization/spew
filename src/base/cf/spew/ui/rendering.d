@@ -11,10 +11,11 @@ import cf.spew.ui.display;
 import cf.spew.ui.context.defs : IContext;
 import devisualization.util.core.memory.managed;
 import stdx.allocator : IAllocator;
+
 //import std.experimental.math.linearalgebra.vector : vec2;
 
 struct vec2(T) {
-	T x, y;
+    T x, y;
 }
 
 /**
@@ -25,26 +26,26 @@ struct vec2(T) {
  *  window representation at the low level.
  */
 interface IRenderPoint {
-	@property {
-		/**
+    @property {
+        /**
 		 * The size of the render area.
-		 * 
+		 *
 		 * For a window this is the user area.
-		 * 
+		 *
 		 * Returns:
 		 * 		The size of the render area.
 		 */
-		vec2!uint size();
+        vec2!uint size();
 
-		/**
+        /**
 		 * Get the display that the render is on.
 		 *
 		 * Returns:
 		 *      The display that the render point is on.
 		 */
-		managed!IDisplay display();
-		
-		/**
+        managed!IDisplay display();
+
+        /**
 		 * The context applied to be rendered to.
 		 *
 		 * This is commonly either a VRAM context or OpenGL.
@@ -55,9 +56,9 @@ interface IRenderPoint {
 		 * Returns:
 		 *      A context that can be rendered to.
 		 */
-		IContext context();
-		
-		/**
+        IContext context();
+
+        /**
 		 * The allocator that allocated this render point.
 		 *
 		 * You most likely won't need to use this.
@@ -66,17 +67,17 @@ interface IRenderPoint {
 		 * Returns:
 		 *      The allocator that allocated this.
 		 */
-		IAllocator allocator();
-		
-		/**
+        IAllocator allocator();
+
+        /**
 		 * Wraps the events that are hookable.
 		 *
 		 * Returns:
 		 *      A class that has event callbacks or null if not available for hooking.
 		 */
-		IRenderEvents events();
-		
-		/**
+        IRenderEvents events();
+
+        /**
 		 * Is the current state able to be rendered to.
 		 *
 		 * This is dependent upon if it has been closed or e.g. the window was visible.
@@ -84,36 +85,36 @@ interface IRenderPoint {
 		 * Returns:
 		 *      If the render point can be rendered to right now.
 		 */
-		bool renderable();
+        bool renderable();
 
-		/// No touchy, very dangerous!
-		size_t __handle();
-	}
-	
-	/**
+        /// No touchy, very dangerous!
+        size_t __handle();
+    }
+
+    /**
 	 * Closes the render point.
 	 * From this point on, this render point is useless.
 	 */
-	void close();
+    void close();
 }
 
 /**
  * Allows incrementally creating a render point.
  */
 interface IRenderPointCreator {
-	@property {
-		/**
+    @property {
+        /**
 		 * The display to show the render point on.
 		 *
 		 * If it is not specified then $D(platform().primaryDisplay) will be
 		 *  used instead.
 		 *
-		 * Params: 
+		 * Params:
 		 *      disp    =   The display to show on
 		 */
-		void display(IDisplay disp);
-		
-		/**
+        void display(IDisplay disp);
+
+        /**
 		 * The allocator to allocate the resulting IRenderPoint and IContext
 		 *  with.
 		 *
@@ -122,10 +123,10 @@ interface IRenderPointCreator {
 		 * Params:
 		 *      alloc   =   The allocator to allocate using.
 		 */
-		void allocator(IAllocator alloc);
-	}
-	
-	/**
+        void allocator(IAllocator alloc);
+    }
+
+    /**
 	 * Creates the resulting render point using the pre given arguments.
 	 *
 	 * May throw an exception depending upon the implementation.
@@ -133,5 +134,5 @@ interface IRenderPointCreator {
 	 * Returns:
 	 *      The render point or null if failed.
 	 */
-	managed!IRenderPoint create();
+    managed!IRenderPoint create();
 }

@@ -90,11 +90,9 @@ int main() {
         }
 
         version(Have_spew_implementation) {
-            import cf.spew.implementation.instance;
-
             writeln("I see you have compiled with spew:implementation enabled, good choice!");
 
-            if (cast(DefaultImplementation)Instance.current is null) {
+            if (Instance.current !is Instance.theDefault) {
                 writeln;
                 writeln("Oh and you even have your own implementation well done!");
                 writeln("But feel free to remove spew.implementation from compilation");

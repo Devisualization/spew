@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Copyright: <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
  * Authors: $(LINK2 http://cattermole.co.nz, Richard Andrew Cattermole)
  */
@@ -8,17 +8,17 @@ import cf.spew.ui.rendering;
 import devisualization.util.core.memory.managed;
 
 interface Have_CustomCtx {
-	void assignCustomContext(managed!ICustomContext);
+    void assignCustomContext(managed!ICustomContext);
 }
 
 ///
 interface ICustomContext : IContext {
-	/**
+    /**
 	 * Beware, the render point probably isn't ready for calling.
 	 * This just tells you the window id ext. which can be quite
 	 *  unsafe if you don't read the source!
 	 */
-	void initialize(IRenderPoint);
+    void initialize(IRenderPoint);
 }
 
 /**
@@ -29,10 +29,11 @@ interface ICustomContext : IContext {
  *      self        =   The render point.
  *      customContext    =   The custom context to load into the window.
  */
-void assignCustomContext(T)(managed!T self, managed!ICustomContext customContext) if (is(T : IRenderPointCreator) || is(T : IWindowCreator)) {
-	if (self is null)
-		return;
-	auto ss = cast(managed!Have_CustomCtx)self;
-	if (ss !is null)
-		ss.assignCustomContext(customContext);
+void assignCustomContext(T)(managed!T self, managed!ICustomContext customContext)
+        if (is(T : IRenderPointCreator) || is(T : IWindowCreator)) {
+    if (self is null)
+        return;
+    auto ss = cast(managed!Have_CustomCtx)self;
+    if (ss !is null)
+        ss.assignCustomContext(customContext);
 }

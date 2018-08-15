@@ -9,71 +9,72 @@ import devisualization.image.interfaces : SwappableImage;
 import std.experimental.color : RGB8, RGBA8;
 import cf.spew.ui.rendering;
 import cf.spew.ui.window.events : IWindowEvents;
+
 //import std.experimental.math.linearalgebra.vector : vec2;
 import stdx.allocator : IAllocator;
 import devisualization.util.core.memory.managed;
 
 ///
 interface IWindow : IRenderPoint {
-	@property {
-		/// The title of the window
-		managed!(dstring) title();
-		
-		/// Sets the title of the window (if possible)
-		void title(string);
+    @property {
+        /// The title of the window
+        managed!(dstring) title();
 
-		/// Ditto
-		void title(wstring);
-		
-		/// Ditto
-		void title(dstring);
-		
-		/// Moves the window on its display
-		void location(vec2!int);
+        /// Sets the title of the window (if possible)
+        void title(string);
 
-		/// Gets the window location relative to its display
-		vec2!int location();
-		
-		/**
+        /// Ditto
+        void title(wstring);
+
+        /// Ditto
+        void title(dstring);
+
+        /// Moves the window on its display
+        void location(vec2!int);
+
+        /// Gets the window location relative to its display
+        vec2!int location();
+
+        /**
 		 * The size of the render area.
-		 * 
+		 *
 		 * For a window this is the user area.
-		 * 
+		 *
 		 * Returns:
 		 * 		The size of the render area.
 		 */
-		vec2!uint size();
+        vec2!uint size();
 
-		/// Sets the size of the window (user area)
-		void size(vec2!uint);
+        /// Sets the size of the window (user area)
+        void size(vec2!uint);
 
-		/// Is the window currently being displayed?
-		bool visible();
+        /// Is the window currently being displayed?
+        bool visible();
 
-		/// Windowing specific events (extends events provided for render point)
-		IWindowEvents windowEvents();
-	}
+        /// Windowing specific events (extends events provided for render point)
+        IWindowEvents windowEvents();
+    }
 
-	///
-	void hide();
-	
-	///
-	void show();
+    ///
+    void hide();
+
+    ///
+    void show();
 }
 
 ///
 interface IWindowCreator : IRenderPointCreator {
-	@property {
-		/// Sets a size for a window to be created in (user area)
-		void size(vec2!ushort);
-		
-		/// The location for a window to try and spawn in
-		void location(vec2!short);
-	}
-	
-	/// The parent window to act as a child of, pretty much always supported, if not is ignored.
-	void parentWindow(IWindow);
+    @property {
+        /// Sets a size for a window to be created in (user area)
+        void size(vec2!ushort);
 
-	/// Creates the window
-	managed!IWindow createWindow();
+        /// The location for a window to try and spawn in
+        void location(vec2!short);
+    }
+
+    /// The parent window to act as a child of, pretty much always supported, if not is ignored.
+    void parentWindow(IWindow);
+
+    /// Creates the window
+    managed!IWindow createWindow();
 }

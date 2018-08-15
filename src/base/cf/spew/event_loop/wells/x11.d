@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Copyright: <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
  * Authors: $(LINK2 http://cattermole.co.nz, Richard Andrew Cattermole)
  */
@@ -11,7 +11,7 @@ import stdx.allocator : ISharedAllocator, make;
 import devisualization.bindings.x11;
 
 /// If null will set to previous handler or default
-void setX11ErrorHandler(XErrorHandler handler=null) {
+void setX11ErrorHandler(XErrorHandler handler = null) {
     if (handler is null)
         handler = lastErrorHandler;
     if (handler is null)
@@ -42,99 +42,61 @@ X11Atoms x11Atoms() {
 /// Automatically loaded atoms
 struct X11Atoms {
     ///
-    Atom
-        XdndEnter,
+    Atom XdndEnter,///
+    XdndPosition,///
+    XdndStatus,///
+    XdndTypeList,///
+    XdndActionCopy,
         ///
-        XdndPosition,
-        ///
-        XdndStatus,
-        ///
-        XdndTypeList,
-        ///
-        XdndActionCopy,
-        ///
-        XdndDrop,
-        ///
-        XdndLeave,
-        ///
-        XdndFinished,
-        ///
-        XdndSelection,
-        ///
-        XdndProxy,
-        ///
+        XdndDrop,///
+        XdndLeave,///
+        XdndFinished,///
+        XdndSelection,///
+        XdndProxy,///
         XdndAware,
 
         ///
-        CARDINAL,
-        ///
-        XA_ATOM,
-        ///
-        XA_TARGETS,
-        ///
-        INTEGER,
-        ///
-        UTF8_STRING,
-
-        ///
-        Backlight,
-        ///
+        CARDINAL,///
+        XA_ATOM,///
+        XA_TARGETS,///
+        INTEGER,///
+        UTF8_STRING,///
+        Backlight,///
         BACKLIGHT,
 
         ///
-        PRIMARY,
-        ///
-        CLIPBOARD,
-
-        /// automatically adapted to your the current screen
-        _NET_SYSTEM_TRAY_S,
-        ///
-        _NET_SYSTEM_TRAY_OPCODE,
-        ///
-        _NET_SYSTEM_TRAY_VISUAL,
-        ///
+        PRIMARY,///
+        CLIPBOARD,/// automatically adapted to your the current screen
+        _NET_SYSTEM_TRAY_S,///
+        _NET_SYSTEM_TRAY_OPCODE,///
+        _NET_SYSTEM_TRAY_VISUAL,///
         _NET_SYSTEM_TRAY_MESSAGE_DATA,
 
         ///
-        WM_DELETE_WINDOW,
-        ///
-        _NET_WM_ICON,
-        ///
-        _MOTIF_WM_HINTS,
-        ///
+        WM_DELETE_WINDOW,///
+        _NET_WM_ICON,///
+        _MOTIF_WM_HINTS,///
         _NET_WM_ALLOWED_ACTIONS,
         ///
-        _NET_WM_STATE,
-
-        ///
-        _NET_WM_WINDOW_TYPE_NORMAL,
-        ///
+        _NET_WM_STATE,///
+        _NET_WM_WINDOW_TYPE_NORMAL,///
         _NET_WM_WINDOW_TYPE_UTILITY,
 
         ///
-        _NET_WM_STATE_STICKY,
-        ///
-        _NET_WM_STATE_MODAL,
-        ///
+        _NET_WM_STATE_STICKY,///
+        _NET_WM_STATE_MODAL,///
         _NET_WM_STATE_ABOVE,
         ///
-        _NET_WM_STATE_FULLSCREEN,
-
-        ///
-        _NET_WM_ACTION_FULLSCREEN,
-        ///
+        _NET_WM_STATE_FULLSCREEN,///
+        _NET_WM_ACTION_FULLSCREEN,///
         _NET_WM_ACTION_CLOSE,
         ///
-        _NET_WM_ACTION_MINIMIZE,
-        ///
-        _NET_WM_ACTION_RESIZE,
-        ///
+        _NET_WM_ACTION_MINIMIZE,///
+        _NET_WM_ACTION_RESIZE,///
         _NET_WM_ACTION_MOVE,
         ///
-        _NET_WM_ACTION_ABOVE,
-        ///
-        _NET_WM_ACTION_MAXIMIZE_HORZ,
-        ///
+        _NET_WM_ACTION_ABOVE,///
+        _NET_WM_ACTION_MAXIMIZE_HORZ,///
         _NET_WM_ACTION_MAXIMIZE_VERT;
 }
 
@@ -169,8 +131,10 @@ private {
             xim = x11.XOpenIM(display, null, null, null);
         }
 
-        static foreach(m; __traits(allMembers, X11Atoms)) {
-            mixin("atoms." ~ m ~ " = x11.XInternAtom(x11Display(), cast(char*)\"" ~ m ~ "\".ptr, true);");
+        static foreach (m; __traits(allMembers, X11Atoms)) {
+            mixin(
+                    "atoms." ~ m ~ " = x11.XInternAtom(x11Display(), cast(char*)\"" ~
+                    m ~ "\".ptr, true);");
         }
 
         atoms.XA_ATOM = x11.XInternAtom(x11Display(), cast(char*)"ATOM".ptr, true);
@@ -185,11 +149,12 @@ private {
 
     }
 
-    extern(C) int defaultX11ErrorHandler(Display* d, XErrorEvent* err) {
+    extern (C) int defaultX11ErrorHandler(Display* d, XErrorEvent* err) {
         import std.stdio : stderr;
 
         debug {
             import core.stdc.string : strlen;
+
             char[1024] buffer;
             x11.XGetErrorText(d, err.error_code, buffer.ptr, cast(int)buffer.length);
             stderr.writeln("X11 Error: ", buffer[0 .. strlen(buffer.ptr)]);
@@ -219,10 +184,21 @@ final class X11EventLoopSource : EventLoopSource {
     }
 
     @property {
-        bool onMainThread() shared { return true; }
-        bool onAdditionalThreads() shared { return true; }
-        string description() shared { return "Implements support for a X11 based event loop iteration. Singleton but threaded."; }
-        EventSource identifier() shared { return EventSources.X11; }
+        bool onMainThread() shared {
+            return true;
+        }
+
+        bool onAdditionalThreads() shared {
+            return true;
+        }
+
+        string description() shared {
+            return "Implements support for a X11 based event loop iteration. Singleton but threaded.";
+        }
+
+        EventSource identifier() shared {
+            return EventSources.X11;
+        }
     }
 
     shared(EventLoopSourceRetriever) nextEventGenerator(shared(ISharedAllocator) alloc) shared {
@@ -248,7 +224,7 @@ final class X11EventLoopSourceRetrieve : EventLoopSourceRetriever {
         // prevents any searching for a consumer (no event actually returned)
         event.type.value = 0;
 
-        for(;;) {
+        for (;;) {
             int pending = x11.XPending(display);
             if (pending > 0) {
                 XEvent x11Event;
@@ -264,95 +240,93 @@ final class X11EventLoopSourceRetrieve : EventLoopSourceRetriever {
         }
     }
 
-    void handledEvent(ref Event event) shared {}
-    void unhandledEvent(ref Event event) shared {}
-    void handledErrorEvent(ref Event event) shared {}
-    void hintTimeout(Duration timeout) shared {}
+    void handledEvent(ref Event event) shared {
+    }
+
+    void unhandledEvent(ref Event event) shared {
+    }
+
+    void handledErrorEvent(ref Event event) shared {
+    }
+
+    void hintTimeout(Duration timeout) shared {
+    }
 }
 
 private {
     void processEvent(ref XEvent x11Event, ref Event event, X11GetXICDel xicgetdel) {
         event.wellData1Value = x11Event.xany.window;
 
-        switch(x11Event.type) {
-            case MappingNotify:
-                if (x11Event.xmapping.request == MappingModifier || x11Event.xmapping.request == MappingKeyboard)
-                    x11.XRefreshKeyboardMapping(&x11Event.xmapping);
-                break;
-            case MapNotify:
-            case Expose:
-                event.type = X11_Events_Types.Expose;
-                break;
+        switch (x11Event.type) {
+        case MappingNotify:
+            if (x11Event.xmapping.request == MappingModifier ||
+                    x11Event.xmapping.request == MappingKeyboard)
+                x11.XRefreshKeyboardMapping(&x11Event.xmapping);
+            break;
+        case MapNotify:
+        case Expose:
+            event.type = X11_Events_Types.Expose;
+            break;
 
-            case FocusIn:
-                auto xic = xicgetdel(x11Event.xany.window);
-                if (xic !is null) x11.XSetICFocus(xic);
-                event.type = Windowing_Events_Types.Window_Show;
-                break;
-            case FocusOut:
-                event.type = Windowing_Events_Types.Window_Hide;
-                auto xic = xicgetdel(x11Event.xany.window);
-                if (xic !is null) x11.XUnsetICFocus(xic);
-                break;
+        case FocusIn:
+            auto xic = xicgetdel(x11Event.xany.window);
+            if (xic !is null)
+                x11.XSetICFocus(xic);
+            event.type = Windowing_Events_Types.Window_Show;
+            break;
+        case FocusOut:
+            event.type = Windowing_Events_Types.Window_Hide;
+            auto xic = xicgetdel(x11Event.xany.window);
+            if (xic !is null)
+                x11.XUnsetICFocus(xic);
+            break;
 
-            case ConfigureNotify:
-                event.type = X11_Events_Types.NewSizeLocation;
-                event.x11.configureNotify.x = x11Event.xconfigure.x;
-                event.x11.configureNotify.y = x11Event.xconfigure.y;
-                event.x11.configureNotify.width = x11Event.xconfigure.width;
-                event.x11.configureNotify.height = x11Event.xconfigure.height;
-                break;
-            case ClientMessage:
-                if (atoms.WM_DELETE_WINDOW != 0 && x11Event.xclient.format == 32 && x11Event.xclient.data.l[0] == atoms.WM_DELETE_WINDOW) {
-                    event.type = Windowing_Events_Types.Window_RequestClose;
-                } else if ((atoms.XdndEnter != None && x11Event.xclient.message_type == atoms.XdndEnter) ||
-                            (atoms.XdndPosition != None && x11Event.xclient.message_type == atoms.XdndPosition) ||
-                            (atoms.XdndDrop != None && x11Event.xclient.message_type == atoms.XdndDrop) ||
-                            (atoms.XdndLeave != None && x11Event.xclient.message_type == atoms.XdndLeave)) {
+        case ConfigureNotify:
+            event.type = X11_Events_Types.NewSizeLocation;
+            event.x11.configureNotify.x = x11Event.xconfigure.x;
+            event.x11.configureNotify.y = x11Event.xconfigure.y;
+            event.x11.configureNotify.width = x11Event.xconfigure.width;
+            event.x11.configureNotify.height = x11Event.xconfigure.height;
+            break;
+        case ClientMessage:
+            if (atoms.WM_DELETE_WINDOW != 0 && x11Event.xclient.format == 32 &&
+                    x11Event.xclient.data.l[0] == atoms.WM_DELETE_WINDOW) {
+                event.type = Windowing_Events_Types.Window_RequestClose;
+            } else if ((atoms.XdndEnter != None && x11Event.xclient.message_type == atoms.XdndEnter) ||
+                    (atoms.XdndPosition != None &&
+                        x11Event.xclient.message_type == atoms.XdndPosition) ||
+                    (atoms.XdndDrop != None && x11Event.xclient.message_type == atoms.XdndDrop) ||
+                    (atoms.XdndLeave != None && x11Event.xclient.message_type == atoms.XdndLeave)) {
 
-                    event.type = X11_Events_Types.Raw;
-                    event.x11.raw = x11Event;
-                }
-                break;
-            case SelectionNotify:
-                if (x11Event.xselection.property != None) {
-                    event.type = X11_Events_Types.Raw;
-                    event.x11.raw = x11Event;
-                }
+                event.type = X11_Events_Types.Raw;
+                event.x11.raw = x11Event;
+            }
+            break;
+        case SelectionNotify:
+            if (x11Event.xselection.property != None) {
+                event.type = X11_Events_Types.Raw;
+                event.x11.raw = x11Event;
+            }
 
-                break;
-            case MotionNotify:
-                event.type = Windowing_Events_Types.Window_CursorMoved;
-                event.windowing.cursorMoved.newX = x11Event.xmotion.x;
-                event.windowing.cursorMoved.newY = x11Event.xmotion.y;
-                break;
-            case ButtonPress:
-                if (x11Event.xbutton.button == Button4) {
-                    event.type = Windowing_Events_Types.Window_CursorScroll;
-                    event.windowing.scroll.amount = 1;
-                    event.windowing.scroll.x = x11Event.xbutton.x;
-                    event.windowing.scroll.y = x11Event.xbutton.y;
-                } else if (x11Event.xbutton.button == Button5) {
-                    event.type = Windowing_Events_Types.Window_CursorScroll;
-                    event.windowing.scroll.amount = -1;
-                    event.windowing.scroll.x = x11Event.xbutton.x;
-                    event.windowing.scroll.y = x11Event.xbutton.y;
-                } else {
-                    event.type = Windowing_Events_Types.Window_CursorAction;
-                    event.windowing.cursorAction.x = x11Event.xbutton.x;
-                    event.windowing.cursorAction.y = x11Event.xbutton.y;
-                    event.windowing.cursorAction.isDoubleClick = false;
-
-                    if (x11Event.xbutton.button == Button1)
-                        event.windowing.cursorAction.action = CursorEventAction.Select;
-                    else if (x11Event.xbutton.button == Button2)
-                        event.windowing.cursorAction.action = CursorEventAction.ViewChange;
-                    else if (x11Event.xbutton.button == Button3)
-                        event.windowing.cursorAction.action = CursorEventAction.Alter;
-                }
-                break;
-            case ButtonRelease:
-                event.type = Windowing_Events_Types.Window_CursorActionEnd;
+            break;
+        case MotionNotify:
+            event.type = Windowing_Events_Types.Window_CursorMoved;
+            event.windowing.cursorMoved.newX = x11Event.xmotion.x;
+            event.windowing.cursorMoved.newY = x11Event.xmotion.y;
+            break;
+        case ButtonPress:
+            if (x11Event.xbutton.button == Button4) {
+                event.type = Windowing_Events_Types.Window_CursorScroll;
+                event.windowing.scroll.amount = 1;
+                event.windowing.scroll.x = x11Event.xbutton.x;
+                event.windowing.scroll.y = x11Event.xbutton.y;
+            } else if (x11Event.xbutton.button == Button5) {
+                event.type = Windowing_Events_Types.Window_CursorScroll;
+                event.windowing.scroll.amount = -1;
+                event.windowing.scroll.x = x11Event.xbutton.x;
+                event.windowing.scroll.y = x11Event.xbutton.y;
+            } else {
+                event.type = Windowing_Events_Types.Window_CursorAction;
                 event.windowing.cursorAction.x = x11Event.xbutton.x;
                 event.windowing.cursorAction.y = x11Event.xbutton.y;
                 event.windowing.cursorAction.isDoubleClick = false;
@@ -363,23 +337,37 @@ private {
                     event.windowing.cursorAction.action = CursorEventAction.ViewChange;
                 else if (x11Event.xbutton.button == Button3)
                     event.windowing.cursorAction.action = CursorEventAction.Alter;
-                else
-                    event.type = 0;
-                break;
-            case KeyPress:
-                event.type = Windowing_Events_Types.Window_KeyDown;
-                translateKey(x11Event, event, true, xicgetdel);
-                break;
-            case KeyRelease:
-                event.type = Windowing_Events_Types.Window_KeyUp;
-                translateKey(x11Event, event, false, xicgetdel);
-                break;
+            }
+            break;
+        case ButtonRelease:
+            event.type = Windowing_Events_Types.Window_CursorActionEnd;
+            event.windowing.cursorAction.x = x11Event.xbutton.x;
+            event.windowing.cursorAction.y = x11Event.xbutton.y;
+            event.windowing.cursorAction.isDoubleClick = false;
 
-            case DestroyNotify:
-                event.type = X11_Events_Types.DestroyNotify;
-                break;
-            default:
-                break;
+            if (x11Event.xbutton.button == Button1)
+                event.windowing.cursorAction.action = CursorEventAction.Select;
+            else if (x11Event.xbutton.button == Button2)
+                event.windowing.cursorAction.action = CursorEventAction.ViewChange;
+            else if (x11Event.xbutton.button == Button3)
+                event.windowing.cursorAction.action = CursorEventAction.Alter;
+            else
+                event.type = 0;
+            break;
+        case KeyPress:
+            event.type = Windowing_Events_Types.Window_KeyDown;
+            translateKey(x11Event, event, true, xicgetdel);
+            break;
+        case KeyRelease:
+            event.type = Windowing_Events_Types.Window_KeyUp;
+            translateKey(x11Event, event, false, xicgetdel);
+            break;
+
+        case DestroyNotify:
+            event.type = X11_Events_Types.DestroyNotify;
+            break;
+        default:
+            break;
         }
     }
 
@@ -402,23 +390,23 @@ private {
         if ((x11Event.xkey.state & Mod4Mask) == Mod4Mask)
             event.windowing.keyInput.modifiers |= KeyModifiers.Super;
 
-        switch(keysym) {
-            case XK_KP_Enter:
-                event.windowing.keyInput.modifiers |= KeyModifiers.Numlock;
-                event.windowing.keyInput.special = SpecialKey.Enter;
-                return;
-            case XK_KP_Add:
-            case XK_KP_Subtract:
-            case XK_KP_Multiply:
-            case XK_KP_Divide:
-            case XK_KP_Decimal:
-            case XK_KP_0: .. case XK_KP_9:
-                event.windowing.keyInput.modifiers |= KeyModifiers.Numlock;
-                event.windowing.keyInput.key = c[0];
-                return;
+        switch (keysym) {
+        case XK_KP_Enter:
+            event.windowing.keyInput.modifiers |= KeyModifiers.Numlock;
+            event.windowing.keyInput.special = SpecialKey.Enter;
+            return;
+        case XK_KP_Add:
+        case XK_KP_Subtract:
+        case XK_KP_Multiply:
+        case XK_KP_Divide:
+        case XK_KP_Decimal:
+        case XK_KP_0: .. case XK_KP_9:
+            event.windowing.keyInput.modifiers |= KeyModifiers.Numlock;
+            event.windowing.keyInput.key = c[0];
+            return;
 
-            default:
-                break;
+        default:
+            break;
 
         }
 
@@ -451,66 +439,65 @@ private {
             event.windowing.keyInput.key = c[0];
         }
 
-        switch(keysym) {
-            case XK_Escape:
-                event.windowing.keyInput.special = SpecialKey.Escape;
-                return;
+        switch (keysym) {
+        case XK_Escape:
+            event.windowing.keyInput.special = SpecialKey.Escape;
+            return;
 
-            case XK_Return:
-                event.windowing.keyInput.special = SpecialKey.Enter;
-                return;
+        case XK_Return:
+            event.windowing.keyInput.special = SpecialKey.Enter;
+            return;
 
-            case XK_BackSpace:
-                event.windowing.keyInput.special = SpecialKey.Backspace;
-                return;
-            case XK_Tab:
-                event.windowing.keyInput.special = SpecialKey.Tab;
-                return;
+        case XK_BackSpace:
+            event.windowing.keyInput.special = SpecialKey.Backspace;
+            return;
+        case XK_Tab:
+            event.windowing.keyInput.special = SpecialKey.Tab;
+            return;
 
-            case XK_Prior:
-                event.windowing.keyInput.special = SpecialKey.PageUp;
-                break;
-            case XK_Next:
-                event.windowing.keyInput.special = SpecialKey.PageDown;
-                break;
+        case XK_Prior:
+            event.windowing.keyInput.special = SpecialKey.PageUp;
+            break;
+        case XK_Next:
+            event.windowing.keyInput.special = SpecialKey.PageDown;
+            break;
 
-            case XK_End:
-                event.windowing.keyInput.special = SpecialKey.End;
-                break;
-            case XK_Home:
-                event.windowing.keyInput.special = SpecialKey.Home;
-                break;
-            case XK_Insert:
-                event.windowing.keyInput.special = SpecialKey.Insert;
-                break;
-            case XK_Delete:
-                event.windowing.keyInput.special = SpecialKey.Delete;
-                break;
+        case XK_End:
+            event.windowing.keyInput.special = SpecialKey.End;
+            break;
+        case XK_Home:
+            event.windowing.keyInput.special = SpecialKey.Home;
+            break;
+        case XK_Insert:
+            event.windowing.keyInput.special = SpecialKey.Insert;
+            break;
+        case XK_Delete:
+            event.windowing.keyInput.special = SpecialKey.Delete;
+            break;
 
-            case XK_Left:
-                event.windowing.keyInput.special = SpecialKey.LeftArrow;
-                break;
-            case XK_Right:
-                event.windowing.keyInput.special = SpecialKey.RightArrow;
-                break;
-            case XK_Up:
-                event.windowing.keyInput.special = SpecialKey.UpArrow;
-                break;
-            case XK_Down:
-                event.windowing.keyInput.special = SpecialKey.DownArrow;
-                break;
+        case XK_Left:
+            event.windowing.keyInput.special = SpecialKey.LeftArrow;
+            break;
+        case XK_Right:
+            event.windowing.keyInput.special = SpecialKey.RightArrow;
+            break;
+        case XK_Up:
+            event.windowing.keyInput.special = SpecialKey.UpArrow;
+            break;
+        case XK_Down:
+            event.windowing.keyInput.special = SpecialKey.DownArrow;
+            break;
 
-            case XK_Scroll_Lock:
-                event.windowing.keyInput.special = SpecialKey.ScrollLock;
-                break;
+        case XK_Scroll_Lock:
+            event.windowing.keyInput.special = SpecialKey.ScrollLock;
+            break;
 
-            case XK_F1: .. case XK_F24:
-                event.windowing.keyInput.special = cast(SpecialKey)(SpecialKey.F1 + (keysym - XK_F1));
-                return;
+        case XK_F1: .. case XK_F24:
+            event.windowing.keyInput.special = cast(SpecialKey)(SpecialKey.F1 + (keysym - XK_F1));
+            return;
 
-            default:
-                break;
+        default:
+            break;
         }
     }
 }
-

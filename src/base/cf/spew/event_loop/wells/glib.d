@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Copyright: <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
  * Authors: $(LINK2 http://cattermole.co.nz, Richard Andrew Cattermole)
  */
@@ -20,10 +20,21 @@ final class GlibEventLoopSource : EventLoopSource {
     }
 
     @property {
-        bool onMainThread() shared { return true; }
-        bool onAdditionalThreads() shared { return true; }
-        string description() shared { return "Implements support for a glib based event loop iteration. Threaded."; }
-        EventSource identifier() shared { return EventSources.Glib; }
+        bool onMainThread() shared {
+            return true;
+        }
+
+        bool onAdditionalThreads() shared {
+            return true;
+        }
+
+        string description() shared {
+            return "Implements support for a glib based event loop iteration. Threaded.";
+        }
+
+        EventSource identifier() shared {
+            return EventSources.Glib;
+        }
     }
 
     shared(EventLoopSourceRetriever) nextEventGenerator(shared(ISharedAllocator) alloc) shared {
@@ -33,7 +44,7 @@ final class GlibEventLoopSource : EventLoopSource {
     struct Bindings {
         import devisualization.bindings.gdk.glib.gtypes;
 
-    extern(C):
+    extern (C):
         ///
         GMainContext* function() g_main_context_default;
         ///
@@ -61,19 +72,26 @@ final class GlibEventLoopSourceRetrieve : EventLoopSourceRetriever {
         // prevents any searching for a consumer (no event actually returned)
         event.type.value = 0;
 
-        if (bindings.g_main_context_default is null || bindings.g_main_context_iteration is null) return false;
+        if (bindings.g_main_context_default is null || bindings.g_main_context_iteration is null)
+            return false;
 
         // should this be unref'd???
         GMainContext* ctx = bindings.g_main_context_default();
-        if (ctx is null) return false;
+        if (ctx is null)
+            return false;
 
         return bindings.g_main_context_iteration(ctx, false) > 0;
     }
 
-    void handledEvent(ref Event event) shared {}
-    void unhandledEvent(ref Event event) shared {}
-    void handledErrorEvent(ref Event event) shared {}
-    // unsupported, but that is ok, we don't block if we don't get an event!
-    void hintTimeout(Duration timeout) shared { }
-}
+    void handledEvent(ref Event event) shared {
+    }
 
+    void unhandledEvent(ref Event event) shared {
+    }
+
+    void handledErrorEvent(ref Event event) shared {
+    }
+    // unsupported, but that is ok, we don't block if we don't get an event!
+    void hintTimeout(Duration timeout) shared {
+    }
+}

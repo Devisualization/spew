@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Copyright: <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
  * Authors: $(LINK2 http://cattermole.co.nz, Richard Andrew Cattermole)
  */
@@ -8,41 +8,41 @@ module cf.spew.ui.display.defs;
  * Represents a display.
  */
 interface IDisplay {
-	import cf.spew.ui.window.defs : IWindow;
-	import devisualization.util.core.memory.managed;
-	import stdx.allocator : IAllocator;
+    import cf.spew.ui.window.defs : IWindow;
+    import devisualization.util.core.memory.managed;
+    import stdx.allocator : IAllocator;
 
-	private import cf.spew.ui.rendering : vec2;
+    private import cf.spew.ui.rendering : vec2;
 
-	@property {
-		/**
+    @property {
+        /**
 		 * The name of the display.
 		 * This could be a computed name that is not meant for human consumption.
 		 *
 		 * Returns:
 		 *      The name of the display.
 		 */
-		managed!string name();
-		
-		/**
+        managed!string name();
+
+        /**
 		 * The dimensions of the display.
 		 *
 		 * Returns:
 		 *      The dimensions (width/height) of the display.
 		 */
-		vec2!ushort size();
+        vec2!ushort size();
 
-		/**
+        /**
 		 * The rate the monitor/display can refresh its contents.
-		 * 
+		 *
 		 * Commonly this is 50 or 60.
 		 *
 		 * Returns:
 		 *      The rate the monitor and display can refresh its contents.
 		 */
-		uint refreshRate();
-		
-		/**
+        uint refreshRate();
+
+        /**
 		 * How bright the display is.
 		 *
 		 * Potentially a very expensive operation.
@@ -53,23 +53,23 @@ interface IDisplay {
 		 * Returns:
 		 *      The brightness of the screen in lumens.
 		 */
-		uint luminosity();
-		
-		/**
+        uint luminosity();
+
+        /**
 		 * Is this display the primary monitor?
-		 * 
+		 *
 		 * If it is not gainable and there is only one display
 		 *  it will return true; otherwise false.
-		 * 
+		 *
 		 * Returns:
 		 * 		If this display is the primary one.
 		 */
-		bool isPrimary();
-		
-		/**
+        bool isPrimary();
+
+        /**
 		 * How bright the display is.
 		 * For usage with gamma display algorithms.
-		 * 
+		 *
 		 * Potentially a very expensive operation.
 		 * Perform only when you absolutely need to.
 		 *
@@ -79,11 +79,11 @@ interface IDisplay {
 		 * Returns:
 		 *      The brightness of the display.
 		 */
-		final float gamma() {
-			return luminosity() / 10f;
-		}
-		
-		/**
+        final float gamma() {
+            return luminosity() / 10f;
+        }
+
+        /**
 		 * All the windows on this display.
 		 *
 		 * Not all IDisplay's will support this.
@@ -92,12 +92,12 @@ interface IDisplay {
 		 * Returns:
 		 *      All the windows on this display or null if none.
 		 */
-		managed!(IWindow[]) windows();
-		
-		/// No touchy, very dangerous!
-		size_t __handle();
-	}
+        managed!(IWindow[]) windows();
 
-	///
-	IDisplay dup(IAllocator alloc);
+        /// No touchy, very dangerous!
+        size_t __handle();
+    }
+
+    ///
+    IDisplay dup(IAllocator alloc);
 }

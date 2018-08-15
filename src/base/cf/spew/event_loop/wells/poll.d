@@ -5,11 +5,12 @@
  * Authors: $(LINK2 http://cattermole.co.nz, Richard Andrew Cattermole)
  */
 module cf.spew.event_loop.wells.poll;
+version (Posix):
 import cf.spew.event_loop.defs;
 import cf.spew.events.defs;
-import stdx.allocator : ISharedAllocator, make, dispose, makeArray, expandArray, shrinkArray, processAllocator;
+import stdx.allocator : ISharedAllocator, make, dispose, makeArray, expandArray,
+    shrinkArray, processAllocator;
 import core.thread;
-version(Posix):
 
 ///
 final class PollEventLoopSource : EventLoopSource {
@@ -19,16 +20,23 @@ final class PollEventLoopSource : EventLoopSource {
 
     @property {
         ///
-        bool onMainThread() shared { return true; }
+        bool onMainThread() shared {
+            return true;
+        }
         ///
-        bool onAdditionalThreads() shared { return true; }
+        bool onAdditionalThreads() shared {
+            return true;
+        }
         ///
-        string description() shared { return "Implements support for FILE* polling via (e)poll. Singleton but threaded."; }
+        string description() shared {
+            return "Implements support for FILE* polling via (e)poll. Singleton but threaded.";
+        }
         ///
         EventSource identifier() shared {
-            version(linux) {
+            version (linux) {
                 return EventSources.Epoll;
-            } else {
+            }
+            else {
                 return EventSources.Poll;
             }
         }
@@ -43,7 +51,8 @@ final class PollEventLoopSource : EventLoopSource {
 
     ///
     void registerFD(int fd, void delegate(int events) callback) shared {
-        if (callback is null) return;
+        if (callback is null)
+            return;
         getRetriever(Thread.getThis().id, processAllocator()).addFD(fd, callback);
     }
 
@@ -60,9 +69,10 @@ final class PollEventLoopSource : EventLoopSource {
 }
 
 private {
-    version(linux) {
+    version (linux) {
         alias PerThreadRetriever = EpollPerThreadRetriever;
-    } else {
+    }
+    else {
         alias PerThreadRetriever = PollPerThreadRetriever;
     }
 
@@ -73,7 +83,7 @@ private {
         ThreadID tid = Thread.getThis().id;
         shared(PerThreadRetriever) previous, instance = retrievers;
 
-        while(instance !is null) {
+        while (instance !is null) {
             shared(PerThreadRetriever) next = instance.next;
 
             if (instance.threadId == tid) {
@@ -81,10 +91,12 @@ private {
 
                 if (previous is null) {
                     retrievers = next;
-                } else {
+                }
+                else {
                     previous.next = next;
                 }
-            } else
+            }
+            else
                 previous = instance;
 
             instance = next;
@@ -95,7 +107,7 @@ private {
     shared(PerThreadRetriever) getRetriever(ThreadID tid, shared(ISharedAllocator) alloc) {
         shared(PerThreadRetriever) instance = retrievers;
 
-        while(instance !is null) {
+        while (instance !is null) {
             if (instance.threadId == tid) {
                 return instance;
             }
@@ -104,12 +116,14 @@ private {
 
         if (alloc is null) {
             return null;
-        } else {
+        }
+        else {
             shared(PerThreadRetriever) temp = alloc.make!(shared(PerThreadRetriever))(tid, alloc);
 
             if (instance is null) {
                 retrievers = temp;
-            } else {
+            }
+            else {
                 instance.next = temp;
             }
 
@@ -118,7 +132,7 @@ private {
     }
 }
 
-version(linux) {
+version (linux) {
     final class EpollPerThreadRetriever : EventLoopSourceRetriever {
         private {
             import core.sys.linux.epoll;
@@ -141,7 +155,8 @@ version(linux) {
         //
 
         ~this() {
-            if (countFd == 0) return;
+            if (countFd == 0)
+                return;
 
             alloc.dispose(fds);
             alloc.dispose(callbacks);
@@ -153,7 +168,7 @@ version(linux) {
 
         void addFD(int fd, void delegate(int) callback) shared {
             synchronized {
-                foreach(i, ref c; callbacks) {
+                foreach (i, ref c; callbacks) {
                     if (c !is null && fds[i] == fd) {
                         c = null;
                         atomicOp!"-="(countFd, 1);
@@ -165,7 +180,8 @@ version(linux) {
                     if (countFd == 0) {
                         fds = alloc.makeArray!(shared(int))(8);
                         callbacks = cast(shared)alloc.makeArray!(void delegate(int))(8);
-                    } else {
+                    }
+                    else {
                         int[] fds2 = cast(int[])fds;
                         alloc.expandArray(fds2, 16);
                         fds = cast(shared)fds2;
@@ -176,7 +192,7 @@ version(linux) {
                     }
                 }
 
-                foreach(uint i, ref c; callbacks) {
+                foreach (uint i, ref c; callbacks) {
                     if (c is null) {
                         c = callback;
                         fds[i] = fd;
@@ -195,10 +211,9 @@ version(linux) {
             assert(0);
         }
 
-
         void removeFD(int fd) shared {
             synchronized {
-                foreach(i, ref c; callbacks) {
+                foreach (i, ref c; callbacks) {
                     if (c !is null && fds[i] == fd) {
                         c = null;
                         atomicOp!"-="(countFd, 1);
@@ -224,11 +239,12 @@ version(linux) {
 
         bool nextEvent(ref Event event) shared {
             import std.math : sqrt;
+
             synchronized {
                 if (fds.length == 0)
                     return false;
 
-                int bufferlen = cast(int)(2^^sqrt(cast(float)fds.length));
+                int bufferlen = cast(int)(2 ^^ sqrt(cast(float)fds.length));
                 if (bufferlen != eventBuffer.length) {
                     if (eventBuffer !is null) {
                         alloc.dispose(cast(epoll_event[])eventBuffer);
@@ -237,18 +253,20 @@ version(linux) {
                     eventBuffer = cast(shared)alloc.makeArray!(epoll_event)(bufferlen);
                 }
 
-
                 // http://man7.org/linux/man-pages/man2/epoll_wait.2.html
-                int count = epoll_wait(threadPoller, cast(epoll_event*)eventBuffer.ptr, bufferlen, 0);
+                int count = epoll_wait(threadPoller,
+                        cast(epoll_event*)eventBuffer.ptr, bufferlen, 0);
 
                 if (count < 0) {
                     if (count == EINTR) {
                         // ok, timeout
                     }
-                } else {
-                    foreach(ev; eventBuffer[0 .. count]) {
+                }
+                else {
+                    foreach (ev; eventBuffer[0 .. count]) {
                         // call handles callbacks
-                        if (ev.data.u32 >= callbacks.length) continue;
+                        if (ev.data.u32 >= callbacks.length)
+                            continue;
 
                         auto callback = callbacks[ev.data.u32];
                         if (callback !is null)
@@ -261,12 +279,20 @@ version(linux) {
             return false;
         }
 
-        void handledEvent(ref Event event) shared {}
-        void unhandledEvent(ref Event event) shared {}
-        void handledErrorEvent(ref Event event) shared {}
-        void hintTimeout(Duration timeout) shared {}
+        void handledEvent(ref Event event) shared {
+        }
+
+        void unhandledEvent(ref Event event) shared {
+        }
+
+        void handledErrorEvent(ref Event event) shared {
+        }
+
+        void hintTimeout(Duration timeout) shared {
+        }
     }
-} else {
+}
+else {
     final class PollPerThreadRetriever : EventLoopSourceRetriever {
         private {
             import core.sys.posix.poll;
@@ -287,7 +313,8 @@ version(linux) {
         //
 
         ~this() {
-            if (countFd == 0) return;
+            if (countFd == 0)
+                return;
 
             alloc.dispose(callbacks);
             alloc.dispose(pollfds);
@@ -295,12 +322,13 @@ version(linux) {
 
         void addFD(int fd, void delegate(int) callback) shared {
             synchronized {
-                foreach(i, ref c; callbacks) {
+                foreach (i, ref c; callbacks) {
                     if (c !is null && pollfds[i].fd == fd) {
-                        if (countFd > 1 && i+1 < countFd) {
-                            pollfds[i] = pollfds[countFd-1];
-                            c = callbacks[countFd-1];
-                        } else {
+                        if (countFd > 1 && i + 1 < countFd) {
+                            pollfds[i] = pollfds[countFd - 1];
+                            c = callbacks[countFd - 1];
+                        }
+                        else {
                             c = null;
                         }
 
@@ -313,7 +341,8 @@ version(linux) {
                     if (countFd == 0) {
                         pollfds = alloc.makeArray!(shared(pollfd))(8);
                         callbacks = cast(shared)alloc.makeArray!(void delegate(int))(8);
-                    } else {
+                    }
+                    else {
                         pollfd[] pollfds2 = cast(pollfd[])pollfds;
                         alloc.expandArray(pollfds2, 16);
                         pollfds = cast(shared)pollfds2;
@@ -324,7 +353,7 @@ version(linux) {
                     }
                 }
 
-                foreach(uint i, ref c; callbacks) {
+                foreach (uint i, ref c; callbacks) {
                     if (c is null) {
                         c = callback;
                         pollfds[i].fd = fd;
@@ -338,15 +367,15 @@ version(linux) {
             assert(0);
         }
 
-
         void removeFD(int fd) shared {
             synchronized {
-                foreach(i, ref c; callbacks) {
+                foreach (i, ref c; callbacks) {
                     if (c !is null && pollfds[i].fd == fd) {
-                        if (countFd > 1 && i+1 < countFd) {
-                            pollfds[i] = pollfds[countFd-1];
-                            c = callbacks[countFd-1];
-                        } else {
+                        if (countFd > 1 && i + 1 < countFd) {
+                            pollfds[i] = pollfds[countFd - 1];
+                            c = callbacks[countFd - 1];
+                        }
+                        else {
                             c = null;
                         }
 
@@ -366,11 +395,12 @@ version(linux) {
 
         bool nextEvent(ref Event event) shared {
             import std.math : sqrt;
+
             synchronized {
                 if (pollfds.length == 0)
                     return false;
 
-                foreach(ref fds; pollfds[0 .. countFd]) {
+                foreach (ref fds; pollfds[0 .. countFd]) {
                     fds.revents = 0;
                 }
 
@@ -381,10 +411,12 @@ version(linux) {
                     if (err == EINTR) {
                         // ok, timeout
                     }
-                } else {
-                    foreach(i, fds; pollfds[0 .. countFd]) {
+                }
+                else {
+                    foreach (i, fds; pollfds[0 .. countFd]) {
                         // call handles callbacks
-                        if (fds.revents == 0) continue;
+                        if (fds.revents == 0)
+                            continue;
 
                         auto callback = callbacks[i];
                         if (callback !is null)
@@ -397,10 +429,16 @@ version(linux) {
             return false;
         }
 
-        void handledEvent(ref Event event) shared {}
-        void unhandledEvent(ref Event event) shared {}
-        void handledErrorEvent(ref Event event) shared {}
-        void hintTimeout(Duration timeout) shared {}
+        void handledEvent(ref Event event) shared {
+        }
+
+        void unhandledEvent(ref Event event) shared {
+        }
+
+        void handledErrorEvent(ref Event event) shared {
+        }
+
+        void hintTimeout(Duration timeout) shared {
+        }
     }
 }
-
