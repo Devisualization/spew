@@ -378,6 +378,7 @@ void notificationTrayTest() {
     creator.icon = icon;
 
     notificationWindow = creator.createWindow();
+    Instance.current.ui.notify(cast(shared(ImageStorage!RGBA8))null, "Testing", "here");
     if (notificationWindow.isNull) return;
 
     notificationWindow.events.onVisible = () {

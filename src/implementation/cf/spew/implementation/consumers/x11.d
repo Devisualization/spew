@@ -286,6 +286,7 @@ final class EventLoopConsumerImpl_X11 : EventLoopConsumerImpl {
                     tryFunc(w2.onInvisibleDel);
                     return true;
 
+                case Windowing_Events_Types.Window_Show:
                 case X11_Events_Types.Expose:
                     if (!w.stateOfVisibleCall) {
                         tryFunc(w2.onVisibleDel);

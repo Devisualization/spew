@@ -92,6 +92,11 @@ Have_Window_ScreenShot, Have_Icon, Have_Window_Menu, Have_Cursor, Have_Style {
             alloc.dispose(context_);
         close();
     }
+
+    override IContext context() {
+        if (!visible || isClosed) return null;
+        return context_;
+    }
     
     @property {
         vec2!uint size() {

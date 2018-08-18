@@ -40,29 +40,39 @@ final class UIInstance_X11 : UIInstance, Feature_Management_Clipboard {
         Window freedesktopTray = x11.XGetSelectionOwner(x11Display(),
                 x11Atoms()._NET_SYSTEM_TRAY_S);
 
-        // TODO: SDBus_KDENotifications
-        if (checkForSDBusKDETray()) {
-            if (checkForSDBusFreeDesktopBubble()) {
-                // sdbus KDE + sdbus KDE bubble
-                notificationBubbleImpl = cast(shared(Feature_NotificationMessage))notificationTrayImpl;
-                isTrayBubbleSame = true;
+        version(linux) {
+            import cf.spew.implementation.instance.ui.notifications_sdbus;
+            if (checkForSDBusKDETray()) {
+                notificationTrayImpl = allocator.make!(shared(SDBus_KDENotifications))(allocator);
+                if (checkForSDBusFreeDesktopBubble()) {
+                    // sdbus KDE + sdbus KDE bubble
+                    notificationBubbleImpl = cast(shared(Feature_NotificationMessage))notificationTrayImpl;
+                    isTrayBubbleSame = true;
+                } else {
+                    // sdbus KDE + freedesktop bubble
+                    notificationBubbleImpl = allocator.make!(shared(FreeDesktopNotifications))();
+                }
+            } else if (freedesktopTray != None) {
+                notificationTrayImpl = allocator.make!(shared(FreeDesktopNotifications))();
+                if (checkForSDBusFreeDesktopBubble()) {
+                    // freedesktop + sdbus KDE bubble
+                    notificationBubbleImpl = allocator.make!(shared(SDBus_KDENotifications))(allocator);
+                } else {
+                    // freedesktop + freedesktop bubble
+                    notificationBubbleImpl = cast(shared(Feature_NotificationMessage))notificationTrayImpl;
+                    isTrayBubbleSame = true;
+                }
             } else {
-                // sdbus KDE + freedesktop bubble
-                notificationBubbleImpl = allocator.make!(shared(FreeDesktopNotifications))();
-            }
-        } else if (freedesktopTray != None) {
-            notificationTrayImpl = allocator.make!(shared(FreeDesktopNotifications))();
-            if (checkForSDBusFreeDesktopBubble()) {
-                // freedesktop + sdbus KDE bubble
-            } else {
-                // freedesktop + freedesktop bubble
-                notificationBubbleImpl = cast(shared(Feature_NotificationMessage))notificationTrayImpl;
-                isTrayBubbleSame = true;
+                if (checkForSDBusFreeDesktopBubble()) {
+                    // sdbus KDE bubble
+                    notificationBubbleImpl = allocator.make!(shared(SDBus_KDENotifications))(allocator);
+                }
             }
         } else {
-            if (checkForSDBusFreeDesktopBubble()) {
-                // sdbus KDE bubble
-            }
+            // freedesktop + freedesktop bubble
+            notificationTrayImpl = allocator.make!(shared(FreeDesktopNotifications))();
+            notificationBubbleImpl = cast(shared(Feature_NotificationMessage))notificationTrayImpl;
+            isTrayBubbleSame = true;
         }
     }
 
@@ -540,31 +550,6 @@ final class FreeDesktopNotifications : Feature_NotificationMessage, Feature_Noti
     }
 }
 
-final class SDBus_KDENotifications : Feature_NotificationMessage, Feature_NotificationTray {
-    @property {
-        managed!IWindow getNotificationWindow(IAllocator alloc) shared {
-            assert(0);
-        }
-
-        void setNotificationWindow(managed!IWindow) shared {
-            assert(0);
-        }
-
-        bool haveNotificationWindow() shared {
-            assert(0);
-        }
-    }
-
-    void notify(shared(ImageStorage!RGBA8), dstring, dstring, shared(ISharedAllocator) alloc) shared {
-        assert(0);
-    }
-
-    void clearNotifications() shared {
-        assert(0);
-    }
-
-}
-
 bool checkForX11() {
     import devisualization.bindings.x11;
     import cf.spew.event_loop.wells.x11;
@@ -573,66 +558,3 @@ bool checkForX11() {
         x11.XkbSetDetectableAutoRepeat !is null;
 }
 
-bool checkForSystemDBus() {
-    import devisualization.bindings.systemd;
-
-    if (systemdLoader is SystemDLoader.init)
-        systemdLoader = SystemDLoader(null);
-    return systemd.sd_bus_default_user !is null;
-}
-
-bool checkForSDBusKDETray() {
-    import devisualization.bindings.systemd;
-
-    if (!checkForSystemDBus)
-        return false;
-
-    sd_bus* bus;
-    if (systemd.sd_bus_default_user(&bus) < 0)
-        return false;
-
-    sd_bus_error error;
-    sd_bus_message* message;
-
-    scope (exit) {
-        if (message !is null)
-            systemd.sd_bus_message_unref(message);
-        systemd.sd_bus_unref(bus);
-    }
-
-    // lets find out if the interface exists
-    // we're using the "kde" namespace, because that is what is implemented /sigh/
-    // it should be freedesktop :/
-    int r = systemd.sd_bus_call_method(bus, "org.kde.StatusNotifierWatcher", "/StatusNotifierWatcher",
-            "org.freedesktop.DBus.Introspectable", "Introspect", &error, &message, "");
-
-    // much cheaper to see if there is a body than to actually get it ;)
-    return r >= 0 && systemd.sd_bus_message_is_empty(message) == 0;
-}
-
-bool checkForSDBusFreeDesktopBubble() {
-    import devisualization.bindings.systemd;
-
-    if (!checkForSystemDBus)
-        return false;
-
-    sd_bus* bus;
-    if (systemd.sd_bus_default_user(&bus) < 0)
-        return false;
-
-    sd_bus_error error;
-    sd_bus_message* message;
-
-    scope (exit) {
-        if (message !is null)
-            systemd.sd_bus_message_unref(message);
-        systemd.sd_bus_unref(bus);
-    }
-
-    // lets find out if the interface exists
-    int r = systemd.sd_bus_call_method(bus, "org.freedesktop.Notifications", "/org/freedesktop/Notifications",
-            "org.freedesktop.DBus.Introspectable", "Introspect", &error, &message, "");
-
-    // much cheaper to see if there is a body than to actually get it ;)
-    return r >= 0 && systemd.sd_bus_message_is_empty(message) == 0;
-}
