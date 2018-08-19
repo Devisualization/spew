@@ -80,6 +80,8 @@ final class SDBus_KDENotifications : Feature_NotificationMessage, Feature_Notifi
 
         alloc.dispose(bufferTitle);
         alloc.dispose(bufferText);
+        if (message !is null)
+            systemd.sd_bus_message_unref(message);
     }
 
     void clearNotifications() shared {
