@@ -111,6 +111,7 @@ private {
 
         if (x11Loader is X11Loader.init) {
             x11Loader = X11Loader(null);
+            assert(x11.XInitThreads() != 0);
             setX11ErrorHandler(null);
         }
 
@@ -169,6 +170,7 @@ private {
     static ~this() {
         if (display !is null)
             x11.XCloseDisplay(display);
+        display = null;
     }
 }
 

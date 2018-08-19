@@ -87,14 +87,15 @@ private {
             shared(PerThreadRetriever) next = instance.next;
 
             if (instance.threadId == tid) {
-                instance.alloc.dispose(instance);
-
                 if (previous is null) {
                     retrievers = next;
                 }
                 else {
                     previous.next = next;
                 }
+
+                auto alloc = instance.alloc;
+                alloc.dispose(instance);
             }
             else
                 previous = instance;

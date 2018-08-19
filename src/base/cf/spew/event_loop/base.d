@@ -131,20 +131,20 @@ abstract class EventLoopManager_Base : IEventLoopManager {
     }
 
     /**
-	 * Starts the event loop for the current thread.
-	 *
-	 * Will stop when the state of the thread is set to stopped.
-	 *
-	 * Implementation:
-	 * 		1. If the thread is not already stored, it is stored and set to uninitialized
-	 *		2. If possible remove all non-existant threads
-	 * 		3. If state has changed (per thread)
-	 *			- If no event loops are executing
-	 *				- Initialize the internal workings for all known (and hence "alive") threads
-	 *			- else
-	 *				- Initialize the internal workings for current thread
-	 *		4. Use the internals for the current thread to execute the current event loop
-	 */
+     * Starts the event loop for the current thread.
+     *
+     * Will stop when the state of the thread is set to stopped.
+     *
+     * Implementation:
+     * 		1. If the thread is not already stored, it is stored and set to uninitialized
+     *		2. If possible remove all non-existant threads
+     * 		3. If state has changed (per thread)
+     *			- If no event loops are executing
+     *				- Initialize the internal workings for all known (and hence "alive") threads
+     *			- else
+     *				- Initialize the internal workings for current thread
+     *		4. Use the internals for the current thread to execute the current event loop
+     */
     void execute() shared {
         if (runningOnCurrentThread) {
             // UMM WHAT! /error/ /error/ /error/

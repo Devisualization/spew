@@ -66,20 +66,20 @@ interface EventLoopConsumer : IEventLoopThing {
     }
 
     /**
-	 * Returns:
-	 * 		If the event is consumed
-	 */
+     * Returns:
+     * 		If the event is consumed
+     */
     bool processEvent(ref Event event) shared;
 }
 
 ///
 interface EventLoopSourceRetriever {
     /**
-	 * If the events type value is 0, then don't search for a consumer.
-	 *
-	 * Returns:
-	 * 		If a valid event
-	 */
+     * If the events type value is 0, then don't search for a consumer.
+     *
+     * Returns:
+     * 		If a valid event
+     */
     bool nextEvent(ref Event event) shared;
 
     ///
@@ -96,17 +96,17 @@ interface EventLoopSourceRetriever {
 ///
 interface IEventLoopManager {
     /**
-	 * Adds the provided consumers to the list.
-	 *
-	 * If a consumer is already stored, it will be ignored.
-	 */
+     * Adds the provided consumers to the list.
+     *
+     * If a consumer is already stored, it will be ignored.
+     */
     void addConsumers(shared(EventLoopConsumer)[]...) shared;
 
     /**
-	 * Adds the provided sources to the list.
-	 *
-	 * If a source is already stored, it will be ignored.
-	 */
+     * Adds the provided sources to the list.
+     *
+     * If a source is already stored, it will be ignored.
+     */
     void addSources(shared(EventLoopSource)[]...) shared;
 
     /// Removes all consumers from the list.

@@ -295,6 +295,15 @@ final class FreeDesktopNotifications : Feature_NotificationMessage, Feature_Noti
     Visual* theVisual;
     GC taskbarSysTrayGC;
     uint bubbleIdNum;
+    bool initialized;
+
+    ~this() {
+        // make sure we deallocate before the x11 context does!
+        import cf.spew.event_loop.wells.x11;
+        assert(x11Display() !is null);
+
+        taskbarTrayWindow = managed!IWindow.init;
+    }
 
     shared(Feature_NotificationTray) __getFeatureNotificationTray() shared {
         return this;
@@ -405,6 +414,9 @@ final class FreeDesktopNotifications : Feature_NotificationMessage, Feature_Noti
 
     package(cf.spew.implementation) {
         void __guardSysTray() shared {
+            if (initialized) return;
+            initialized = true;
+
             ThreadID myThreadID = Thread.getThis().id;
             Window trayOwner = x11.XGetSelectionOwner(x11Display(), x11Atoms()._NET_SYSTEM_TRAY_S);
 

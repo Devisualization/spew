@@ -142,6 +142,7 @@ final class DefaultImplementation : Instance {
                 import cf.spew.implementation.instance.ui.x11 : UIInstance_X11,
                     checkForX11;
                 import cf.spew.implementation.consumers.x11;
+                import devisualization.bindings.x11;
 
                 if (checkForX11()) {
                     import devisualization.bindings.x11;
