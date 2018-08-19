@@ -152,6 +152,7 @@ private {
 
     extern (C) int defaultX11ErrorHandler(Display* d, XErrorEvent* err) {
         import std.stdio : stderr;
+        if (display is null) return 0;
 
         debug {
             import core.stdc.string : strlen;
@@ -258,6 +259,9 @@ final class X11EventLoopSourceRetrieve : EventLoopSourceRetriever {
 private {
     void processEvent(ref XEvent x11Event, ref Event event, X11GetXICDel xicgetdel) {
         event.wellData1Value = x11Event.xany.window;
+
+import std.stdio;
+writeln(x11Event.type);
 
         switch (x11Event.type) {
         case MappingNotify:
