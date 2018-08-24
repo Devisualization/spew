@@ -42,6 +42,7 @@ final class UIInstance_X11 : UIInstance, Feature_Management_Clipboard {
 
         version(linux) {
             import cf.spew.implementation.instance.ui.notifications_sdbus;
+            /+unsupported currently
             if (checkForSDBusKDETray()) {
                 notificationTrayImpl = allocator.make!(shared(SDBus_KDENotifications))(allocator);
                 if (checkForSDBusFreeDesktopBubble()) {
@@ -52,7 +53,7 @@ final class UIInstance_X11 : UIInstance, Feature_Management_Clipboard {
                     // sdbus KDE + freedesktop bubble
                     notificationBubbleImpl = allocator.make!(shared(FreeDesktopNotifications))();
                 }
-            } else if (freedesktopTray != None) {
+            } else+/ if (freedesktopTray != None) {
                 notificationTrayImpl = allocator.make!(shared(FreeDesktopNotifications))();
                 if (checkForSDBusFreeDesktopBubble()) {
                     // freedesktop + sdbus KDE bubble
