@@ -645,12 +645,13 @@ void onForcedDraw() {
             gl.glGetIntegerv(GL_MINOR_VERSION, &glMinorVersion);
 
             // OpenGL < 3 don't support the above version, so let's do a more expensive but compat way
-            if (glMajorVersion == 0) {
+            if (glMajorVersion == 0 && gl.glGetString !is null) {
                 import std.format : formattedRead;
                 import core.stdc.string : strlen;
 
                 char* glText = cast(char*)gl.glGetString(GL_VERSION);
-                glText[0 .. strlen(glText)].formattedRead!"%d.%d"(glMajorVersion, glMinorVersion);
+                if (glText !is null) // XWayland + VM = null
+                    glText[0 .. strlen(glText)].formattedRead!"%d.%d"(glMajorVersion, glMinorVersion);
             }
 
             if ((glMajorVersion == 3 && glMinorVersion >= 3) || glMajorVersion > 3) {
@@ -732,7 +733,7 @@ void onForcedDraw() {
                     gl.glDeleteShader(vertexShaderGL);
                     gl.glDeleteShader(fragmentShaderGL);+/
                 }
-            } else {
+            } else if (glMajorVersion >= 1) {
                 auto wsize = window.size;
                 gl.glViewport(0, 0, wsize.x, wsize.y);
                 gl.glClearColor(0, 0, 0, 1);
@@ -745,6 +746,8 @@ void onForcedDraw() {
                 gl.glVertex2f(0.5f, 0.5f);
                 gl.glVertex2f(-0.5f, 0.5f);
                 gl.glEnd();
+            } else {
+                // No OpenGL support, oh goody...
             }
         }
     }
