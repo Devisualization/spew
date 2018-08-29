@@ -650,8 +650,10 @@ void onForcedDraw() {
                 import core.stdc.string : strlen;
 
                 char* glText = cast(char*)gl.glGetString(GL_VERSION);
-                if (glText !is null) // XWayland + VM = null
-                    glText[0 .. strlen(glText)].formattedRead!"%d.%d"(glMajorVersion, glMinorVersion);
+
+                // XWayland + OpenGL = null (if we get here its an error)
+                assert(glText !is null);
+                glText[0 .. strlen(glText)].formattedRead!"%d.%d"(glMajorVersion, glMinorVersion);
             }
 
             if ((glMajorVersion == 3 && glMinorVersion >= 3) || glMajorVersion > 3) {

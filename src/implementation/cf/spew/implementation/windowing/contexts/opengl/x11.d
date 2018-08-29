@@ -30,7 +30,7 @@ final class OpenGLContextImpl_X11 : OpenGLContextImpl, IPlatformData {
             GLX_STENCIL_SIZE = 13,
             GLX_SAMPLE_BUFFERS = 100000,
             GLX_SAMPLES = 100001,
-
+            GL_VERSION = 0x1F02,
         }
 
         struct __GLXcontextRec;
@@ -72,6 +72,7 @@ final class OpenGLContextImpl_X11 : OpenGLContextImpl, IPlatformData {
         extern (C) x11b.XVisualInfo* function(x11b.Display* dpy,
                 GLXFBConfig config) glXGetVisualFromFBConfig;
         extern (C) int function(x11b.Display* dpy, GLXFBConfig config, int attribute, int* value) glXGetFBConfigAttrib;
+        extern (C) ubyte* function(int) glGetString;
     }
 
     this(OpenGLVersion version_, OpenGL_Context_Callbacks* callbacks) {
@@ -96,7 +97,8 @@ final class OpenGLContextImpl_X11 : OpenGLContextImpl, IPlatformData {
 
     override {
         bool readyToBeUsed() {
-            return _context !is null;
+            // an extra check, to out right disable this context
+            return _context !is null && glGetString(GL_VERSION) !is null;
         }
 
         void activate() {
@@ -132,9 +134,10 @@ final class OpenGLContextImpl_X11 : OpenGLContextImpl, IPlatformData {
                     "glXDestroyContext");
             glXSwapBuffers = cast(typeof(glXSwapBuffers))callbacks.loadSymbol("glXSwapBuffers");
             glXChooseVisual = cast(typeof(glXChooseVisual))callbacks.loadSymbol("glXChooseVisual");
+            glGetString = cast(typeof(glGetString))callbacks.loadSymbol("glGetString");
         }
 
-        if (glXCreateContext !is null && glXMakeCurrent !is null &&
+        if (glXCreateContext !is null && glXMakeCurrent !is null && glGetString !is null &&
                 glXDestroyContext !is null && glXSwapBuffers !is null && glXChooseVisual !is null) {
 
             if (visualInfo !is null)
