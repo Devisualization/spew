@@ -260,9 +260,6 @@ private {
     void processEvent(ref XEvent x11Event, ref Event event, X11GetXICDel xicgetdel) {
         event.wellData1Value = x11Event.xany.window;
 
-import std.stdio;
-writeln(x11Event.type);
-
         switch (x11Event.type) {
         case MappingNotify:
             if (x11Event.xmapping.request == MappingModifier ||
