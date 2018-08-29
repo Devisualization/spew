@@ -47,13 +47,12 @@ final class OpenGLContextImpl_X11 : OpenGLContextImpl, IPlatformData {
         int[5] attribs = [GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, x11b.None];
         int[5] arbAttribs = [GLX_CONTEXT_MAJOR_VERSION_ARB, 1,
             GLX_CONTEXT_MINOR_VERSION_ARB, 0, 0];
-        int[21] visualAttribs = [
+        int[19] visualAttribs = [
             GLX_X_RENDERABLE, x11b.True, GLX_DRAWABLE_TYPE, GLX_WINDOW_BIT,
             GLX_RENDER_TYPE, GLX_RGBA_BIT, GLX_X_VISUAL_TYPE, GLX_TRUE_COLOR,
-            GLX_RED_SIZE, 8, GLX_GREEN_SIZE, 8, GLX_BLUE_SIZE, 8,//GLX_ALPHA_SIZE, 8, // can cause context to not map
+            GLX_RED_SIZE, 8, GLX_GREEN_SIZE, 8, GLX_BLUE_SIZE, 8,
             GLX_DEPTH_SIZE,
-            24, GLX_STENCIL_SIZE, 8, GLX_DOUBLEBUFFER, x11b.True,//GLX_SAMPLE_BUFFERS  , 1,
-            //GLX_SAMPLES         , 4,
+            24, GLX_DOUBLEBUFFER, x11b.True,
             x11b.None
         ];
 
@@ -236,7 +235,7 @@ final class OpenGLContextImpl_X11 : OpenGLContextImpl, IPlatformData {
 
             if (_context !is null) {
                 glXMakeCurrent(x11Display(), cast(GLXDrawable)whandle, _context);
-                if (glGetString(GL_VERSION) !is null) {
+                if (glGetString(GL_VERSION) is null) {
                     glXDestroyContext(x11Display(), _context);
                     _context = null;
                     disableContext = true;
