@@ -42,6 +42,7 @@ final class OpenGLContextImpl_X11 : OpenGLContextImpl, IPlatformData {
         x11b.Window whandle;
         GLXContext _context;
         x11b.XVisualInfo* visualInfo;
+        bool disableContext;
 
         int[5] attribs = [GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, x11b.None];
         int[5] arbAttribs = [GLX_CONTEXT_MAJOR_VERSION_ARB, 1,
@@ -98,10 +99,11 @@ final class OpenGLContextImpl_X11 : OpenGLContextImpl, IPlatformData {
     override {
         bool readyToBeUsed() {
             // an extra check, to out right disable this context
-            return _context !is null && glGetString(GL_VERSION) !is null;
+            return _context !is null;
         }
 
         void activate() {
+            if (disableContext) return;
             if (_context is null)
                 attemptCreation();
 
@@ -231,6 +233,15 @@ final class OpenGLContextImpl_X11 : OpenGLContextImpl, IPlatformData {
                 }
             } else
                 _context = fallbackRC;
+
+            if (_context !is null) {
+                glXMakeCurrent(x11Display(), cast(GLXDrawable)whandle, _context);
+                if (glGetString(GL_VERSION) !is null) {
+                    glXDestroyContext(x11Display(), _context);
+                    _context = null;
+                    disableContext = true;
+                }
+            }
         }
     }
 
