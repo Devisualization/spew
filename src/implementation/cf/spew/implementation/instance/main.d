@@ -87,7 +87,7 @@ final class DefaultImplementation : Instance {
         }
 
         // linux EPoll support
-        version (linux) {
+        version (Posix) {
             import cf.spew.event_loop.wells.poll;
 
             _eventLoop.manager.addSources(PollEventLoopSource.instance);
