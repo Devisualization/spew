@@ -415,9 +415,6 @@ final class FreeDesktopNotifications : Feature_NotificationMessage, Feature_Noti
 
     package(cf.spew.implementation) {
         void __guardSysTray() shared {
-            if (initialized) return;
-            initialized = true;
-
             ThreadID myThreadID = Thread.getThis().id;
             Window trayOwner = x11.XGetSelectionOwner(x11Display(), x11Atoms()._NET_SYSTEM_TRAY_S);
 

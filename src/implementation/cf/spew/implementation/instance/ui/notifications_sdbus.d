@@ -41,14 +41,22 @@ final class SDBus_KDENotifications : Feature_NotificationMessage, Feature_Notifi
 
     @property {
         managed!IWindow getNotificationWindow(IAllocator alloc) shared {
+            /+if (cast()taskbarTrayWindow is managed!IWindow.init ||
+                    taskbarTrayWindowThread != Thread.getThis().id)
+                return managed!IWindow.init;
+            else
+                return cast()taskbarTrayWindow;+/
             assert(0);
         }
 
         void setNotificationWindow(managed!IWindow) shared {
+            /+cast()taskbarTrayWindow = window;
+            __guardSysTray();+/
             assert(0);
         }
 
         bool haveNotificationWindow() shared {
+            //return cast()taskbarTrayWindow !is managed!IWindow.init;
             assert(0);
         }
     }
@@ -95,6 +103,12 @@ final class SDBus_KDENotifications : Feature_NotificationMessage, Feature_Notifi
 
     void clearNotifications() shared {
         // if we supported this, we'd have to store id's, no thank you
+    }
+
+    private {
+        void __guardSysTray() {
+
+        }
     }
 }
 
