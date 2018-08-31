@@ -1,5 +1,6 @@
 module cf.spew.implementation.instance.ui.notifications_sdbus;
 version(linux):
+import cf.spew.implementation.instance.ui.state : taskbarTrayWindow, taskbarTrayWindowThread;
 import cf.spew.event_loop.wells.poll;
 import cf.spew.ui.features.notificationmessage;
 import cf.spew.ui.features.notificationtray;
@@ -41,23 +42,20 @@ final class SDBus_KDENotifications : Feature_NotificationMessage, Feature_Notifi
 
     @property {
         managed!IWindow getNotificationWindow(IAllocator alloc) shared {
-            /+if (cast()taskbarTrayWindow is managed!IWindow.init ||
+            if (cast()taskbarTrayWindow is managed!IWindow.init ||
                     taskbarTrayWindowThread != Thread.getThis().id)
                 return managed!IWindow.init;
             else
-                return cast()taskbarTrayWindow;+/
-            assert(0);
+                return cast()taskbarTrayWindow;
         }
 
         void setNotificationWindow(managed!IWindow) shared {
-            /+cast()taskbarTrayWindow = window;
-            __guardSysTray();+/
-            assert(0);
+            cast()taskbarTrayWindow = window;
+            __guardSysTray();
         }
 
         bool haveNotificationWindow() shared {
-            //return cast()taskbarTrayWindow !is managed!IWindow.init;
-            assert(0);
+            return cast()taskbarTrayWindow !is managed!IWindow.init;
         }
     }
 
