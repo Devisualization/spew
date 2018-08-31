@@ -1,6 +1,6 @@
 module cf.spew.implementation.instance.ui.notifications_sdbus;
 version(linux):
-import cf.spew.implementation.instance.ui.state : taskbarTrayWindow, taskbarTrayWindowThread;
+import cf.spew.implementation.instance.state : taskbarTrayWindow, taskbarTrayWindowThread;
 import cf.spew.event_loop.wells.poll;
 import cf.spew.ui.features.notificationmessage;
 import cf.spew.ui.features.notificationtray;
@@ -12,12 +12,16 @@ import stdx.allocator : IAllocator, ISharedAllocator, make, dispose/+,
     processAllocator, theAllocator+/, makeArray;
 import std.experimental.color : RGBA8;
 import std.utf : byChar, codeLength;
+import core.thread : Thread, ThreadID;
 
 final class SDBus_KDENotifications : Feature_NotificationMessage, Feature_NotificationTray {
     shared(ISharedAllocator) alloc;
     sd_bus* bus;
+    bool enableTray;
 
     this(shared(ISharedAllocator) alloc) shared {
+        import std.process : thisProcessID;
+        import std.format : sformat;
         this.alloc = alloc;
 
         assert(systemd.sd_bus_open_user(cast(sd_bus**)&bus) >= 0, "Could not create the sd-bus session to user bus");
@@ -30,11 +34,43 @@ final class SDBus_KDENotifications : Feature_NotificationMessage, Feature_Notifi
                 counter++;
             }
         });
+
+        sysTrayVtable = [
+            () {
+                sd_bus_vtable ret;
+                ret.type = _SD_BUS_VTABLE_START;
+                ret.flags = 0;
+                ret.x.start.element_size = sd_bus_vtable.sizeof;
+                return ret;
+            }(),
+            () {
+                sd_bus_vtable ret;
+                ret.type = _SD_BUS_VTABLE_METHOD;
+                ret.flags = 0;
+                ret.x.method.member = "SayHello".ptr;
+                ret.x.method.signature = "".ptr;
+                ret.x.method.result = "".ptr;
+                ret.x.method.handler = &sayHelloHandler;
+                ret.x.method.offset = 0;
+
+                return ret;
+            }(),
+            sd_bus_vtable(_SD_BUS_VTABLE_END)
+        ];
+
+        // setup the name for our notification item for easy access
+
+        enum SysTNI = "org.kde.StatusNotifierItem-";
+        sysTrayId[0 .. SysTNI.length] = SysTNI;
+
+        char[] tempPID = (cast(char[])(sysTrayId[SysTNI.length .. SysTNI.length + 8])).sformat!"%d"(thisProcessID());
+        sysTrayId[SysTNI.length + tempPID.length .. SysTNI.length + tempPID.length + 3] = "-1\0";
     }
 
     ~this() {
         if (bus is null) return;
         PollEventLoopSource.instance.unregisterFD(systemd.sd_bus_get_fd(cast(sd_bus*)bus));
+        (cast(shared)this).sysTrayRelease();
 
         systemd.sd_bus_flush(bus);
         systemd.sd_bus_unref(bus);
@@ -49,7 +85,7 @@ final class SDBus_KDENotifications : Feature_NotificationMessage, Feature_Notifi
                 return cast()taskbarTrayWindow;
         }
 
-        void setNotificationWindow(managed!IWindow) shared {
+        void setNotificationWindow(managed!IWindow window) shared {
             cast()taskbarTrayWindow = window;
             __guardSysTray();
         }
@@ -104,8 +140,78 @@ final class SDBus_KDENotifications : Feature_NotificationMessage, Feature_Notifi
     }
 
     private {
-        void __guardSysTray() {
+        const sd_bus_vtable[3/+10 + 4 + 6+/] sysTrayVtable;
+        char["org.freedesktop.StatusNotifierItem-".length + 8 + 3] sysTrayId;
+        sd_bus_slot* sysTraySlot;
 
+        void __guardSysTray() shared {
+            sysTrayRelease();
+
+            if (!(cast()taskbarTrayWindow).isNull) {
+                auto r = systemd.sd_bus_request_name(cast(sd_bus*)bus, cast(char*)sysTrayId.ptr, 0);
+                if (r < 0) {
+                    taskbarTrayWindow = managed!IWindow.init;
+                    return;
+                }
+
+                r = systemd.sd_bus_add_object_vtable(cast(sd_bus*)bus, cast(sd_bus_slot**)&sysTraySlot,
+                    "/StatusNotifierItem".ptr,
+                    "org.kde.StatusNotifierItem".ptr,
+                    cast(sd_bus_vtable*)sysTrayVtable.ptr,
+                    null);
+
+                if (r < 0) {
+                    taskbarTrayWindow = managed!IWindow.init;
+                    systemd.sd_bus_release_name(cast(sd_bus*)bus, cast(char*)sysTrayId.ptr);
+                    return;
+                }
+
+                // TODO: can we support the signals NewTitle and NewIcon?
+            }
+        }
+
+        void sysTrayRelease() shared {
+            if (sysTraySlot !is null) {
+                systemd.sd_bus_slot_unref(cast(sd_bus_slot*)sysTraySlot);
+                sysTraySlot = null;
+                systemd.sd_bus_release_name(cast(sd_bus*)bus, cast(char*)sysTrayId.ptr);
+            }
+        }
+    }
+}
+
+private {
+    extern(C) int sayHelloHandler(sd_bus_message*, void*, sd_bus_error*) {
+        import std.stdio;
+        writeln("Hello was said.");
+        return 1;
+    }
+
+    extern(C) {
+        int spewKDESdBus_Activate(sd_bus_message* msg, void* ctx, sd_bus_error* error) {
+            // x:i, y:i
+            return 1;
+        }
+
+        int spewKDESdBus_Read_Category(sd_bus_message* msg, void* ctx, sd_bus_error* error) {
+            // TODO: return "ApplicationStatus" type s
+            return 1;
+        }
+        int spewKDESdBus_Read_WindowId(sd_bus_message* msg, void* ctx, sd_bus_error* error) {
+            // TODO: if x11 or wayland return, else 0 type i
+            return 1;
+        }
+        int spewKDESdBus_Read_Id(sd_bus_message* msg, void* ctx, sd_bus_error* error) {
+            // TODO: return application's binary name type s
+            return 1;
+        }
+        int spewKDESdBus_Read_Status(sd_bus_message* msg, void* ctx, sd_bus_error* error) {
+            // TODO: if we have a window, return "Active" else "Passive" type s
+            return 1;
+        }
+        int spewKDESdBus_Read_IconPixmap(sd_bus_message* msg, void* ctx, sd_bus_error* error) {
+            // TODO: if we have a window with icon, return icon of the window type a(iiay)
+            return 1;
         }
     }
 }
@@ -130,6 +236,7 @@ bool checkForSDBusKDETray() {
     scope (exit) {
         if (message !is null)
             systemd.sd_bus_message_unref(message);
+        systemd.sd_bus_error_free(&error);
         systemd.sd_bus_unref(bus);
     }
 
@@ -157,6 +264,7 @@ bool checkForSDBusFreeDesktopBubble() {
     scope (exit) {
         if (message !is null)
             systemd.sd_bus_message_unref(message);
+        systemd.sd_bus_error_free(&error);
         systemd.sd_bus_unref(bus);
     }
 
