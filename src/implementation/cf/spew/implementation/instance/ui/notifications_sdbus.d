@@ -23,7 +23,11 @@ final class SDBus_KDENotifications : Feature_NotificationMessage, Feature_Notifi
         assert(bus !is null, "Could not create the sd-bus session to user bus");
 
         PollEventLoopSource.instance.registerFD(systemd.sd_bus_get_fd(cast(sd_bus*)bus), (int) {
-            systemd.sd_bus_process(cast(sd_bus*)bus, null);
+            size_t counter;
+            while(systemd.sd_bus_process(cast(sd_bus*)bus, null) > 0 && counter < 4) {
+                // hi?
+                counter++;
+            }
         });
     }
 
@@ -79,7 +83,7 @@ final class SDBus_KDENotifications : Feature_NotificationMessage, Feature_Notifi
             "org.freedesktop.Notifications", "Notify",
             &spewSDBusNotifyCallback, cast(void*)userdata,
             "susssasa{sv}i" /+ types +/,
-            "".ptr /+ our applications name, optional, blank +/,
+            "SPEW library notifications".ptr /+ our applications name, optional, blank +/,
             0 /+ replace id +/,
             null /+ Not supported: application icon +/,
             bufferTitle.ptr /+ title +/,
