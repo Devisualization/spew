@@ -231,11 +231,7 @@ final class X11EventLoopSourceRetrieve : EventLoopSourceRetriever {
             int pending = x11.XPending(display);
             if (pending > 0) {
                 XEvent x11Event;
-                x11.XPeekEvent(display, &x11Event);
-
                 x11.XNextEvent(display, &x11Event);
-                //if (x11.XFilterEvent(&x11Event, 0)) continue;
-
                 processEvent(x11Event, event, xicgetdel);
                 return true;
             } else
