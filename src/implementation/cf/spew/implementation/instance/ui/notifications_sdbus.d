@@ -35,14 +35,15 @@ final class SDBus_KDENotifications : Feature_NotificationMessage, Feature_Notifi
             }
         });
 
-        static sd_bus_vtable vtableProperty(string name, sd_bus_message_handler_t handler, string signature) {
+        static sd_bus_vtable vtableProperty(string name, sd_bus_property_get_t getter, string signature) {
             sd_bus_vtable ret;
             ret.type = _SD_BUS_VTABLE_PROPERTY;
             ret.flags = 0;
 
             ret.x.property.member = name.ptr;
             ret.x.property.signature = signature.ptr;
-            ret.x.property.get = handler;
+            ret.x.property.get = getter;
+            ret.x.property.set = null;
             ret.x.property.offset = 0;
 
             return ret;
@@ -67,7 +68,7 @@ final class SDBus_KDENotifications : Feature_NotificationMessage, Feature_Notifi
             ret.type = _SD_BUS_VTABLE_SIGNAL;
             ret.flags = 0;
 
-            ret.x.signal.name = name.ptr;
+            ret.x.signal.member = name.ptr;
             ret.x.signal.signature = signature.ptr;
 
             return ret;
@@ -84,25 +85,25 @@ final class SDBus_KDENotifications : Feature_NotificationMessage, Feature_Notifi
 
             vtableProperty("Category", &spewKDESdBus_Read_Category, "s"),
             vtableProperty("Id", &spewKDESdBus_Read_Id, "s"),
-            vtableProperty("Title", null, "s"),
+            vtableProperty("Title", &spewKDESdBus_Read_No, "s"),
             vtableProperty("Status", &spewKDESdBus_Read_Status, "s"),
             vtableProperty("WindowId", &spewKDESdBus_Read_WindowId, "i"),
-            vtableProperty("IconThemePath", null, "s"),
-            vtableProperty("Menu", null, "o"),
-            vtableProperty("ItemIsMenu", null, "b"),
-            vtableProperty("IconName", null, "s"),
+            vtableProperty("IconThemePath", &spewKDESdBus_Read_No, "s"),
+            vtableProperty("Menu", &spewKDESdBus_Read_No, "o"),
+            vtableProperty("ItemIsMenu", &spewKDESdBus_Read_No, "b"),
+            vtableProperty("IconName", &spewKDESdBus_Read_No, "s"),
             vtableProperty("IconPixmap", &spewKDESdBus_Read_IconPixmap, "a(iiay)"),
-            vtableProperty("OverlayIconName", null, "s"),
-            vtableProperty("OverlayIconPixmap", null, "a(iiay)"),
-            vtableProperty("AttentionIconName", null, "s"),
-            vtableProperty("AttentioniconPixmap", null, "a(iiay)"),
-            vtableProperty("AttentionMovieName", null, "s"),
-            vtableProperty("ToolTip", null, "sa(iiay)ss"),
+            vtableProperty("OverlayIconName", &spewKDESdBus_Read_No, "s"),
+            vtableProperty("OverlayIconPixmap", &spewKDESdBus_Read_No, "a(iiay)"),
+            vtableProperty("AttentionIconName", &spewKDESdBus_Read_No, "s"),
+            vtableProperty("AttentioniconPixmap", &spewKDESdBus_Read_No, "a(iiay)"),
+            vtableProperty("AttentionMovieName", &spewKDESdBus_Read_No, "s"),
+            vtableProperty("ToolTip", &spewKDESdBus_Read_No, "(sa(iiay)ss)"),
 
-            vtableMethod("ContextMenu", null, "ii"),
+            vtableMethod("ContextMenu", &spewKDESdBus_NoMethod, "ii"),
             vtableMethod("Activate", &spewKDESdBus_Activate, "ii"),
-            vtableMethod("SecondaryActivate", null, "ii"),
-            vtableMethod("Scroll", null, "is"),
+            vtableMethod("SecondaryActivate", &spewKDESdBus_NoMethod, "ii"),
+            vtableMethod("Scroll", &spewKDESdBus_NoMethod, "is"),
 
             vtableSignal("NewTitle"),
             vtableSignal("NewIcon"),
@@ -121,6 +122,8 @@ final class SDBus_KDENotifications : Feature_NotificationMessage, Feature_Notifi
 
         char[] tempPID = (cast(char[])(sysTrayId[SysTNI.length .. SysTNI.length + 8])).sformat!"%d"(thisProcessID());
         sysTrayId[SysTNI.length + tempPID.length .. SysTNI.length + tempPID.length + 3] = "-1\0";
+
+
     }
 
     ~this() {
@@ -196,8 +199,8 @@ final class SDBus_KDENotifications : Feature_NotificationMessage, Feature_Notifi
     }
 
     private {
-        const sd_bus_vtable[10 + 4 + 6] sysTrayVtable;
-        char["org.freedesktop.StatusNotifierItem-".length + 8 + 3] sysTrayId;
+        const sd_bus_vtable[/+2 + 16 + 4 + 6+/] sysTrayVtable;
+        char["org.kde.StatusNotifierItem-".length + 8 + 3] sysTrayId;
         sd_bus_slot* sysTraySlot;
 
         void __guardSysTray() shared {
@@ -316,26 +319,32 @@ private {
             // x:i, y:i
             return 1;
         }
+        int spewKDESdBus_NoMethod(sd_bus_message* msg, void* ctx, sd_bus_error* error) {
+            return 0;
+        }
 
-        int spewKDESdBus_Read_Category(sd_bus_message* msg, void* ctx, sd_bus_error* error) {
-            // TODO: return "ApplicationStatus" type s
+        int spewKDESdBus_Read_Category(sd_bus* bus, const char* path, const char* interface_, const char* property, sd_bus_message* reply, void* userdata, sd_bus_error* ret_error) {
+            systemd.sd_bus_message_append(reply, "s", "ApplicationStatus".ptr);
             return 1;
         }
-        int spewKDESdBus_Read_WindowId(sd_bus_message* msg, void* ctx, sd_bus_error* error) {
+        int spewKDESdBus_Read_WindowId(sd_bus* bus, const char* path, const char* interface_, const char* property, sd_bus_message* reply, void* userdata, sd_bus_error* ret_error) {
             // TODO: if x11 or wayland return, else 0 type i
-            return 1;
+            return systemd.sd_bus_reply_method_return(reply, "".ptr);
         }
-        int spewKDESdBus_Read_Id(sd_bus_message* msg, void* ctx, sd_bus_error* error) {
+        int spewKDESdBus_Read_Id(sd_bus* bus, const char* path, const char* interface_, const char* property, sd_bus_message* reply, void* userdata, sd_bus_error* ret_error) {
             // TODO: return application's binary name type s
-            return 1;
+            return systemd.sd_bus_reply_method_return(reply, "".ptr);
         }
-        int spewKDESdBus_Read_Status(sd_bus_message* msg, void* ctx, sd_bus_error* error) {
+        int spewKDESdBus_Read_Status(sd_bus* bus, const char* path, const char* interface_, const char* property, sd_bus_message* reply, void* userdata, sd_bus_error* ret_error) {
             // TODO: if we have a window, return "Active" else "Passive" type s
-            return 1;
+            return systemd.sd_bus_reply_method_return(reply, "".ptr);
         }
-        int spewKDESdBus_Read_IconPixmap(sd_bus_message* msg, void* ctx, sd_bus_error* error) {
+        int spewKDESdBus_Read_IconPixmap(sd_bus* bus, const char* path, const char* interface_, const char* property, sd_bus_message* reply, void* userdata, sd_bus_error* ret_error) {
             // TODO: if we have a window with icon, return icon of the window type a(iiay)
-            return 1;
+            return systemd.sd_bus_reply_method_return(reply, "".ptr);
+        }
+        int spewKDESdBus_Read_No(sd_bus* bus, const char* path, const char* interface_, const char* property, sd_bus_message* reply, void* userdata, sd_bus_error* ret_error) {
+            return systemd.sd_bus_reply_method_return(reply, "".ptr);
         }
     }
 }
