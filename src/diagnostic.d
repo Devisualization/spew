@@ -230,13 +230,16 @@ int main() {
     //  processes/threads cpu time.
     // After all, do we REALLY need all of it?
     // Maybe for a game, but say a GUI toolkit? Nope.
-    // This is make or break code for non-Windows platforms.
-    Instance.current.eventLoop.manager.setIdleCallback = () {
-        writeln("idle callback");
+    version(none) {
+        // This code is arbitrary and not really required.
+        // Just depends upon how the event sources + timeouts are configured.
+        Instance.current.eventLoop.manager.setIdleCallback = () {
+            writeln("idle callback");
 
-        import core.thread : Thread;
-        Thread.sleep(dur!"msecs"(30));
-    };
+            import core.thread : Thread;
+            Thread.sleep(dur!"msecs"(30));
+        };
+    }
 
     Instance.current.eventLoop.execute();
     return 0;
