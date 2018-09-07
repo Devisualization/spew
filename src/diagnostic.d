@@ -231,17 +231,11 @@ int main() {
     // After all, do we REALLY need all of it?
     // Maybe for a game, but say a GUI toolkit? Nope.
     // This is make or break code for non-Windows platforms.
-    // Be warned, for XWayland this is far too small, or you'll have kwin_x11
-    //  using 100% of your cpu.
     Instance.current.eventLoop.manager.setIdleCallback = () {
         writeln("idle callback");
 
         import core.thread : Thread;
-        version(Posix) {
-            Thread.sleep(dur!"msecs"(200));
-        } else {
-            Thread.sleep(dur!"msecs"(30));
-        }
+        Thread.sleep(dur!"msecs"(30));
     };
 
     Instance.current.eventLoop.execute();

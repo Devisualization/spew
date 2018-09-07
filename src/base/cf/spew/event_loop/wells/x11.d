@@ -214,9 +214,11 @@ final class X11EventLoopSource : EventLoopSource {
 
 final class X11EventLoopSourceRetrieve : EventLoopSourceRetriever {
     import cf.spew.event_loop.known_implementations;
+    import core.sys.posix.poll;
     import core.time : dur, Duration;
 
     X11GetXICDel xicgetdel;
+    int msTimeout;
 
     this(X11GetXICDel xicgetdel) shared {
         this.xicgetdel = xicgetdel;
@@ -226,6 +228,11 @@ final class X11EventLoopSourceRetrieve : EventLoopSourceRetriever {
         event.source = EventSources.X11;
         // prevents any searching for a consumer (no event actually returned)
         event.type.value = 0;
+
+        pollfd pfd;
+        pfd.fd = x11.XConnectionNumber(x11Display());
+        pfd.events = POLLIN | POLLOUT | POLLPRI | POLLERR | POLLHUP;
+        poll(&pfd, 1, msTimeout);
 
         for (;;) {
             int pending = x11.XPending(display);
@@ -249,6 +256,12 @@ final class X11EventLoopSourceRetrieve : EventLoopSourceRetriever {
     }
 
     void hintTimeout(Duration timeout) shared {
+        long temp = timeout.total!"msecs";
+
+        if (temp >= int.max)
+            msTimeout = -1;
+        else
+            msTimeout = cast(int)temp;
     }
 }
 

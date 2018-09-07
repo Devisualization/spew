@@ -89,7 +89,7 @@ interface EventLoopSourceRetriever {
     ///
     void handledErrorEvent(ref Event event) shared;
 
-    ///
+    /// Timeout or more than or equal to int.max will be infinite aka blocking
     void hintTimeout(Duration timeout) shared;
 }
 

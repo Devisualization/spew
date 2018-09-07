@@ -103,12 +103,18 @@ final class LibUVEventLoopSourceRetrieve : EventLoopSourceRetriever {
 
         // setup a timer so we can find out if we have gone beyond what we are allowed.
         ulong timeoutms = cast(ulong)atomicLoad(timeout).total!"msecs" / 2;
-        uvLoopTimeout.data = &uvLoop;
-        libuv.uv_timer_start(&uvLoopTimeout, &uvLoopTimerCB, timeoutms, timeoutms);
+
+        if (timeoutms < int.max) {
+            timeoutms++;
+            uvLoopTimeout.data = &uvLoop;
+            libuv.uv_timer_start(&uvLoopTimeout, &uvLoopTimerCB, timeoutms, timeoutms);
+        }
 
         // tells the manager if there are more events
         libuv.uv_run(&uvLoop, uv_run_mode.UV_RUN_ONCE);
-        libuv.uv_timer_stop(&uvLoopTimeout);
+
+        if (timeoutms < int.max)
+            libuv.uv_timer_stop(&uvLoopTimeout);
 
         return uvLoopTimeout.data !is null;
     }
@@ -121,7 +127,7 @@ final class LibUVEventLoopSourceRetrieve : EventLoopSourceRetriever {
 
     void handledErrorEvent(ref Event event) shared {
     }
-    // unsupported, but that is ok, we don't block if we don't get an event!
+
     void hintTimeout(Duration timeout) shared {
         this.timeout = timeout;
     }
