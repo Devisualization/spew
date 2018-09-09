@@ -4,6 +4,7 @@ import cf.spew.implementation.windowing.window.base;
 import cf.spew.implementation.windowing.display.x11;
 import cf.spew.implementation.windowing.utilities.x11;
 import cf.spew.implementation.instance.ui.x11;
+import cf.spew.implementation.instance.ui.notifications_sdbus : SDBus_KDENotifications;
 import cf.spew.implementation.instance.state : uiInstance, taskbarTrayWindow;
 import cf.spew.ui.window.features.cursor;
 import cf.spew.ui.window.features.icon;
@@ -318,6 +319,10 @@ Have_Window_ScreenShot, Have_Icon, Have_Cursor, Have_Style {
                     imageData2[i] = cast(uint)imageData[i+2];
 
                 fdn.drawSystray(cast(uint)from.width, cast(uint)from.height, imageData2.ptr);
+            }
+        } else if (shared(SDBus_KDENotifications) kden = cast(shared(SDBus_KDENotifications))uiInstance.__getFeatureNotificationTray()) {
+            if (kden.haveNotificationWindow() && (cast()taskbarTrayWindow).__handle == whandle) {
+                kden.prepareNewIcon(from);
             }
         }
         

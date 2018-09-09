@@ -18,6 +18,7 @@ __gshared {
 
     managed!IWindow taskbarTrayWindow;
     ThreadID taskbarTrayWindowThread;
+    shared(ubyte*) taskbarTrayWindowIconDBus;
 }
 
 // \/ TLS

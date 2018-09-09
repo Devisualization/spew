@@ -1,10 +1,11 @@
 module cf.spew.implementation.instance.ui.notifications_sdbus;
 version(linux):
-import cf.spew.implementation.instance.state : taskbarTrayWindow, taskbarTrayWindowThread;
+import cf.spew.implementation.instance.state : taskbarTrayWindow, taskbarTrayWindowThread, taskbarTrayWindowIconDBus;
 import cf.spew.event_loop.wells.poll;
 import cf.spew.ui.features.notificationmessage;
 import cf.spew.ui.features.notificationtray;
 import cf.spew.ui : IWindow;
+import cf.spew.ui.rendering : vec2;
 import devisualization.util.core.memory.managed;
 import devisualization.image.interfaces : ImageStorage;
 import devisualization.bindings.systemd;
@@ -85,7 +86,7 @@ final class SDBus_KDENotifications : Feature_NotificationMessage, Feature_Notifi
 
             vtableProperty("Category", &spewKDESdBus_Read_Category, "s"),
             vtableProperty("Id", &spewKDESdBus_Read_Id, "s"),
-            vtableProperty("Title", &spewKDESdBus_Read_No, "s"),
+            vtableProperty("Title", &spewKDESdBus_Read_Id, "s"),
             vtableProperty("Status", &spewKDESdBus_Read_Status, "s"),
             vtableProperty("WindowId", &spewKDESdBus_Read_WindowId, "i"),
             vtableProperty("IconThemePath", &spewKDESdBus_Read_No, "s"),
@@ -198,12 +199,61 @@ final class SDBus_KDENotifications : Feature_NotificationMessage, Feature_Notifi
         // if we supported this, we'd have to store id's, no thank you
     }
 
+    void prepareNewIcon(scope ImageStorage!RGBA8 icon) shared {
+        import core.atomic;
+        import core.stdc.stdlib : malloc, free;
+
+        // ARGB32: a(iiay)
+        // uint [( int, int, uint, [ ubyte ] )]
+
+        shared(ubyte)* newWindowIcon;
+        if (icon is null || icon.width * icon.height >= 63 * 1024 * 1024) {
+            // 63mb
+        } else {
+            newWindowIcon = cast(shared(ubyte)*)malloc((4 * 4) + (4 * icon.width * icon.height));
+            uint[] buf = (cast(uint*)newWindowIcon)[0 .. 4 + (icon.width * icon.height)];
+
+            buf[0] = 1;
+            buf[1] = cast(uint)icon.width;
+            buf[2] = cast(uint)icon.height;
+            buf[3] = cast(uint)(icon.width * icon.height * 4);
+
+            buf = buf[4 .. $];
+
+            size_t count;
+            foreach(y; 0 .. icon.height) {
+                foreach(x; 0 .. icon.width) {
+                    uint temp;
+                    auto color = icon[x, y];
+
+                    temp |= cast(uint)color.a.value;
+                    temp |= color.r.value << 8;
+                    temp |= color.g.value << 16;
+                    temp |= color.b.value << 24;
+
+                    buf[count++] = temp;
+                }
+            }
+        }
+
+        shared(ubyte)* currentWindowIcon = atomicLoad(taskbarTrayWindowIconDBus);
+
+        while(!cas(&taskbarTrayWindowIconDBus, currentWindowIcon, newWindowIcon)) {
+            currentWindowIcon = atomicLoad(taskbarTrayWindowIconDBus);
+        }
+
+        if (currentWindowIcon !is null)
+            free(cast(void*)currentWindowIcon);
+    }
+
     private {
         const sd_bus_vtable[/+2 + 16 + 4 + 6+/] sysTrayVtable;
         char["org.kde.StatusNotifierItem-".length + 8 + 3] sysTrayId;
         sd_bus_slot* sysTraySlot;
 
         void __guardSysTray() shared {
+            import cf.spew.ui.window.features.icon : icon;
+
             sysTrayRelease();
 
             if (!(cast()taskbarTrayWindow).isNull) {
@@ -225,7 +275,15 @@ final class SDBus_KDENotifications : Feature_NotificationMessage, Feature_Notifi
                     return;
                 }
 
+                systemd.sd_bus_call_method_async(cast(sd_bus*)bus, null, "org.kde.StatusNotifierWatcher", "/StatusNotifierWatcher",
+                    "org.kde.StatusNotifierWatcher", "RegisterStatusNotifierItem",
+                    &spewSDBusRegisterWatcherCallback, null,
+                    "s" /+ types +/,
+                    cast(char*)sysTrayId.ptr);
+
                 // TODO: can we support the signals NewTitle and NewIcon?
+
+                prepareNewIcon((cast()taskbarTrayWindow).icon);
             }
         }
 
@@ -314,9 +372,27 @@ private {
         return 0;
     }
 
+    extern(C) int spewSDBusRegisterWatcherCallback(sd_bus_message* message, void*, sd_bus_error*) {
+        systemd.sd_bus_message_unref(message);
+        return 0;
+    }
+
+    // from rt.dmain2
+    struct CArgs {
+        int argc;
+        char** argv;
+    }
+    extern extern(C) CArgs rt_cArgs() @nogc;
+
     extern(C) {
         int spewKDESdBus_Activate(sd_bus_message* msg, void* ctx, sd_bus_error* error) {
-            // x:i, y:i
+            int x, y;
+            int r = systemd.sd_bus_message_read(msg, "ii", &x, &y);
+            if (r < 0)
+                return 0;
+
+            (cast()taskbarTrayWindow).show();
+            (cast()taskbarTrayWindow).location = vec2!int(x, y);
             return 1;
         }
         int spewKDESdBus_NoMethod(sd_bus_message* msg, void* ctx, sd_bus_error* error) {
@@ -327,24 +403,79 @@ private {
             systemd.sd_bus_message_append(reply, "s", "ApplicationStatus".ptr);
             return 1;
         }
+
         int spewKDESdBus_Read_WindowId(sd_bus* bus, const char* path, const char* interface_, const char* property, sd_bus_message* reply, void* userdata, sd_bus_error* ret_error) {
-            // TODO: if x11 or wayland return, else 0 type i
-            return systemd.sd_bus_reply_method_return(reply, "".ptr);
+            if (cast()taskbarTrayWindow !is managed!IWindow.init) {
+                import cf.spew.implementation.windowing.window.x11 : WindowImpl_X11;
+
+                managed!WindowImpl_X11 wx11 = cast(managed!WindowImpl_X11)(cast()taskbarTrayWindow);
+
+                if (!wx11.isNull) {
+                    systemd.sd_bus_message_append(reply, "i", cast(int)cast(size_t)wx11.__handle());
+                    return 0;
+                }
+            }
+
+            systemd.sd_bus_reply_method_return(reply, "".ptr);
+            return 0;
         }
+
         int spewKDESdBus_Read_Id(sd_bus* bus, const char* path, const char* interface_, const char* property, sd_bus_message* reply, void* userdata, sd_bus_error* ret_error) {
-            // TODO: return application's binary name type s
-            return systemd.sd_bus_reply_method_return(reply, "".ptr);
+            if (rt_cArgs().argc > 0) {
+                size_t lastSlash, i;
+                char* temp = rt_cArgs().argv[0];
+
+                while(temp[i]) {
+                    if (temp[i] == '\\' || temp[i] == '/')
+                        lastSlash = i+1;
+                    i++;
+                }
+
+                systemd.sd_bus_message_append(reply, "s", rt_cArgs().argv[0] + lastSlash);
+            } else
+                systemd.sd_bus_reply_method_return(reply, "".ptr);
+
+            return 1;
         }
+
         int spewKDESdBus_Read_Status(sd_bus* bus, const char* path, const char* interface_, const char* property, sd_bus_message* reply, void* userdata, sd_bus_error* ret_error) {
-            // TODO: if we have a window, return "Active" else "Passive" type s
-            return systemd.sd_bus_reply_method_return(reply, "".ptr);
+            if (cast()taskbarTrayWindow !is managed!IWindow.init)
+                systemd.sd_bus_message_append(reply, "s", "Active".ptr);
+            else
+                systemd.sd_bus_reply_method_return(reply, "".ptr);
+
+            return 1;
         }
+
         int spewKDESdBus_Read_IconPixmap(sd_bus* bus, const char* path, const char* interface_, const char* property, sd_bus_message* reply, void* userdata, sd_bus_error* ret_error) {
-            // TODO: if we have a window with icon, return icon of the window type a(iiay)
-            return systemd.sd_bus_reply_method_return(reply, "".ptr);
+            import core.atomic : atomicLoad;
+
+            ubyte* temp = cast(ubyte*)atomicLoad(taskbarTrayWindowIconDBus);
+            if (temp !is null) {
+                uint[4] args = (cast(uint*)temp)[0 .. 4];
+
+                auto r = systemd.sd_bus_message_open_container(reply, 'a', "(iiay)".ptr);
+                if (r < 0) return 0;
+                r = systemd.sd_bus_message_open_container(reply, 'r', "iiay".ptr);
+                if (r < 0) return 0;
+
+                r = systemd.sd_bus_message_append(reply, "ii".ptr, cast(int)args[1], cast(int)args[2]);
+                if (r < 0) return 0;
+                r = systemd.sd_bus_message_append_array(reply, 'y', temp + (4*4), args[3]);
+                if (r < 0) return 0;
+
+                r = systemd.sd_bus_message_close_container(reply);
+                if (r < 0) return 0;
+                r = systemd.sd_bus_message_close_container(reply);
+                if (r < 0) return 0;
+            } else
+                systemd.sd_bus_reply_method_return(reply, "".ptr);
+
+            return 1;
         }
+
         int spewKDESdBus_Read_No(sd_bus* bus, const char* path, const char* interface_, const char* property, sd_bus_message* reply, void* userdata, sd_bus_error* ret_error) {
-            return systemd.sd_bus_reply_method_return(reply, "".ptr);
+            return systemd.sd_bus_reply_method_return(reply, null);
         }
     }
 }
