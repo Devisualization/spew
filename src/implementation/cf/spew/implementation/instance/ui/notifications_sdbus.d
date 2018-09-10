@@ -99,7 +99,7 @@ final class SDBus_KDENotifications : Feature_NotificationMessage, Feature_Notifi
             vtableProperty("AttentionIconName", &spewKDESdBus_Read_No, "s"),
             vtableProperty("AttentioniconPixmap", &spewKDESdBus_Read_No, "a(iiay)"),
             vtableProperty("AttentionMovieName", &spewKDESdBus_Read_No, "s"),
-            vtableProperty("ToolTip", &spewKDESdBus_Read_No, "(sa(iiay)ss)"),
+            vtableProperty("ToolTip", &spewKDESdBus_Read_ToolTip, "(sa(iiay)ss)"),
 
             vtableMethod("ContextMenu", &spewKDESdBus_NoMethod, "ii"),
             vtableMethod("Activate", &spewKDESdBus_Activate, "ii"),
@@ -244,10 +244,14 @@ final class SDBus_KDENotifications : Feature_NotificationMessage, Feature_Notifi
 
         if (currentWindowIcon !is null)
             free(cast(void*)currentWindowIcon);
+
+        systemd.sd_bus_emit_signal(cast(sd_bus*)bus, "/StatusNotifierItem".ptr, "org.kde.StatusNotifierItem".ptr, "NewIcon".ptr, "".ptr);
+        systemd.sd_bus_emit_signal(cast(sd_bus*)bus, "/StatusNotifierItem".ptr, "org.kde.StatusNotifierItem".ptr, "NewTitle".ptr, "".ptr);
+        systemd.sd_bus_emit_signal(cast(sd_bus*)bus, "/StatusNotifierItem".ptr, "org.kde.StatusNotifierItem".ptr, "NewStatus".ptr, "s".ptr, "Active".ptr);
     }
 
     private {
-        const sd_bus_vtable[/+2 + 16 + 4 + 6+/] sysTrayVtable;
+        const sd_bus_vtable[2 + 16 + 4 + 6] sysTrayVtable;
         char["org.kde.StatusNotifierItem-".length + 8 + 3] sysTrayId;
         sd_bus_slot* sysTraySlot;
 
@@ -465,6 +469,39 @@ private {
                 if (r < 0) return 0;
 
                 r = systemd.sd_bus_message_close_container(reply);
+                if (r < 0) return 0;
+                r = systemd.sd_bus_message_close_container(reply);
+                if (r < 0) return 0;
+            } else
+                systemd.sd_bus_reply_method_return(reply, "".ptr);
+
+            return 1;
+        }
+
+        int spewKDESdBus_Read_ToolTip(sd_bus* bus, const char* path, const char* interface_, const char* property, sd_bus_message* reply, void* userdata, sd_bus_error* ret_error) {
+            // (sa(iiay)ss)
+
+            if (rt_cArgs().argc > 0) {
+                size_t lastSlash, i;
+                char* temp = rt_cArgs().argv[0];
+
+                while(temp[i]) {
+                    if (temp[i] == '\\' || temp[i] == '/')
+                        lastSlash = i+1;
+                    i++;
+                }
+
+                auto r = systemd.sd_bus_message_open_container(reply, 'r', "sa(iiay)ss".ptr);
+                if (r < 0) return 0;
+                r = systemd.sd_bus_message_append(reply, "s", rt_cArgs().argv[0] + lastSlash);
+                if (r < 0) return 0;
+
+                r = systemd.sd_bus_message_open_container(reply, 'a', "(iiay)".ptr);
+                if (r < 0) return 0;
+                r = systemd.sd_bus_message_close_container(reply);
+                if (r < 0) return 0;
+
+                r = systemd.sd_bus_message_append(reply, "ss", "".ptr, "".ptr);
                 if (r < 0) return 0;
                 r = systemd.sd_bus_message_close_container(reply);
                 if (r < 0) return 0;
