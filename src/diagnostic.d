@@ -366,11 +366,16 @@ void notificationTrayTest() {
     import devisualization.image.interfaces;
     import std.experimental.color : RGBA8;
 
-    auto icon = imageObject!(ImageStorageHorizontal!RGBA8)(2, 2);
-    icon[0, 0] = RGBA8(255, 0, 0, 255);
-    icon[1, 0] = RGBA8(0, 255, 0, 255);
-    icon[0, 1] = RGBA8(0, 0, 255, 255);
-    icon[1, 1] = RGBA8(255, 255, 255, 255);
+    auto icon = imageObject!(ImageStorageHorizontal!RGBA8)(32, 32);
+
+    foreach(x; 0 .. 16) {
+        foreach(y; 0 .. 16) {
+            icon[x, y] = RGBA8(255, 0, 0, 255);
+            icon[x + 16, y] = RGBA8(0, 255, 0, 255);
+            icon[x, y + 16] = RGBA8(0, 0, 255, 255);
+            icon[x + 16, y + 16] = RGBA8(255, 255, 255, 255);
+        }
+    }
 
     auto creator = Instance.current.ui.createWindow();
     if (creator.isNull) return;

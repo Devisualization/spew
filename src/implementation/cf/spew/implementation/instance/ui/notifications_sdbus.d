@@ -227,9 +227,9 @@ final class SDBus_KDENotifications : Feature_NotificationMessage, Feature_Notifi
                     auto color = icon[x, y];
 
                     temp |= cast(uint)color.a.value;
-                    temp |= color.r.value << 8;
-                    temp |= color.g.value << 16;
-                    temp |= color.b.value << 24;
+                    temp |= (cast(uint)color.r.value) << 8;
+                    temp |= (cast(uint)color.r.value) << 16;
+                    temp |= (cast(uint)color.r.value) << 24;
 
                     buf[count++] = temp;
                 }
@@ -397,7 +397,8 @@ private {
 
             (cast()taskbarTrayWindow).show();
             (cast()taskbarTrayWindow).location = vec2!int(x, y);
-            return 1;
+
+            return systemd.sd_bus_reply_method_return(msg, null);
         }
         int spewKDESdBus_NoMethod(sd_bus_message* msg, void* ctx, sd_bus_error* error) {
             return 0;
