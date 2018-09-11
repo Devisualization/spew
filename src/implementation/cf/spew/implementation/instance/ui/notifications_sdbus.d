@@ -246,8 +246,6 @@ final class SDBus_KDENotifications : Feature_NotificationMessage, Feature_Notifi
             free(cast(void*)currentWindowIcon);
 
         systemd.sd_bus_emit_signal(cast(sd_bus*)bus, "/StatusNotifierItem".ptr, "org.kde.StatusNotifierItem".ptr, "NewIcon".ptr, "".ptr);
-        systemd.sd_bus_emit_signal(cast(sd_bus*)bus, "/StatusNotifierItem".ptr, "org.kde.StatusNotifierItem".ptr, "NewTitle".ptr, "".ptr);
-        systemd.sd_bus_emit_signal(cast(sd_bus*)bus, "/StatusNotifierItem".ptr, "org.kde.StatusNotifierItem".ptr, "NewStatus".ptr, "s".ptr, "Active".ptr);
     }
 
     private {
@@ -279,15 +277,17 @@ final class SDBus_KDENotifications : Feature_NotificationMessage, Feature_Notifi
                     return;
                 }
 
+                systemd.sd_bus_emit_signal(cast(sd_bus*)bus, "/StatusNotifierItem".ptr, "org.kde.StatusNotifierItem".ptr, "NewTitle".ptr, "".ptr);
+                systemd.sd_bus_emit_signal(cast(sd_bus*)bus, "/StatusNotifierItem".ptr, "org.kde.StatusNotifierItem".ptr, "NewStatus".ptr, "s".ptr, "Active".ptr);
+                systemd.sd_bus_emit_signal(cast(sd_bus*)bus, "/StatusNotifierItem".ptr, "org.kde.StatusNotifierItem".ptr, "NewToolTip".ptr, "".ptr);
+
+                prepareNewIcon((cast()taskbarTrayWindow).icon);
+
                 systemd.sd_bus_call_method_async(cast(sd_bus*)bus, null, "org.kde.StatusNotifierWatcher", "/StatusNotifierWatcher",
                     "org.kde.StatusNotifierWatcher", "RegisterStatusNotifierItem",
                     &spewSDBusRegisterWatcherCallback, null,
                     "s" /+ types +/,
                     cast(char*)sysTrayId.ptr);
-
-                // TODO: can we support the signals NewTitle and NewIcon?
-
-                prepareNewIcon((cast()taskbarTrayWindow).icon);
             }
         }
 
