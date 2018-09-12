@@ -750,7 +750,7 @@ void onForcedDraw() {
                 gl.glClear(GL_COLOR_BUFFER_BIT);
 
                 gl.glBegin(GL_QUADS);
-                gl.glColor4f(1, 0, 0, 1);
+                gl.glColor4f(1, 0, 1, 1);
                 gl.glVertex2f(-0.5f, -0.5f);
                 gl.glVertex2f(0.5f, -0.5f);
                 gl.glVertex2f(0.5f, 0.5f);
