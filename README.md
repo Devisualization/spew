@@ -30,9 +30,9 @@ Warning: Windows 64bit for dmd is currently bugged when using the diagnostic cod
     - [ ] Cocoa
 	- [x] LibUV
     - [x] GLIB
-    - [ ] Poll (posix)
+    - [x] Poll (posix)
     - [x] Epoll (linux)
-    - [ ] D-Bus (system-d)
+    - [x] D-Bus (system-d)
   - [ ] Consumers:
     - [x] X11
     - [x] WinAPI
@@ -57,12 +57,12 @@ Warning: Windows 64bit for dmd is currently bugged when using the diagnostic cod
   - [x] LibUV
   - [ ] Fallback
 - [ ] Windowing
-  - [ ] X11
+  - [x] X11
     - [x] Core
-    - [ ] Features:
-       - [ ] notifications
+    - [x] Features:
+       - [x] notifications
           - [x] FreeDesktop
-          - [ ] D-Bus org.freedesktop.Notifications
+          - [x] D-Bus org.freedesktop.Notifications
        - [x] cursor
        - [x] icon
        - [x] screenshot
@@ -98,6 +98,9 @@ Warning: Windows 64bit for dmd is currently bugged when using the diagnostic cod
        - [ ] VRAM
        - [ ] OpenGL
 
+Warning:
+- For X11 under e.g. KDE you won't get a notification window support. You must create an external [config](https://forum.kde.org/viewtopic.php?f=305&t=142838) file to make it appear.
+
 __Short list of won't-implement__:
 - Contexts
 	- DirectX
@@ -106,5 +109,6 @@ __Short list of won't-implement__:
 - Input
 	- Game controllers, I suggest you to use a library like [libstem_gamepad](https://github.com/ThemsAllTook/libstem_gamepad) or [NVGamepad](https://developer.nvidia.com/cross-platform-gamepad-api).
 - Audio, I suggest you use [Port Audio](http://portaudio.com) or [libsoundio](http://libsound.io/).
+
 ## License
 Boost
