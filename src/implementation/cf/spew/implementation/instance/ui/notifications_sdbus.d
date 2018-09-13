@@ -315,11 +315,8 @@ bool checkForSDBusKDETray() {
         return false;
 
     sd_bus_error error;
-    sd_bus_message* message;
 
     scope (exit) {
-        if (message !is null)
-            systemd.sd_bus_message_unref(message);
         systemd.sd_bus_error_free(&error);
         systemd.sd_bus_unref(bus);
     }
@@ -327,11 +324,14 @@ bool checkForSDBusKDETray() {
     // lets find out if the interface exists
     // we're using the "kde" namespace, because that is what is implemented /sigh/
     // it should be freedesktop :/
-    int r = systemd.sd_bus_call_method(bus, "org.kde.StatusNotifierWatcher", "/StatusNotifierWatcher",
-            "org.freedesktop.DBus.Introspectable", "Introspect", &error, &message, "");
+    bool bIs;
+    int r = systemd.sd_bus_get_property_trivial(bus, "org.kde.StatusNotifierWatcher", "/StatusNotifierWatcher",
+            "org.kde.StatusNotifierWatcher", "IsStatusNotifierHostRegistered", &error, 'b', &bIs);
 
-    // much cheaper to see if there is a body than to actually get it ;)
-    return r >= 0 && systemd.sd_bus_message_is_empty(message) == 0;
+    if (r < 0)
+        return false;
+    else
+        return bIs;
 }
 
 bool checkForSDBusFreeDesktopBubble() {
