@@ -124,6 +124,8 @@ final class OpenGLContextImpl_X11 : OpenGLContextImpl, IPlatformData {
     void attemptCreation1() {
         if (glXCreateContext !is null || callbacks.loadSymbol is null)
             return;
+        if (callbacks.onLoad !is null)
+            callbacks.onLoad("glXGetProcAddress");
 
         glXCreateContext = cast(typeof(glXCreateContext)) callbacks.loadSymbol("glXCreateContext");
         glXMakeCurrent = cast(typeof(glXMakeCurrent)) callbacks.loadSymbol("glXMakeCurrent");
@@ -261,9 +263,6 @@ final class OpenGLContextImpl_X11 : OpenGLContextImpl, IPlatformData {
             x11b.x11.XFree(fallbackVisual);
             glXDestroyContext(x11Display(), fallbackRC);
             x11b.x11.XFree(fbc);
-
-            if (callbacks.onLoad !is null)
-                callbacks.onLoad("glXGetProcAddress");
 
             if (whandle != x11b.None) {
                 glXMakeCurrent(x11Display(), cast(GLXDrawable) whandle, _context);

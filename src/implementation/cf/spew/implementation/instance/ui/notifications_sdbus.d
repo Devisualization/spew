@@ -207,7 +207,7 @@ final class SDBus_KDENotifications : Feature_NotificationMessage, Feature_Notifi
         // uint [( int, int, uint, [ ubyte ] )]
 
         shared(ubyte)* newWindowIcon;
-        if (icon is null || icon.width * icon.height >= 63 * 1024 * 1024) {
+        if (icon is null || icon.width * icon.height * 4 >= 63 * 1024 * 1024) {
             // 63mb
         } else {
             newWindowIcon = cast(shared(ubyte)*)malloc((4 * 4) + (4 * icon.width * icon.height));
@@ -226,17 +226,21 @@ final class SDBus_KDENotifications : Feature_NotificationMessage, Feature_Notifi
                     uint temp;
                     auto color = icon[x, y];
 
+                    import std.stdio;
+
+
                     temp |= cast(uint)color.a.value;
                     temp |= (cast(uint)color.r.value) << 8;
                     temp |= (cast(uint)color.r.value) << 16;
                     temp |= (cast(uint)color.r.value) << 24;
-
+writeln(x, "x", y,": ", temp);
                     buf[count++] = temp;
                 }
             }
         }
+        assert(0);
 
-        shared(ubyte)* currentWindowIcon = atomicLoad(taskbarTrayWindowIconDBus);
+        /+shared(ubyte)* currentWindowIcon = atomicLoad(taskbarTrayWindowIconDBus);
 
         while(!cas(&taskbarTrayWindowIconDBus, currentWindowIcon, newWindowIcon)) {
             currentWindowIcon = atomicLoad(taskbarTrayWindowIconDBus);
@@ -245,7 +249,7 @@ final class SDBus_KDENotifications : Feature_NotificationMessage, Feature_Notifi
         if (currentWindowIcon !is null)
             free(cast(void*)currentWindowIcon);
 
-        systemd.sd_bus_emit_signal(cast(sd_bus*)bus, "/StatusNotifierItem".ptr, "org.kde.StatusNotifierItem".ptr, "NewIcon".ptr, "".ptr);
+        systemd.sd_bus_emit_signal(cast(sd_bus*)bus, "/StatusNotifierItem".ptr, "org.kde.StatusNotifierItem".ptr, "NewIcon".ptr, "".ptr);+/
     }
 
     private {

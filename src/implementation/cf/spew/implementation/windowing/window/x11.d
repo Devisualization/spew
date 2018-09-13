@@ -262,7 +262,7 @@ Have_Window_ScreenShot, Have_Icon, Have_Cursor, Have_Style {
         
         Atom net_wm_icon = x11Atoms()._NET_WM_ICON;
         Atom cardinal = x11Atoms().CARDINAL;
-        
+
         X11WindowProperty prop = x11ReadWindowProperty(x11Display(), whandle, net_wm_icon);
         scope(exit) if (prop.data !is null) x11.XFree(prop.data);
         
@@ -285,8 +285,7 @@ Have_Window_ScreenShot, Have_Icon, Have_Cursor, Have_Style {
                     storage[x, y] = RGBA8((cast(ubyte)(p >> 16)), (cast(ubyte)(p >> 8)), (cast(ubyte)p), (cast(ubyte)(p >> 24)));
                 }
             }
-            
-            
+
             return storage;
         } else
             return null;
