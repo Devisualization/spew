@@ -109,6 +109,7 @@ final class DefaultImplementation : Instance {
                 CalculatePopupWindowPosition, GetMonitorCapabilities,
                 GetMonitorBrightness, GetPhysicalMonitorsFromHMONITOR;
             import cf.spew.implementation.consumers.winapi;
+            import cf.spew.implementation.instance.robot.winapi;
             import cf.spew.implementation.instance.ui.winapi;
             import cf.spew.event_loop.wells.winapi;
             import core.sys.windows.ole2 : OleInitialize;
@@ -140,6 +141,7 @@ final class DefaultImplementation : Instance {
                 assert(0);
 
             _userInterface = allocator.make!(shared(UIInstance_WinAPI))(allocator);
+            _robotInstance = allocator.make!(shared(RobotInstance_WinAPI))();
 
             _mainEventSource_ = allocator.make!(shared(WinAPI_EventLoop_Source));
             _eventLoop.manager.addSources(_mainEventSource_);

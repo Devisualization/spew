@@ -239,7 +239,7 @@ Have_Window_ScreenShot, Have_Icon, Have_Window_Menu, Have_Cursor, Have_Style {
     void show() {
         if (isClosed) return;
         
-        ShowWindow(hwnd, SW_SHOW);
+        ShowWindow(hwnd, SW_SHOWNORMAL);
         UpdateWindow(hwnd);
     }
     

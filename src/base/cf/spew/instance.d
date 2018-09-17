@@ -174,7 +174,7 @@ interface Management_Robot {
     }
 
     ///
-    void sendKey(dchar, KeyModifiers, managed!IWindow window = managed!IWindow.init) shared;
+    void sendKey(dchar, ushort modifiers, managed!IWindow window = managed!IWindow.init) shared;
 
     ///
     void sendKey(SpecialKey, managed!IWindow window = managed!IWindow.init) shared;

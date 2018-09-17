@@ -558,6 +558,11 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
             }
             return 0;
 
+        case WM_UNICHAR:
+            if (wParam == UNICODE_NOCHAR)
+                return TRUE;
+            else goto case WM_CHAR;
+
         case WM_CHAR:
             switch(wParam) {
                 case 0: .. case ' ':
@@ -686,7 +691,6 @@ LRESULT callbackWindowHandler(HWND hwnd, uint uMsg, WPARAM wParam, LPARAM lParam
         case WM_SYSKEYUP:
         case WM_SYSCHAR:
         case WM_SYSDEADCHAR:
-        case WM_KEYLAST:
         	
         case WM_IME_STARTCOMPOSITION:
         case WM_IME_ENDCOMPOSITION:
