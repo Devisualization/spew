@@ -3,6 +3,7 @@
  * Authors: $(LINK2 http://cattermole.co.nz, Richard Andrew Cattermole)
  */
 module cf.spew.event_loop.wells.x11;
+version(Posix):
 import cf.spew.event_loop.defs;
 import cf.spew.events.defs;
 import cf.spew.events.windowing;
