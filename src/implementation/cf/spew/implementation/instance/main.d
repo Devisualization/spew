@@ -20,6 +20,10 @@ final class DefaultImplementation : Instance {
                 allocator.dispose(_userInterface);
             if (_streamInstance !is null)
                 allocator.dispose(_streamInstance);
+            if (_miscInstance !is null)
+                allocator.dispose(_miscInstance);
+            if (_robotInstance !is null)
+                allocator.dispose(_robotInstance);
 
             if (_secondaryEventSource_ !is null)
                 allocator.dispose(_secondaryEventSource_);
@@ -36,6 +40,7 @@ final class DefaultImplementation : Instance {
     shared(Management_UserInterface) _userInterface;
     shared(StreamsInstance) _streamInstance;
     shared(Miscellaneous_Instance) _miscInstance;
+    shared(Management_Robot) _robotInstance;
 
     @property {
         override shared(Management_EventLoop) eventLoop() shared {
@@ -56,6 +61,11 @@ final class DefaultImplementation : Instance {
         override shared(Management_Miscellaneous) misc() shared {
             __guardCheck();
             return _miscInstance;
+        }
+
+        override shared(Management_Robot) robot() shared {
+            __guardCheck();
+            return _robotInstance;
         }
     }
 

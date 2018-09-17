@@ -18,6 +18,8 @@ abstract class Instance {
         /// Got a better name for this?
         shared(Management_Miscellaneous) misc() shared;
         ///
+        shared(Management_Robot) robot() shared;
+        ///
         pragma(inline, true) final shared(Management_UserInterface) ui() shared {
             return userInterface;
         }
@@ -155,4 +157,31 @@ interface Management_Miscellaneous {
 
     /// Watches a directory recursively (if possible) and notifies of changes.
     managed!IFileSystemWatcher createFileSystemWatcher(string path, IAllocator alloc = theAllocator()) shared;
+}
+
+///
+interface Management_Robot {
+    import cf.spew.events.windowing : KeyModifiers, SpecialKey, CursorEventAction;
+    import cf.spew.ui.window.defs : IWindow;
+    import stdx.allocator : IAllocator, theAllocator;
+
+    @property {
+        ///
+        managed!IWindow focusWindow(IAllocator alloc = theAllocator()) shared;
+
+        ///
+        void focusWindow(managed!IWindow) shared;
+    }
+
+    ///
+    void sendKey(dchar, KeyModifiers, managed!IWindow window = managed!IWindow.init) shared;
+
+    ///
+    void sendKey(SpecialKey, managed!IWindow window = managed!IWindow.init) shared;
+
+    ///
+    void sendScroll(int x, int y, int amount, managed!IWindow window = managed!IWindow.init) shared;
+
+    ///
+    void sendMouse(int x, int y, CursorEventAction, managed!IWindow window = managed!IWindow.init) shared;
 }
