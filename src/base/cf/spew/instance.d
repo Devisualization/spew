@@ -179,9 +179,12 @@ interface Management_Robot {
     ///
     void sendKey(SpecialKey, managed!IWindow window = managed!IWindow.init) shared;
 
-    ///
+    /// Not relative to window coordinates
     void sendScroll(int x, int y, int amount, managed!IWindow window = managed!IWindow.init) shared;
 
-    ///
-    void sendMouse(int x, int y, CursorEventAction, managed!IWindow window = managed!IWindow.init) shared;
+    /// Not relative to window coordinates
+    void sendMouse(int x, int y, bool isDown, CursorEventAction, managed!IWindow window = managed!IWindow.init) shared;
+
+    /// Not relative to window coordinates
+    void sendMouseClick(int x, int y, CursorEventAction, managed!IWindow window = managed!IWindow.init) shared;
 }

@@ -9,7 +9,11 @@ import core.sys.windows.windows : SetActiveWindow, GetActiveWindow, HWND, INPUT,
     VK_DIVIDE, VK_OEM_2, VK_MULTIPLY, KEYEVENTF_KEYUP, VK_LMENU, VK_RMENU, VK_LCONTROL, VK_RCONTROL,
     VK_LSHIFT, VK_RSHIFT, VK_CAPITAL, VK_NUMLOCK, VK_LWIN, VK_RWIN, HIWORD, GetKeyState,
     VK_DECIMAL, VK_SPACE, VK_OEM_PLUS, VK_ADD, VK_SUBTRACT, VK_OEM_MINUS, WORD, KEYEVENTF_UNICODE,
-    VK_OEM_1, VK_OEM_COMMA, VK_OEM_PERIOD, VK_OEM_7, VK_OEM_5, VK_NUMPAD0;
+    VK_OEM_1, VK_OEM_COMMA, VK_OEM_PERIOD, VK_OEM_7, VK_OEM_5, VK_NUMPAD0, VK_F1, VK_ESCAPE, VK_RETURN,
+    VK_BACK, VK_TAB, VK_PRIOR, VK_NEXT, VK_END, VK_HOME, VK_INSERT, VK_DELETE, VK_PAUSE, VK_LEFT, VK_RIGHT,
+    VK_UP, VK_DOWN, VK_SCROLL, INPUT_MOUSE, MOUSEEVENTF_MOVE, MOUSEEVENTF_ABSOLUTE, MOUSEEVENTF_WHEEL,
+    MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP, MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_RIGHTUP,
+    MOUSEEVENTF_MIDDLEDOWN, MOUSEEVENTF_MIDDLEUP;
 
 final class RobotInstance_WinAPI : Management_Robot {
     @property {
@@ -207,7 +211,7 @@ final class RobotInstance_WinAPI : Management_Robot {
         
         count += setKeyModifiersEnd(inputs[count .. $], modifiers, inverseModifiers);
         
-        if (window is null) {
+        if (window.isNull) {
             SendInput(count, inputs.ptr, INPUT.sizeof);
         } else {
             HWND previous = SetActiveWindow(cast(HWND)window.__handle);
@@ -218,9 +222,206 @@ final class RobotInstance_WinAPI : Management_Robot {
         }
     }
     
-    void sendKey(SpecialKey, managed!IWindow window = managed!IWindow.init) shared {}
-    void sendScroll(int x, int y, int amount, managed!IWindow window = managed!IWindow.init) shared {}
-    void sendMouse(int x, int y, CursorEventAction, managed!IWindow window = managed!IWindow.init) shared {}
+    void sendKey(SpecialKey key, managed!IWindow window = managed!IWindow.init) shared {
+        uint count;
+        INPUT[2] inputs;
+        
+        foreach(i; 0 .. 2) {
+            inputs[i] = INPUT(INPUT_KEYBOARD);
+        }
+
+        switch(key) {
+            case SpecialKey.F1: .. case SpecialKey.F24:
+                inputs[count].ki.wVk = cast(ushort)(VK_F1 + (key - SpecialKey.F1));
+                break;
+
+            case SpecialKey.Escape:
+                inputs[count].ki.wVk = VK_ESCAPE;
+                break;
+
+            case SpecialKey.Enter:
+                inputs[count].ki.wVk = VK_RETURN;
+                break;
+
+            case SpecialKey.Backspace:
+                inputs[count].ki.wVk = VK_BACK;
+                break;
+
+            case SpecialKey.Tab:
+                inputs[count].ki.wVk = VK_TAB;
+                break;
+
+            case SpecialKey.PageUp:
+                inputs[count].ki.wVk = VK_PRIOR;
+                break;
+
+            case SpecialKey.PageDown:
+                inputs[count].ki.wVk = VK_NEXT;
+                break;
+
+            case SpecialKey.End:
+                inputs[count].ki.wVk = VK_END;
+                break;
+
+            case SpecialKey.Home:
+                inputs[count].ki.wVk = VK_HOME;
+                break;
+
+            case SpecialKey.Insert:
+                inputs[count].ki.wVk = VK_INSERT;
+                break;
+
+            case SpecialKey.Delete:
+                inputs[count].ki.wVk = VK_DELETE;
+                break;
+
+            case SpecialKey.Pause:
+                inputs[count].ki.wVk = VK_PAUSE;
+                break;
+
+            case SpecialKey.LeftArrow:
+                inputs[count].ki.wVk = VK_LEFT;
+                break;
+
+            case SpecialKey.RightArrow:
+                inputs[count].ki.wVk = VK_RIGHT;
+                break;
+
+            case SpecialKey.UpArrow:
+                inputs[count].ki.wVk = VK_UP;
+                break;
+
+            case SpecialKey.DownArrow:
+                inputs[count].ki.wVk = VK_DOWN;
+                break;
+
+            case SpecialKey.ScrollLock:
+                inputs[count].ki.wVk = VK_SCROLL;
+                break;
+                
+            default:
+                return;
+        }
+
+        inputs[count + 1].ki.wVk = inputs[count].ki.wVk;
+        inputs[count + 1].ki.dwFlags = KEYEVENTF_KEYUP;
+        count += 2;
+
+        if (window.isNull) {
+            SendInput(count, inputs.ptr, INPUT.sizeof);
+        } else {
+            HWND previous = SetActiveWindow(cast(HWND)window.__handle);
+            SendInput(count, inputs.ptr, INPUT.sizeof);
+            
+            if (previous !is null)
+                SetActiveWindow(previous);
+        }
+    }
+
+    void sendScroll(int x, int y, int amount, managed!IWindow window = managed!IWindow.init) shared {
+        INPUT input = INPUT(INPUT_MOUSE);
+        
+        input.mi.dx = x;
+        input.mi.dy = y;
+        input.mi.mouseData = amount * 120;
+        input.mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_WHEEL;
+
+        if (window.isNull) {
+            SendInput(1, &input, INPUT.sizeof);
+        } else {
+            HWND previous = SetActiveWindow(cast(HWND)window.__handle);
+            SendInput(1, &input, INPUT.sizeof);
+            
+            if (previous !is null)
+                SetActiveWindow(previous);
+        }
+    }
+
+    void sendMouse(int x, int y, bool isDown, CursorEventAction action, managed!IWindow window = managed!IWindow.init) shared {
+        uint count;
+        INPUT input = INPUT(INPUT_MOUSE);
+        
+        final switch(action) {
+            case CursorEventAction.Select:
+                if (isDown)
+                    input.mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+                else
+                    input.mi.dwFlags = MOUSEEVENTF_LEFTUP;
+                break;
+                
+            case CursorEventAction.Alter:
+                if (isDown)
+                    input.mi.dwFlags = MOUSEEVENTF_RIGHTDOWN;
+                else
+                    input.mi.dwFlags = MOUSEEVENTF_RIGHTUP;
+                break;
+                
+            case CursorEventAction.ViewChange:
+                if (isDown)
+                    input.mi.dwFlags = MOUSEEVENTF_MIDDLEDOWN;
+                else
+                    input.mi.dwFlags = MOUSEEVENTF_MIDDLEUP;
+                break;
+        }
+        
+        input.mi.dx = x;
+        input.mi.dy = y;
+        input.mi.dwFlags |= MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
+        
+        if (window.isNull) {
+            SendInput(1, &input, INPUT.sizeof);
+        } else {
+            HWND previous = SetActiveWindow(cast(HWND)window.__handle);
+            SendInput(1, &input, INPUT.sizeof);
+            
+            if (previous !is null)
+                SetActiveWindow(previous);
+        }
+    }
+
+    void sendMouseClick(int x, int y, CursorEventAction action, managed!IWindow window = managed!IWindow.init) shared {
+        uint count;
+        INPUT[2] inputs;
+        
+        foreach(i; 0 .. 2) {
+            inputs[i] = INPUT(INPUT_MOUSE);
+        }
+
+        final switch(action) {
+            case CursorEventAction.Select:
+                inputs[count].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+                inputs[count+1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+                break;
+
+            case CursorEventAction.Alter:
+                inputs[count].mi.dwFlags = MOUSEEVENTF_RIGHTDOWN;
+                inputs[count+1].mi.dwFlags = MOUSEEVENTF_RIGHTUP;
+                break;
+
+            case CursorEventAction.ViewChange:
+                inputs[count].mi.dwFlags = MOUSEEVENTF_MIDDLEDOWN;
+                inputs[count+1].mi.dwFlags = MOUSEEVENTF_MIDDLEUP;
+                break;
+        }
+
+        inputs[count].mi.dx = x;
+        inputs[count].mi.dy = y;
+        inputs[count++].mi.dwFlags |= MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
+
+        inputs[count].mi.dx = x;
+        inputs[count].mi.dy = y;
+        inputs[count++].mi.dwFlags |= MOUSEEVENTF_ABSOLUTE;
+
+        if (window.isNull) {
+            SendInput(count, inputs.ptr, INPUT.sizeof);
+        } else {
+            HWND previous = SetActiveWindow(cast(HWND)window.__handle);
+            SendInput(count, inputs.ptr, INPUT.sizeof);
+            
+            if (previous !is null)
+                SetActiveWindow(previous);
+        }
+    }
 }
 
 
