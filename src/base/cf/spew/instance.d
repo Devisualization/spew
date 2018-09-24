@@ -162,10 +162,14 @@ interface Management_Miscellaneous {
 ///
 interface Management_Robot {
     import cf.spew.events.windowing : KeyModifiers, SpecialKey, CursorEventAction;
+    import cf.spew.ui.rendering : vec2;
     import cf.spew.ui.window.defs : IWindow;
     import stdx.allocator : IAllocator, theAllocator;
 
     @property {
+        ///
+        vec2!int mouseLocation() shared;
+
         ///
         managed!IWindow focusWindow(IAllocator alloc = theAllocator()) shared;
 
@@ -173,18 +177,87 @@ interface Management_Robot {
         void focusWindow(managed!IWindow) shared;
     }
 
-    ///
-    void sendKey(dchar, ushort modifiers, managed!IWindow window = managed!IWindow.init) shared;
+    /**
+     * Sends a key push (up + down) with given modifiers.
+     * 
+     * Params:
+     *    key = The key to send (UTF-32 codepoint)
+     *    modifiers = Bitwise or'd list of modifiers
+     *    window = The window to send to, default the current focussed window
+     * 
+     * See_Also:
+     *    KeyModifiers
+     */
+    void sendKey(dchar key, ushort modifiers, managed!IWindow window = managed!IWindow.init) shared;
 
-    ///
-    void sendKey(SpecialKey, managed!IWindow window = managed!IWindow.init) shared;
+    /**
+     * Sends a key push (up + down) for a specific special key.
+     * 
+     * Params:
+     *    key = The special key to send
+     *    window = The window to send to, default the current focussed window
+     * 
+     * See_Also:
+     *     SpecialKey
+     */
+    void sendKey(SpecialKey key, managed!IWindow window = managed!IWindow.init) shared;
 
-    /// Not relative to window coordinates
+    /**
+     * Sends a mouse scroll event at the given x and y coordinates from within the window's content area.
+     * 
+     * Params:
+     *    x = X coordinate, from within the window's content area (if specified)
+     *    y = Y coordinate, from within the window's content area (if specified)
+     *    amount = The amount to scroll by, postive one amount, negative another direction, use small values
+     *    window = The window to send to, default the current focussed window
+     */
     void sendScroll(int x, int y, int amount, managed!IWindow window = managed!IWindow.init) shared;
 
-    /// Not relative to window coordinates
-    void sendMouse(int x, int y, bool isDown, CursorEventAction, managed!IWindow window = managed!IWindow.init) shared;
+    /**
+     * Sends a mouse up/down event at the given x and y coordinates from within the window's content area.
+     * 
+     * Note: This may not actually move the cursor!
+     * 
+     * Params:
+     *    x = X coordinate, from within the window's content area (if specified)
+     *    y = Y coordinate, from within the window's content area (if specified)
+     *    isDown = is the button press down or up?
+     *    action = Mouse action to send
+     *    window = The window to send to, default the current focussed window
+     * 
+     * See_Also:
+     *    CursorEventAction
+     */
+    void sendMouse(int x, int y, bool isDown, CursorEventAction action, managed!IWindow window = managed!IWindow.init) shared;
 
-    /// Not relative to window coordinates
-    void sendMouseClick(int x, int y, CursorEventAction, managed!IWindow window = managed!IWindow.init) shared;
+    /**
+     * Sends a mouse move event at the given x and y coordinates from within the window's content area.
+     * 
+     * Note: This may not actually move the cursor!
+     * 
+     * Params:
+     *    x = X coordinate, from within the window's content area (if specified)
+     *    y = Y coordinate, from within the window's content area (if specified)
+     *    window = The window to send to, default the current focussed window
+     * 
+     * See_Also:
+     *    CursorEventAction
+     */
+    void sendMouseMove(int x, int y, managed!IWindow window = managed!IWindow.init) shared;
+
+    /**
+     * Sends a mouse press (up + down) event at the given x and y coordinates from within the window's content area.
+     * 
+     * Note: This may not actually move the cursor!
+     * 
+     * Params:
+     *    x = X coordinate, from within the window's content area (if specified)
+     *    y = Y coordinate, from within the window's content area (if specified)
+     *    action = Mouse action to send
+     *    window = The window to send to, default the current focussed window
+     * 
+     * See_Also:
+     *    CursorEventAction
+     */
+    void sendMouseClick(int x, int y, CursorEventAction action, managed!IWindow window = managed!IWindow.init) shared;
 }

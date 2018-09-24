@@ -223,7 +223,7 @@ Have_Window_ScreenShot, Have_Icon, Have_Window_Menu, Have_Cursor, Have_Style {
                 return;
             
             RECT rect;
-            rect.top = point.x;
+            rect.right = point.x;
             rect.bottom = point.y;
             
             assert(AdjustWindowRectEx(&rect, GetWindowLongA(hwnd, GWL_STYLE), GetMenu(hwnd) !is null, GetWindowLongA(hwnd, GWL_EXSTYLE)));

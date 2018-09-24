@@ -2,6 +2,7 @@
 version(Windows):
 import cf.spew.instance : Management_Robot;
 import cf.spew.events.windowing : KeyModifiers, SpecialKey, CursorEventAction;
+import cf.spew.ui.rendering : vec2;
 import cf.spew.ui.window.defs : IWindow;
 import stdx.allocator : IAllocator, theAllocator, make;
 import devisualization.util.core.memory.managed;
@@ -12,11 +13,18 @@ import core.sys.windows.windows : SetActiveWindow, GetActiveWindow, HWND, INPUT,
     VK_OEM_1, VK_OEM_COMMA, VK_OEM_PERIOD, VK_OEM_7, VK_OEM_5, VK_NUMPAD0, VK_F1, VK_ESCAPE, VK_RETURN,
     VK_BACK, VK_TAB, VK_PRIOR, VK_NEXT, VK_END, VK_HOME, VK_INSERT, VK_DELETE, VK_PAUSE, VK_LEFT, VK_RIGHT,
     VK_UP, VK_DOWN, VK_SCROLL, INPUT_MOUSE, MOUSEEVENTF_MOVE, MOUSEEVENTF_ABSOLUTE, MOUSEEVENTF_WHEEL,
-    MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP, MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_RIGHTUP,
-    MOUSEEVENTF_MIDDLEDOWN, MOUSEEVENTF_MIDDLEUP;
+    MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP, MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_RIGHTUP, GetWindowLongA,
+    MOUSEEVENTF_MIDDLEDOWN, MOUSEEVENTF_MIDDLEUP, RECT, AdjustWindowRectEx, GetWindowRect, GetMenu,
+    GWL_STYLE, GWL_EXSTYLE, GetCursorPos, POINT;
 
 final class RobotInstance_WinAPI : Management_Robot {
     @property {
+        vec2!int mouseLocation() shared {
+            POINT point;
+            assert(GetCursorPos(&point));
+            return vec2!int(point.x, point.y);
+        }
+
         managed!IWindow focusWindow(IAllocator alloc = theAllocator()) shared {
             import cf.spew.implementation.windowing.window.winapi;
             HWND active = GetActiveWindow();
@@ -221,7 +229,7 @@ final class RobotInstance_WinAPI : Management_Robot {
                 SetActiveWindow(previous);
         }
     }
-    
+
     void sendKey(SpecialKey key, managed!IWindow window = managed!IWindow.init) shared {
         uint count;
         INPUT[2] inputs;
@@ -320,7 +328,11 @@ final class RobotInstance_WinAPI : Management_Robot {
 
     void sendScroll(int x, int y, int amount, managed!IWindow window = managed!IWindow.init) shared {
         INPUT input = INPUT(INPUT_MOUSE);
-        
+
+        if (!window.isNull) {
+            adjustCoordinateToWindowContentArea(cast(HWND)window.__handle, x, y);
+        }
+
         input.mi.dx = x;
         input.mi.dy = y;
         input.mi.mouseData = amount * 120;
@@ -338,8 +350,11 @@ final class RobotInstance_WinAPI : Management_Robot {
     }
 
     void sendMouse(int x, int y, bool isDown, CursorEventAction action, managed!IWindow window = managed!IWindow.init) shared {
-        uint count;
         INPUT input = INPUT(INPUT_MOUSE);
+
+        if (!window.isNull) {
+            adjustCoordinateToWindowContentArea(cast(HWND)window.__handle, x, y);
+        }
         
         final switch(action) {
             case CursorEventAction.Select:
@@ -379,12 +394,38 @@ final class RobotInstance_WinAPI : Management_Robot {
         }
     }
 
+    void sendMouseMove(int x, int y, managed!IWindow window = managed!IWindow.init) shared {
+        INPUT input = INPUT(INPUT_MOUSE);
+        
+        if (!window.isNull) {
+            adjustCoordinateToWindowContentArea(cast(HWND)window.__handle, x, y);
+        }
+
+        input.mi.dx = x;
+        input.mi.dy = y;
+        input.mi.dwFlags |= MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
+
+        if (window.isNull) {
+            SendInput(1, &input, INPUT.sizeof);
+        } else {
+            HWND previous = SetActiveWindow(cast(HWND)window.__handle);
+            SendInput(1, &input, INPUT.sizeof);
+            
+            if (previous !is null)
+                SetActiveWindow(previous);
+        }
+    }
+
     void sendMouseClick(int x, int y, CursorEventAction action, managed!IWindow window = managed!IWindow.init) shared {
         uint count;
         INPUT[2] inputs;
         
         foreach(i; 0 .. 2) {
             inputs[i] = INPUT(INPUT_MOUSE);
+        }
+
+        if (!window.isNull) {
+            adjustCoordinateToWindowContentArea(cast(HWND)window.__handle, x, y);
         }
 
         final switch(action) {
@@ -426,6 +467,24 @@ final class RobotInstance_WinAPI : Management_Robot {
 
 
 private {
+    void adjustCoordinateToWindowContentArea(HWND hwnd, ref int x, ref int y) {
+        RECT rect;
+        rect.top = x;
+        rect.bottom = y;
+
+        // step 1, adjust our offsets so they go /into/ the right place of the content area
+        if (AdjustWindowRectEx(&rect, GetWindowLongA(hwnd, GWL_STYLE), GetMenu(hwnd) !is null, GetWindowLongA(hwnd, GWL_EXSTYLE))) {
+            x = rect.left;
+            y = rect.top;
+        }
+
+        // step 2, now add the window coordinates on to make them absolute
+
+        GetWindowRect(hwnd, &rect);
+        x += rect.left;
+        y += rect.top;
+    }
+
     void getKeyModifiers(dchar key, ref ushort modifiers, ref ushort inverseModifiers) {
         switch(key) {
             case '*':
