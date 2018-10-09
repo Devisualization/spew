@@ -55,11 +55,11 @@ final class VRAMContextImpl_WinAPI : VRAMContextImpl {
     override {
         @property {
             ImageStorage!RGB8 vramBuffer() {
-                return null; //return stage3;
+                return stage3;
             }
 
             ImageStorage!RGBA8 vramAlphaBuffer() {
-                return null; //return stage3Alpha;
+                return stage3Alpha;
             }
         }
 
