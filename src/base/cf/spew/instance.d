@@ -177,6 +177,9 @@ interface Management_Robot {
         void focusWindow(managed!IWindow) shared;
     }
 
+    /// Convenience function to locate a window given its title, can be null
+    managed!IWindow findWindow(string title, IAllocator alloc = theAllocator());
+
     /**
      * Sends a key push (up + down) with given modifiers.
      * 

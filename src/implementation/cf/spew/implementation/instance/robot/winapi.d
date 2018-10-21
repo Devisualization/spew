@@ -4,7 +4,7 @@ import cf.spew.instance : Management_Robot;
 import cf.spew.events.windowing : KeyModifiers, SpecialKey, CursorEventAction;
 import cf.spew.ui.rendering : vec2;
 import cf.spew.ui.window.defs : IWindow;
-import stdx.allocator : IAllocator, theAllocator, make;
+import stdx.allocator : IAllocator, theAllocator, make, makeArray, dispose;
 import devisualization.util.core.memory.managed;
 import core.sys.windows.windows : SetActiveWindow, GetActiveWindow, HWND, INPUT, SendInput, INPUT_KEYBOARD,
     VK_DIVIDE, VK_OEM_2, VK_MULTIPLY, KEYEVENTF_KEYUP, VK_LMENU, VK_RMENU, VK_LCONTROL, VK_RCONTROL,
@@ -15,9 +15,11 @@ import core.sys.windows.windows : SetActiveWindow, GetActiveWindow, HWND, INPUT,
     VK_UP, VK_DOWN, VK_SCROLL, INPUT_MOUSE, MOUSEEVENTF_MOVE, MOUSEEVENTF_ABSOLUTE, MOUSEEVENTF_WHEEL,
     MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP, MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_RIGHTUP, GetWindowLongA,
     MOUSEEVENTF_MIDDLEDOWN, MOUSEEVENTF_MIDDLEUP, RECT, AdjustWindowRectEx, GetWindowRect, GetMenu,
-    GWL_STYLE, GWL_EXSTYLE, GetCursorPos, POINT;
+    GWL_STYLE, GWL_EXSTYLE, GetCursorPos, POINT, FindWindowW;
 
 final class RobotInstance_WinAPI : Management_Robot {
+    import cf.spew.implementation.windowing.window.winapi;
+
     @property {
         vec2!int mouseLocation() shared {
             POINT point;
@@ -26,7 +28,6 @@ final class RobotInstance_WinAPI : Management_Robot {
         }
 
         managed!IWindow focusWindow(IAllocator alloc = theAllocator()) shared {
-            import cf.spew.implementation.windowing.window.winapi;
             HWND active = GetActiveWindow();
             
             if (active is null)
@@ -41,7 +42,32 @@ final class RobotInstance_WinAPI : Management_Robot {
             SetActiveWindow(cast(HWND)window.__handle);
         }
     }
-    
+
+    managed!IWindow findWindow(string title, IAllocator alloc = theAllocator()) {
+        import std.utf : codeLength, byWchar;
+
+        wchar[] title2 = alloc.makeArray!wchar(codeLength!wchar(title) + 1);
+        title2[$-1] = 0;
+
+        size_t i;
+        foreach(c; title.byWchar) {
+            title2[i] = c;
+            i++;
+        }
+
+        //
+
+        HWND handle = FindWindowW(null, title2.ptr);
+        alloc.dispose(title2);
+
+        if (handle is null)
+            return managed!IWindow.init;
+        else {
+            return managed!IWindow(alloc.make!WindowImpl_WinAPI(handle, null, alloc),
+                managers(ReferenceCountedManager()), alloc);
+        }
+    }
+
     void sendKey(dchar key, ushort modifiers, managed!IWindow window = managed!IWindow.init) shared {
         enum Atoa = 'a' - 'A';
 
