@@ -43,7 +43,7 @@ final class RobotInstance_WinAPI : Management_Robot {
         }
     }
 
-    managed!IWindow findWindow(string title, IAllocator alloc = theAllocator()) {
+    managed!IWindow findWindow(string title, IAllocator alloc = theAllocator()) shared {
         import std.utf : codeLength, byWchar;
 
         wchar[] title2 = alloc.makeArray!wchar(codeLength!wchar(title) + 1);
