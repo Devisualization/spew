@@ -81,6 +81,8 @@ final class DefaultImplementation : Instance {
     }
 
     void __handleGuardCheck() shared {
+        import cf.spew.event_loop.wells.libuv;
+
         __Initialized = true;
         allocator = processAllocator();
 
@@ -88,9 +90,8 @@ final class DefaultImplementation : Instance {
         _miscInstance = allocator.make!(shared(Miscellaneous_Instance))(allocator);
 
         // LibUV stuff for streams support
-        version (all) {
+        if (getThreadLoop_UV() !is null) {
             import cf.spew.implementation.instance.streams.libuv;
-            import cf.spew.event_loop.wells.libuv;
 
             _streamInstance = allocator.make!(shared(StreamsInstance_LibUV))(allocator);
             _eventLoop.manager.addSources(LibUVEventLoopSource.instance);

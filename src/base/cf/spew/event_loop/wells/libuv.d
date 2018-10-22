@@ -13,12 +13,16 @@ import core.atomic;
 uv_loop_t* getThreadLoop_UV() {
     import devisualization.bindings.libuv.loader;
 
-    if (libuvLoader is LibUVLoader.init)
-        libuvLoader = LibUVLoader(null);
-    if (uvLoop.data is null)
-        performInit;
+    try {
+        if (libuvLoader is LibUVLoader.init)
+            libuvLoader = LibUVLoader(null);
+        if (uvLoop.data is null)
+            performInit;
 
-    return &uvLoop;
+        return &uvLoop;
+    } catch (Exception) {
+        return null;
+    }
 }
 
 private {
