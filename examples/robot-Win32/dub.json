@@ -1,0 +1,9 @@
+{
+	"name": "robot",
+	"platforms": ["Windows"],
+	"sourceFiles": ["app.d"],
+	"targetType": "executable",
+	"dependencies": {
+		"spew:implementation": {"path": "../../"}
+	}
+}
