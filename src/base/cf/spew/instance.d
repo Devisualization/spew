@@ -167,100 +167,146 @@ interface Management_Robot {
     import stdx.allocator : IAllocator, theAllocator;
 
     @property {
-        ///
+        /// Gets the cursor location
         vec2!int mouseLocation() shared;
 
-        ///
+        /**
+         * Gets the currently keyboard/mouse input focussed window.
+         * 
+         * Params:
+         *     alloc = The allocator to create the returned window with.
+         * 
+         * Returns:
+         *     The window instance, can be null if none currently have focus.
+         */
         managed!IWindow focusWindow(IAllocator alloc = theAllocator()) shared;
 
-        ///
-        void focusWindow(managed!IWindow) shared;
+        /**
+         * Focus a window to get keyboard/mouse input.
+         * 
+         * Params:
+         *     window = The window to focus (keyboard/mouse input).
+         */
+        void focusWindow(managed!IWindow window) shared;
     }
 
-    /// Convenience function to locate a window given its title, can be null
+    /**
+     * Convenience function to locate a window given its title, can be null.
+     * 
+     * You should manually focus/unfocus the desired window to prevent required thread sleeping.
+     * 
+     * Params:
+     *     title = The precise text that a window has for a title.
+     *     alloc = The allocator to create the returned window with.
+     * 
+     * Returns:
+     *     The window instance, can be null if none are found matching.
+     * 
+     * See_Also:
+     *     focusWindow
+     */
     managed!IWindow findWindow(string title, IAllocator alloc = theAllocator()) shared;
 
     /**
      * Sends a key push (up + down) with given modifiers.
      * 
+     * You should manually focus/unfocus the desired window to prevent required thread sleeping.
+     * 
      * Params:
-     *    key = The key to send (UTF-32 codepoint)
-     *    modifiers = Bitwise or'd list of modifiers
-     *    window = The window to send to, default the current focussed window
+     *    key = The key to send (UTF-32 codepoint).
+     *    modifiers = Bitwise or'd list of modifiers.
+     *    window = The window to send to, default the current focussed window.
      * 
      * See_Also:
-     *    KeyModifiers
+     *     KeyModifiers, focusWindow
      */
     void sendKey(dchar key, ushort modifiers, managed!IWindow window = managed!IWindow.init) shared;
 
     /**
      * Sends a key push (up + down) for a specific special key.
      * 
+     * You should manually focus/unfocus the desired window to prevent required thread sleeping.
+     * 
+     * Note: This may not actually move the cursor!
+     * 
      * Params:
-     *    key = The special key to send
-     *    window = The window to send to, default the current focussed window
+     *    key = The special key to send.
+     *    window = The window to send to, default the current focussed window.
      * 
      * See_Also:
-     *     SpecialKey
+     *     SpecialKey, focusWindow
      */
     void sendKey(SpecialKey key, managed!IWindow window = managed!IWindow.init) shared;
 
     /**
      * Sends a mouse scroll event at the given x and y coordinates from within the window's content area.
      * 
+     * You should manually focus/unfocus the desired window to prevent required thread sleeping.
+     * 
+     * Note: This may not actually move the cursor!
+     * 
      * Params:
-     *    x = X coordinate, from within the window's content area (if specified)
-     *    y = Y coordinate, from within the window's content area (if specified)
-     *    amount = The amount to scroll by, postive one amount, negative another direction, use small values
-     *    window = The window to send to, default the current focussed window
+     *    x = X coordinate, from within the window's content area (if specified).
+     *    y = Y coordinate, from within the window's content area (if specified).
+     *    amount = The amount to scroll by, postive one amount, negative another direction, use small values.
+     *    window = The window to send to, default the current focussed window.
+     * 
+     * See_Also:
+     *     focusWindow
      */
     void sendScroll(int x, int y, int amount, managed!IWindow window = managed!IWindow.init) shared;
 
     /**
      * Sends a mouse up/down event at the given x and y coordinates from within the window's content area.
      * 
+     * You should manually focus/unfocus the desired window to prevent required thread sleeping.
+     * 
      * Note: This may not actually move the cursor!
      * 
      * Params:
-     *    x = X coordinate, from within the window's content area (if specified)
-     *    y = Y coordinate, from within the window's content area (if specified)
+     *    x = X coordinate, from within the window's content area (if specified).
+     *    y = Y coordinate, from within the window's content area (if specified).
      *    isDown = is the button press down or up?
-     *    action = Mouse action to send
-     *    window = The window to send to, default the current focussed window
+     *    action = Mouse action to send.
+     *    window = The window to send to, default the current focussed window.
      * 
      * See_Also:
-     *    CursorEventAction
+     *    CursorEventAction, focusWindow
      */
     void sendMouse(int x, int y, bool isDown, CursorEventAction action, managed!IWindow window = managed!IWindow.init) shared;
 
     /**
      * Sends a mouse move event at the given x and y coordinates from within the window's content area.
      * 
+     * You should manually focus/unfocus the desired window to prevent required thread sleeping.
+     * 
      * Note: This may not actually move the cursor!
      * 
      * Params:
-     *    x = X coordinate, from within the window's content area (if specified)
-     *    y = Y coordinate, from within the window's content area (if specified)
-     *    window = The window to send to, default the current focussed window
+     *    x = X coordinate, from within the window's content area (if specified).
+     *    y = Y coordinate, from within the window's content area (if specified).
+     *    window = The window to send to, default the current focussed window.
      * 
      * See_Also:
-     *    CursorEventAction
+     *    CursorEventAction, focusWindow
      */
     void sendMouseMove(int x, int y, managed!IWindow window = managed!IWindow.init) shared;
 
     /**
      * Sends a mouse press (up + down) event at the given x and y coordinates from within the window's content area.
      * 
+     * You should manually focus/unfocus the desired window to prevent required thread sleeping.
+     * 
      * Note: This may not actually move the cursor!
      * 
      * Params:
-     *    x = X coordinate, from within the window's content area (if specified)
-     *    y = Y coordinate, from within the window's content area (if specified)
-     *    action = Mouse action to send
-     *    window = The window to send to, default the current focussed window
+     *    x = X coordinate, from within the window's content area (if specified).
+     *    y = Y coordinate, from within the window's content area (if specified).
+     *    action = Mouse action to send.
+     *    window = The window to send to, default the current focussed window.
      * 
      * See_Also:
-     *    CursorEventAction
+     *    CursorEventAction, focusWindow
      */
     void sendMouseClick(int x, int y, CursorEventAction action, managed!IWindow window = managed!IWindow.init) shared;
 }

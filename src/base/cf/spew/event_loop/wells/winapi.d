@@ -891,6 +891,16 @@ bool translateKeyCall(WPARAM code, LPARAM lParam, out dchar key, out SpecialKey 
             key = isShift ? ':' : ';'; break;
         case VK_OEM_2:
             key = isShift ? '?' : '/'; break;
+        case VK_OEM_3:
+            key = isShift ? '~' : '`'; break;
+        case VK_OEM_4:
+            key = isShift ? '{' : '['; break;
+        case VK_OEM_5:
+            key = isShift ? '|' : '\\'; break;
+        case VK_OEM_6:
+            key = isShift ? '}' : ']'; break;
+        case VK_OEM_7:
+            key = isShift ? '"' : '\''; break;
         case VK_OEM_PLUS:
             key = isShift ? '+' : '='; break;
         case VK_OEM_MINUS:
@@ -899,10 +909,6 @@ bool translateKeyCall(WPARAM code, LPARAM lParam, out dchar key, out SpecialKey 
             key = isShift ? '<' : ','; break;
         case VK_OEM_PERIOD:
             key = isShift ? '>' : '.'; break;
-        case VK_OEM_7:
-            key = isShift ? '"' : '\''; break;
-        case VK_OEM_5:
-            key = isShift ? '|' : '\\'; break;
         case VK_DECIMAL:
             key = '.';
             modifiers |= KeyModifiers.Numlock; break;

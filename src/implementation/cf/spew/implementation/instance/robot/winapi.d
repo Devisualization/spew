@@ -1,34 +1,34 @@
 ﻿module cf.spew.implementation.instance.robot.winapi;
 version(Windows):
-import cf.spew.instance : Management_Robot;
+import cf.spew.implementation.windowing.window.winapi;
 import cf.spew.events.windowing : KeyModifiers, SpecialKey, CursorEventAction;
-import cf.spew.ui.rendering : vec2;
+import cf.spew.instance : Management_Robot;
 import cf.spew.ui.window.defs : IWindow;
+import cf.spew.ui.rendering : vec2;
 import stdx.allocator : IAllocator, theAllocator, make, makeArray, dispose;
 import devisualization.util.core.memory.managed;
-import core.sys.windows.windows : SetActiveWindow, GetActiveWindow, HWND, INPUT, SendInput, INPUT_KEYBOARD,
-    VK_DIVIDE, VK_OEM_2, VK_MULTIPLY, KEYEVENTF_KEYUP, VK_LMENU, VK_RMENU, VK_LCONTROL, VK_RCONTROL,
-    VK_LSHIFT, VK_RSHIFT, VK_CAPITAL, VK_NUMLOCK, VK_LWIN, VK_RWIN, HIWORD, GetKeyState,
-    VK_DECIMAL, VK_SPACE, VK_OEM_PLUS, VK_ADD, VK_SUBTRACT, VK_OEM_MINUS, WORD, KEYEVENTF_UNICODE,
-    VK_OEM_1, VK_OEM_COMMA, VK_OEM_PERIOD, VK_OEM_7, VK_OEM_5, VK_NUMPAD0, VK_F1, VK_ESCAPE, VK_RETURN,
-    VK_BACK, VK_TAB, VK_PRIOR, VK_NEXT, VK_END, VK_HOME, VK_INSERT, VK_DELETE, VK_PAUSE, VK_LEFT, VK_RIGHT,
-    VK_UP, VK_DOWN, VK_SCROLL, INPUT_MOUSE, MOUSEEVENTF_MOVE, MOUSEEVENTF_ABSOLUTE, MOUSEEVENTF_WHEEL,
-    MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP, MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_RIGHTUP, GetWindowLongA,
-    MOUSEEVENTF_MIDDLEDOWN, MOUSEEVENTF_MIDDLEUP, RECT, AdjustWindowRectEx, GetWindowRect, GetMenu,
-    GWL_STYLE, GWL_EXSTYLE, GetCursorPos, POINT, FindWindowW;
+import core.thread : Thread;
+import core.time : seconds, msecs;
+import core.sys.windows.windows : INPUT, VK_LMENU, VK_RMENU, VK_LCONTROL, VK_RCONTROL, VK_LSHIFT, VK_RSHIFT, VK_CAPITAL,
+    VK_NUMLOCK, VK_LWIN, VK_RWIN, POINT, GetCursorPos, SetCursorPos, HWND, GetForegroundWindow, SetForegroundWindow,
+    FindWindowW, INPUT_KEYBOARD, INPUT_MOUSE, WORD, KEYEVENTF_KEYUP, KEYEVENTF_UNICODE, VK_NUMPAD0,
+    VK_OEM_1, VK_OEM_2, VK_OEM_3, VK_OEM_4, VK_OEM_5, VK_OEM_6, VK_OEM_7, VK_OEM_MINUS, VK_OEM_COMMA, VK_OEM_PERIOD,
+    VK_DECIMAL, VK_SPACE, VK_OEM_PLUS, VK_ADD, VK_SUBTRACT, VK_MULTIPLY, VK_DIVIDE, SendInput, VK_F1, VK_ESCAPE,
+    VK_RETURN, VK_BACK, VK_TAB, VK_PRIOR, VK_NEXT, VK_END, VK_HOME, VK_INSERT, VK_DELETE, VK_PAUSE, VK_LEFT, VK_RIGHT,
+    VK_UP, VK_DOWN, VK_SCROLL, RECT, MapWindowPoints, MOUSEEVENTF_WHEEL, MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP,
+    MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_RIGHTUP, MOUSEEVENTF_MIDDLEDOWN, MOUSEEVENTF_MIDDLEUP, HWND_DESKTOP,
+    HIWORD, GetKeyState;
 
 final class RobotInstance_WinAPI : Management_Robot {
-    import cf.spew.implementation.windowing.window.winapi;
-
     @property {
         vec2!int mouseLocation() shared {
             POINT point;
             assert(GetCursorPos(&point));
             return vec2!int(point.x, point.y);
         }
-
+        
         managed!IWindow focusWindow(IAllocator alloc = theAllocator()) shared {
-            HWND active = GetActiveWindow();
+            HWND active = GetForegroundWindow();
             
             if (active is null)
                 return managed!IWindow.init;
@@ -39,27 +39,27 @@ final class RobotInstance_WinAPI : Management_Robot {
         
         void focusWindow(managed!IWindow window) shared {
             if (window.isNull) return;
-            SetActiveWindow(cast(HWND)window.__handle);
+            SetForegroundWindow(cast(HWND)window.__handle);
         }
     }
 
     managed!IWindow findWindow(string title, IAllocator alloc = theAllocator()) shared {
         import std.utf : codeLength, byWchar;
-
+        
         wchar[] title2 = alloc.makeArray!wchar(codeLength!wchar(title) + 1);
         title2[$-1] = 0;
-
+        
         size_t i;
         foreach(c; title.byWchar) {
             title2[i] = c;
             i++;
         }
-
+        
         //
-
+        
         HWND handle = FindWindowW(null, title2.ptr);
         alloc.dispose(title2);
-
+        
         if (handle is null)
             return managed!IWindow.init;
         else {
@@ -68,36 +68,43 @@ final class RobotInstance_WinAPI : Management_Robot {
         }
     }
 
-    void sendKey(dchar key, ushort modifiers, managed!IWindow window = managed!IWindow.init) shared {
-        enum Atoa = 'a' - 'A';
+    void sendKey(dchar key, ushort modifiersToDown, managed!IWindow window = managed!IWindow.init) shared {
+        import std.utf : encode;
 
         uint count;
         INPUT[22] inputs;
-        ushort inverseModifiers;
-
+        ushort modifiersToUp, currentState;
+        
         foreach(i; 0 .. 22) {
-            inputs[i] = INPUT(INPUT_KEYBOARD);
+            inputs[i].type = INPUT_KEYBOARD;
+            inputs[i].ki.wScan = 0;
+            inputs[i].ki.dwFlags = 0;
+            inputs[i].ki.time = 0;
+            inputs[i].ki.dwExtraInfo = 0;
         }
 
-        getKeyModifiers(key, modifiers, inverseModifiers);
-        count += setKeyModifiersStart(inputs[], modifiers, inverseModifiers);
-        
+        getKeyModifiers(key, modifiersToDown, modifiersToUp, currentState);
+        count += addKeyModifiersStart(inputs[count .. $], modifiersToDown, modifiersToUp, currentState);
+
+        //
+
         switch(key) {
-           case '0': .. case '9':
-                if ((modifiers & KeyModifiers.Numlock) == KeyModifiers.Numlock)
+            case '0': .. case '9':
+                if ((modifiersToDown & KeyModifiers.Numlock) == KeyModifiers.Numlock)
                     inputs[count].ki.wVk = cast(WORD)((cast(uint)key - cast(uint)'0') + VK_NUMPAD0);
                 else
                     inputs[count].ki.wVk = cast(WORD)key;
-
+                
                 inputs[count + 1].ki.wVk = inputs[count].ki.wVk;
                 inputs[count + 1].ki.dwFlags = KEYEVENTF_KEYUP;
+
                 count += 2;
                 break;
 
-            case 'A': .. case 'Z':
-                key = cast(dchar)((cast(uint)key) - Atoa);
-                goto case 'a';
             case 'a': .. case 'z':
+                key = cast(dchar)((cast(uint)key) - Atoa);
+                goto case 'A';
+            case 'A': .. case 'Z':
                 inputs[count].ki.wVk = cast(ushort)key;
                 inputs[count + 1].ki.wVk = inputs[count].ki.wVk;
                 inputs[count + 1].ki.dwFlags = KEYEVENTF_KEYUP;
@@ -112,31 +119,17 @@ final class RobotInstance_WinAPI : Management_Robot {
                 count += 2;
                 break;
 
-            case '_':
-                inputs[count].ki.wVk = VK_OEM_MINUS;
+            case '~':
+            case '`':
+                inputs[count].ki.wVk = VK_OEM_3;
                 inputs[count + 1].ki.wVk = inputs[count].ki.wVk;
                 inputs[count + 1].ki.dwFlags = KEYEVENTF_KEYUP;
                 count += 2;
                 break;
 
-            case '<':
-            case ',':
-                inputs[count].ki.wVk = VK_OEM_COMMA;
-                inputs[count + 1].ki.wVk = inputs[count].ki.wVk;
-                inputs[count + 1].ki.dwFlags = KEYEVENTF_KEYUP;
-                count += 2;
-                break;
-
-            case '>':
-                inputs[count].ki.wVk = VK_OEM_PERIOD;
-                inputs[count + 1].ki.wVk = inputs[count].ki.wVk;
-                inputs[count + 1].ki.dwFlags = KEYEVENTF_KEYUP;
-                count += 2;
-                break;
-
-            case '"':
-            case '\'':
-                inputs[count].ki.wVk = VK_OEM_7;
+            case '{':
+            case '[':
+                inputs[count].ki.wVk = VK_OEM_4;
                 inputs[count + 1].ki.wVk = inputs[count].ki.wVk;
                 inputs[count + 1].ki.dwFlags = KEYEVENTF_KEYUP;
                 count += 2;
@@ -150,8 +143,46 @@ final class RobotInstance_WinAPI : Management_Robot {
                 count += 2;
                 break;
 
+            case '}':
+            case ']':
+                inputs[count].ki.wVk = VK_OEM_6;
+                inputs[count + 1].ki.wVk = inputs[count].ki.wVk;
+                inputs[count + 1].ki.dwFlags = KEYEVENTF_KEYUP;
+                count += 2;
+                break;
+
+            case '"':
+            case '\'':
+                inputs[count].ki.wVk = VK_OEM_7;
+                inputs[count + 1].ki.wVk = inputs[count].ki.wVk;
+                inputs[count + 1].ki.dwFlags = KEYEVENTF_KEYUP;
+                count += 2;
+                break;
+                
+            case '_':
+                inputs[count].ki.wVk = VK_OEM_MINUS;
+                inputs[count + 1].ki.wVk = inputs[count].ki.wVk;
+                inputs[count + 1].ki.dwFlags = KEYEVENTF_KEYUP;
+                count += 2;
+                break;
+                
+            case '<':
+            case ',':
+                inputs[count].ki.wVk = VK_OEM_COMMA;
+                inputs[count + 1].ki.wVk = inputs[count].ki.wVk;
+                inputs[count + 1].ki.dwFlags = KEYEVENTF_KEYUP;
+                count += 2;
+                break;
+                
+            case '>':
+                inputs[count].ki.wVk = VK_OEM_PERIOD;
+                inputs[count + 1].ki.wVk = inputs[count].ki.wVk;
+                inputs[count + 1].ki.dwFlags = KEYEVENTF_KEYUP;
+                count += 2;
+                break;
+                
             case '.':
-                if ((modifiers & KeyModifiers.Numlock) == KeyModifiers.Numlock) {
+                if ((modifiersToDown & KeyModifiers.Numlock) == KeyModifiers.Numlock) {
                     inputs[count].ki.wVk = VK_DECIMAL;
                 } else {
                     inputs[count].ki.wVk = VK_OEM_PERIOD;
@@ -161,35 +192,35 @@ final class RobotInstance_WinAPI : Management_Robot {
                 inputs[count + 1].ki.dwFlags = KEYEVENTF_KEYUP;
                 count += 2;
                 break;
-
+                
             case ' ':
                 inputs[count].ki.wVk = VK_SPACE;
                 inputs[count + 1].ki.wVk = inputs[count].ki.wVk;
                 inputs[count + 1].ki.dwFlags = KEYEVENTF_KEYUP;
                 count += 2;
                 break;
-            
+                
             case '=':
                 inputs[count].ki.wVk = VK_OEM_PLUS;
                 inputs[count + 1].ki.wVk = inputs[count].ki.wVk;
                 inputs[count + 1].ki.dwFlags = KEYEVENTF_KEYUP;
                 count += 2;
                 break;
-
+                
             case '+':
-                if ((modifiers & KeyModifiers.Numlock) == KeyModifiers.Numlock) {
+                if ((modifiersToDown & KeyModifiers.Numlock) == KeyModifiers.Numlock) {
                     inputs[count].ki.wVk = VK_ADD;
                 } else {
                     inputs[count].ki.wVk = VK_OEM_PLUS;
                 }
-
+                
                 inputs[count + 1].ki.wVk = inputs[count].ki.wVk;
                 inputs[count + 1].ki.dwFlags = KEYEVENTF_KEYUP;
                 count += 2;
                 break;
                 
             case '-':
-                if ((modifiers & KeyModifiers.Numlock) == KeyModifiers.Numlock) {
+                if ((modifiersToDown & KeyModifiers.Numlock) == KeyModifiers.Numlock) {
                     inputs[count].ki.wVk = VK_SUBTRACT;
                 } else
                     inputs[count].ki.wVk = VK_OEM_MINUS;
@@ -200,7 +231,7 @@ final class RobotInstance_WinAPI : Management_Robot {
                 break;
                 
             case '*':
-                if ((modifiers & KeyModifiers.Numlock) == KeyModifiers.Numlock) {
+                if ((modifiersToDown & KeyModifiers.Numlock) == KeyModifiers.Numlock) {
                     inputs[count].ki.wVk = VK_MULTIPLY;
                     inputs[count + 1].ki.wVk = inputs[count].ki.wVk;
                     inputs[count + 1].ki.dwFlags = KEYEVENTF_KEYUP;
@@ -211,9 +242,16 @@ final class RobotInstance_WinAPI : Management_Robot {
                     count++;
                 }
                 break;
-                
+
+            case '?':
+                inputs[count].ki.wVk = VK_OEM_2;
+                inputs[count + 1].ki.wVk = inputs[count].ki.wVk;
+                inputs[count + 1].ki.dwFlags = KEYEVENTF_KEYUP;
+                count += 2;
+                break;
+
             case '/':
-                if ((modifiers & KeyModifiers.Numlock) == KeyModifiers.Numlock) {
+                if ((modifiersToDown & KeyModifiers.Numlock) == KeyModifiers.Numlock) {
                     inputs[count].ki.wVk = VK_DIVIDE;
                 } else
                     inputs[count].ki.wVk = VK_OEM_2;
@@ -222,37 +260,42 @@ final class RobotInstance_WinAPI : Management_Robot {
                 inputs[count + 1].ki.dwFlags = KEYEVENTF_KEYUP;
                 count += 2;
                 break;
-                
+
             default:
-                import std.utf : encode;
                 wchar[2] temp;
                 size_t count2 = temp.encode(key);
-
+                
                 if (count2 > 0) {
                     inputs[count].ki.wScan = cast(WORD)temp[0];
                     inputs[count].ki.dwFlags = KEYEVENTF_UNICODE;
                     count++;
                 }
-
+                
                 if (count2 == 2) {
                     inputs[count].ki.wScan = cast(WORD)temp[1];
                     inputs[count].ki.dwFlags = KEYEVENTF_UNICODE;
                     count++;
                 }
-
                 break;
         }
-        
-        count += setKeyModifiersEnd(inputs[count .. $], modifiers, inverseModifiers);
-        
+
+        //
+
+        count += addKeyModifiersEnd(inputs[count .. $], modifiersToDown, modifiersToUp, currentState);
+
         if (window.isNull) {
             SendInput(count, inputs.ptr, INPUT.sizeof);
         } else {
-            HWND previous = SetActiveWindow(cast(HWND)window.__handle);
-            SendInput(count, inputs.ptr, INPUT.sizeof);
-            
-            if (previous !is null)
-                SetActiveWindow(previous);
+            HWND previous = GetForegroundWindow();
+
+            if (previous !is cast(HWND)window.__handle) {
+                SetForegroundWindow(cast(HWND)window.__handle);
+                SendInput(count, inputs.ptr, INPUT.sizeof);
+
+                Thread.sleep(750.msecs);
+                SetForegroundWindow(previous);
+            } else
+                SendInput(count, inputs.ptr, INPUT.sizeof);
         }
     }
 
@@ -261,74 +304,78 @@ final class RobotInstance_WinAPI : Management_Robot {
         INPUT[2] inputs;
         
         foreach(i; 0 .. 2) {
-            inputs[i] = INPUT(INPUT_KEYBOARD);
+            inputs[i].type = INPUT_KEYBOARD;
+            inputs[i].ki.wScan = 0;
+            inputs[i].ki.dwFlags = 0;
+            inputs[i].ki.time = 0;
+            inputs[i].ki.dwExtraInfo = 0;
         }
-
+        
         switch(key) {
             case SpecialKey.F1: .. case SpecialKey.F24:
                 inputs[count].ki.wVk = cast(ushort)(VK_F1 + (key - SpecialKey.F1));
                 break;
-
+                
             case SpecialKey.Escape:
                 inputs[count].ki.wVk = VK_ESCAPE;
                 break;
-
+                
             case SpecialKey.Enter:
                 inputs[count].ki.wVk = VK_RETURN;
                 break;
-
+                
             case SpecialKey.Backspace:
                 inputs[count].ki.wVk = VK_BACK;
                 break;
-
+                
             case SpecialKey.Tab:
                 inputs[count].ki.wVk = VK_TAB;
                 break;
-
+                
             case SpecialKey.PageUp:
                 inputs[count].ki.wVk = VK_PRIOR;
                 break;
-
+                
             case SpecialKey.PageDown:
                 inputs[count].ki.wVk = VK_NEXT;
                 break;
-
+                
             case SpecialKey.End:
                 inputs[count].ki.wVk = VK_END;
                 break;
-
+                
             case SpecialKey.Home:
                 inputs[count].ki.wVk = VK_HOME;
                 break;
-
+                
             case SpecialKey.Insert:
                 inputs[count].ki.wVk = VK_INSERT;
                 break;
-
+                
             case SpecialKey.Delete:
                 inputs[count].ki.wVk = VK_DELETE;
                 break;
-
+                
             case SpecialKey.Pause:
                 inputs[count].ki.wVk = VK_PAUSE;
                 break;
-
+                
             case SpecialKey.LeftArrow:
                 inputs[count].ki.wVk = VK_LEFT;
                 break;
-
+                
             case SpecialKey.RightArrow:
                 inputs[count].ki.wVk = VK_RIGHT;
                 break;
-
+                
             case SpecialKey.UpArrow:
                 inputs[count].ki.wVk = VK_UP;
                 break;
-
+                
             case SpecialKey.DownArrow:
                 inputs[count].ki.wVk = VK_DOWN;
                 break;
-
+                
             case SpecialKey.ScrollLock:
                 inputs[count].ki.wVk = VK_SCROLL;
                 break;
@@ -336,52 +383,77 @@ final class RobotInstance_WinAPI : Management_Robot {
             default:
                 return;
         }
-
+        
         inputs[count + 1].ki.wVk = inputs[count].ki.wVk;
         inputs[count + 1].ki.dwFlags = KEYEVENTF_KEYUP;
         count += 2;
-
+    
         if (window.isNull) {
             SendInput(count, inputs.ptr, INPUT.sizeof);
         } else {
-            HWND previous = SetActiveWindow(cast(HWND)window.__handle);
-            SendInput(count, inputs.ptr, INPUT.sizeof);
+            HWND previous = GetForegroundWindow();
             
-            if (previous !is null)
-                SetActiveWindow(previous);
+            if (previous !is cast(HWND)window.__handle) {
+                SetForegroundWindow(cast(HWND)window.__handle);
+                SendInput(count, inputs.ptr, INPUT.sizeof);
+                
+                Thread.sleep(750.msecs);
+                SetForegroundWindow(previous);
+            } else
+                SendInput(count, inputs.ptr, INPUT.sizeof);
         }
     }
 
     void sendScroll(int x, int y, int amount, managed!IWindow window = managed!IWindow.init) shared {
-        INPUT input = INPUT(INPUT_MOUSE);
-
         if (!window.isNull) {
-            adjustCoordinateToWindowContentArea(cast(HWND)window.__handle, x, y);
+            RECT rect;
+            rect.top = x;
+            rect.bottom = y;
+            
+            MapWindowPoints(cast(HWND)window.__handle, HWND_DESKTOP, cast(POINT*)&rect, 2);
+            
+            x = rect.left;
+            y = rect.top;
         }
-
-        input.mi.dx = x;
-        input.mi.dy = y;
+        
+        SetCursorPos(x, y);
+        
+        INPUT input = INPUT(INPUT_MOUSE);
         input.mi.mouseData = amount * 120;
-        input.mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_WHEEL;
-
+        input.mi.dwFlags = MOUSEEVENTF_WHEEL;
+        
         if (window.isNull) {
             SendInput(1, &input, INPUT.sizeof);
         } else {
-            HWND previous = SetActiveWindow(cast(HWND)window.__handle);
-            SendInput(1, &input, INPUT.sizeof);
+            HWND previous = GetForegroundWindow();
             
-            if (previous !is null)
-                SetActiveWindow(previous);
+            if (previous !is cast(HWND)window.__handle) {
+                SetForegroundWindow(cast(HWND)window.__handle);
+                SendInput(1, &input, INPUT.sizeof);
+                
+                Thread.sleep(750.msecs);
+                SetForegroundWindow(previous);
+            } else
+                SendInput(1, &input, INPUT.sizeof);
         }
     }
 
     void sendMouse(int x, int y, bool isDown, CursorEventAction action, managed!IWindow window = managed!IWindow.init) shared {
-        INPUT input = INPUT(INPUT_MOUSE);
-
         if (!window.isNull) {
-            adjustCoordinateToWindowContentArea(cast(HWND)window.__handle, x, y);
+            RECT rect;
+            rect.top = x;
+            rect.bottom = y;
+            
+            MapWindowPoints(cast(HWND)window.__handle, HWND_DESKTOP, cast(POINT*)&rect, 2);
+            
+            x = rect.left;
+            y = rect.top;
         }
         
+        SetCursorPos(x, y);
+        
+        INPUT input = INPUT(INPUT_MOUSE);
+
         final switch(action) {
             case CursorEventAction.Select:
                 if (isDown)
@@ -405,290 +477,171 @@ final class RobotInstance_WinAPI : Management_Robot {
                 break;
         }
         
-        input.mi.dx = x;
-        input.mi.dy = y;
-        input.mi.dwFlags |= MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
-        
         if (window.isNull) {
             SendInput(1, &input, INPUT.sizeof);
         } else {
-            HWND previous = SetActiveWindow(cast(HWND)window.__handle);
-            SendInput(1, &input, INPUT.sizeof);
+            HWND previous = GetForegroundWindow();
             
-            if (previous !is null)
-                SetActiveWindow(previous);
+            if (previous !is cast(HWND)window.__handle) {
+                SetForegroundWindow(cast(HWND)window.__handle);
+                SendInput(1, &input, INPUT.sizeof);
+                
+                Thread.sleep(750.msecs);
+                SetForegroundWindow(previous);
+            } else
+                SendInput(1, &input, INPUT.sizeof);
         }
     }
 
     void sendMouseMove(int x, int y, managed!IWindow window = managed!IWindow.init) shared {
-        INPUT input = INPUT(INPUT_MOUSE);
-        
         if (!window.isNull) {
-            adjustCoordinateToWindowContentArea(cast(HWND)window.__handle, x, y);
-        }
-
-        input.mi.dx = x;
-        input.mi.dy = y;
-        input.mi.dwFlags |= MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
-
-        if (window.isNull) {
-            SendInput(1, &input, INPUT.sizeof);
-        } else {
-            HWND previous = SetActiveWindow(cast(HWND)window.__handle);
-            SendInput(1, &input, INPUT.sizeof);
+            RECT rect;
+            rect.top = x;
+            rect.bottom = y;
             
-            if (previous !is null)
-                SetActiveWindow(previous);
+            MapWindowPoints(cast(HWND)window.__handle, HWND_DESKTOP, cast(POINT*)&rect, 2);
+            
+            x = rect.left;
+            y = rect.top;
         }
+        
+        SetCursorPos(x, y);
     }
 
     void sendMouseClick(int x, int y, CursorEventAction action, managed!IWindow window = managed!IWindow.init) shared {
-        uint count;
-        INPUT[2] inputs;
-        
-        foreach(i; 0 .. 2) {
-            inputs[i] = INPUT(INPUT_MOUSE);
-        }
-
         if (!window.isNull) {
-            adjustCoordinateToWindowContentArea(cast(HWND)window.__handle, x, y);
+            RECT rect;
+            rect.top = x;
+            rect.bottom = y;
+            
+            MapWindowPoints(cast(HWND)window.__handle, HWND_DESKTOP, cast(POINT*)&rect, 2);
+            
+            x = rect.left;
+            y = rect.top;
         }
-
+        
+        SetCursorPos(x, y);
+        
+        INPUT input = INPUT(INPUT_MOUSE);
+        
         final switch(action) {
             case CursorEventAction.Select:
-                inputs[count].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
-                inputs[count+1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+                input.mi.dwFlags = MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP;
                 break;
-
+                
             case CursorEventAction.Alter:
-                inputs[count].mi.dwFlags = MOUSEEVENTF_RIGHTDOWN;
-                inputs[count+1].mi.dwFlags = MOUSEEVENTF_RIGHTUP;
+                input.mi.dwFlags = MOUSEEVENTF_RIGHTDOWN | MOUSEEVENTF_RIGHTUP;
                 break;
-
+                
             case CursorEventAction.ViewChange:
-                inputs[count].mi.dwFlags = MOUSEEVENTF_MIDDLEDOWN;
-                inputs[count+1].mi.dwFlags = MOUSEEVENTF_MIDDLEUP;
+                input.mi.dwFlags = MOUSEEVENTF_MIDDLEDOWN | MOUSEEVENTF_MIDDLEUP;
                 break;
         }
-
-        inputs[count].mi.dx = x;
-        inputs[count].mi.dy = y;
-        inputs[count++].mi.dwFlags |= MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
-
-        inputs[count].mi.dx = x;
-        inputs[count].mi.dy = y;
-        inputs[count++].mi.dwFlags |= MOUSEEVENTF_ABSOLUTE;
-
+        
         if (window.isNull) {
-            SendInput(count, inputs.ptr, INPUT.sizeof);
+            SendInput(1, &input, INPUT.sizeof);
         } else {
-            HWND previous = SetActiveWindow(cast(HWND)window.__handle);
-            SendInput(count, inputs.ptr, INPUT.sizeof);
+            HWND previous = GetForegroundWindow();
             
-            if (previous !is null)
-                SetActiveWindow(previous);
+            if (previous !is cast(HWND)window.__handle) {
+                SetForegroundWindow(cast(HWND)window.__handle);
+                SendInput(1, &input, INPUT.sizeof);
+                
+                Thread.sleep(750.msecs);
+                SetForegroundWindow(previous);
+            } else
+                SendInput(1, &input, INPUT.sizeof);
         }
     }
 }
 
+private:
 
-private {
-    void adjustCoordinateToWindowContentArea(HWND hwnd, ref int x, ref int y) {
-        RECT rect;
-        rect.top = x;
-        rect.bottom = y;
+enum Atoa = 'a' - 'A';
+enum AllKeyModifiers = [KeyModifiers.LAlt, KeyModifiers.RAlt, KeyModifiers.LControl, KeyModifiers.RControl,
+    KeyModifiers.LShift, KeyModifiers.RShift, KeyModifiers.Capslock, KeyModifiers.Numlock,
+    KeyModifiers.LSuper, KeyModifiers.RSuper];
+enum AllVirtualKeyModifiers = [VK_LMENU, VK_RMENU, VK_LCONTROL, VK_RCONTROL, VK_LSHIFT,
+    VK_RSHIFT, VK_CAPITAL, VK_NUMLOCK, VK_LWIN, VK_RWIN];
 
-        // step 1, adjust our offsets so they go /into/ the right place of the content area
-        if (AdjustWindowRectEx(&rect, GetWindowLongA(hwnd, GWL_STYLE), GetMenu(hwnd) !is null, GetWindowLongA(hwnd, GWL_EXSTYLE))) {
-            x = rect.left;
-            y = rect.top;
-        }
+void getKeyModifiers(dchar key, ref ushort modifiersToDown, ref ushort modifiersToUp, out ushort currentState) {
+    // modify what to set down and set what needs to go up
 
-        // step 2, now add the window coordinates on to make them absolute
+    switch(key) {
+        case '{':
+        case '}':
+        case '?':
+        case '~':
+        case '*':
+        case'|':
+        case '>':
+        case '<':
+        case '_':
+        case '"':
+        case ':':
+        case 'A': .. case 'Z':
+            modifiersToDown |= KeyModifiers.LShift | KeyModifiers.RShift;
+            break;
 
-        GetWindowRect(hwnd, &rect);
-        x += rect.left;
-        y += rect.top;
+        case'[':
+        case ']':
+        case '`':
+        case '=':
+        case '\\':
+        case '.':
+        case '\'':
+        case ',':
+        case ';':
+        case '0': .. case '9':
+        case 'a': .. case 'z':
+            modifiersToDown &= ~(KeyModifiers.LShift | KeyModifiers.RShift);
+            modifiersToUp |= KeyModifiers.LShift | KeyModifiers.RShift;
+            break;
+            
+        default:
+            break;
     }
 
-    void getKeyModifiers(dchar key, ref ushort modifiers, ref ushort inverseModifiers) {
-        switch(key) {
-            case '*':
-            case'|':
-            case '>':
-            case '<':
-            case '_':
-            case ':':
-            case 'A': .. case 'Z':
-                modifiers |= KeyModifiers.LShift;
-                break;
-               
-            case '=':
-            case '\\':
-            case '.':
-            case ',':
-            case ';':
-            case 'a': .. case 'z':
-                modifiers &= ~(KeyModifiers.LShift | KeyModifiers.RShift);
-                inverseModifiers |= KeyModifiers.LShift;
-                inverseModifiers |= KeyModifiers.RShift;
-                break;
+    // now grab the current state
 
-            default:
-                break;
+    foreach(i, KM; AllKeyModifiers) {
+        if (HIWORD(GetKeyState(AllVirtualKeyModifiers[i])) != 0)
+            currentState |= KM;
+    }
+}
+
+uint addKeyModifiersStart(INPUT[] inputs, ushort modifiersToDown, ushort modifiersToUp, ushort currentState) {
+    uint count;
+
+    // we should only press a key down if it already isn't pressed
+    // nor should we unpress a key if it is already not pressed
+
+    foreach(i, KM; AllKeyModifiers) {
+        if ((modifiersToDown & KM) == KM && (currentState & KM) != KM)
+            inputs[count++].ki.wVk = cast(ushort)AllVirtualKeyModifiers[i];
+        else if ((modifiersToUp & KM) == KM && (currentState & KM) == KM) {
+            inputs[count].ki.wVk = cast(ushort)AllVirtualKeyModifiers[i];
+            inputs[count++].ki.dwFlags = KEYEVENTF_KEYUP;
         }
     }
+    
+    return count;
+}
 
-    uint setKeyModifiersStart(INPUT[] inputs, ushort modifiers, ushort inverseModifiers) {
-        uint count;
+uint addKeyModifiersEnd(INPUT[] inputs, ushort modifiersToDown, ushort modifiersToUp, ushort currentState) {
+    uint count;
 
-        if ((modifiers & KeyModifiers.LAlt) == KeyModifiers.LAlt)
-            inputs[count++].ki.wVk = VK_LMENU;
-        else if ((inverseModifiers & KeyModifiers.LAlt) == KeyModifiers.LAlt) {
-            inputs[count].ki.wVk = VK_LMENU;
+    // we should only unpress a key if we pressed it
+    // nor should we press a key if it is already not pressed
+
+    foreach(i, KM; AllKeyModifiers) {
+        if ((modifiersToUp & KM) == KM && (currentState & KM) == KM)
+            inputs[count++].ki.wVk = cast(ushort)AllVirtualKeyModifiers[i];
+        else if ((modifiersToDown & KM) == KM && (currentState & KM) != KM) {
+            inputs[count].ki.wVk = cast(ushort)AllVirtualKeyModifiers[i];
             inputs[count++].ki.dwFlags = KEYEVENTF_KEYUP;
         }
-
-        if ((modifiers & KeyModifiers.RAlt) == KeyModifiers.RAlt)
-            inputs[count++].ki.wVk = VK_RMENU;
-        else if ((inverseModifiers & KeyModifiers.RAlt) == KeyModifiers.RAlt) {
-            inputs[count].ki.wVk = VK_RMENU;
-            inputs[count++].ki.dwFlags = KEYEVENTF_KEYUP;
-        }
-
-        if ((modifiers & KeyModifiers.LControl) == KeyModifiers.LControl)
-            inputs[count++].ki.wVk = VK_LCONTROL;
-        else if ((inverseModifiers & KeyModifiers.LControl) == KeyModifiers.LControl) {
-            inputs[count].ki.wVk = VK_LCONTROL;
-            inputs[count++].ki.dwFlags = KEYEVENTF_KEYUP;
-        }
-
-        if ((modifiers & KeyModifiers.RControl) == KeyModifiers.RControl)
-            inputs[count++].ki.wVk = VK_RCONTROL;
-        else if ((inverseModifiers & KeyModifiers.RControl) == KeyModifiers.RControl) {
-            inputs[count].ki.wVk = VK_RCONTROL;
-            inputs[count++].ki.dwFlags = KEYEVENTF_KEYUP;
-        }
-
-        if ((modifiers & KeyModifiers.LShift) == KeyModifiers.LShift)
-            inputs[count++].ki.wVk = VK_LSHIFT;
-        else if ((inverseModifiers & KeyModifiers.LShift) == KeyModifiers.LShift) {
-            inputs[count].ki.wVk = VK_LSHIFT;
-            inputs[count++].ki.dwFlags = KEYEVENTF_KEYUP;
-        }
-
-        if ((modifiers & KeyModifiers.RShift) == KeyModifiers.RShift)
-            inputs[count++].ki.wVk = VK_RSHIFT;
-        else if ((inverseModifiers & KeyModifiers.RShift) == KeyModifiers.RShift) {
-            inputs[count].ki.wVk = VK_RSHIFT;
-            inputs[count++].ki.dwFlags = KEYEVENTF_KEYUP;
-        }
-
-        if ((modifiers & KeyModifiers.Capslock) == KeyModifiers.Capslock)
-            inputs[count++].ki.wVk = VK_CAPITAL;
-        else if ((inverseModifiers & KeyModifiers.Capslock) == KeyModifiers.Capslock) {
-            inputs[count].ki.wVk = VK_CAPITAL;
-            inputs[count++].ki.dwFlags = KEYEVENTF_KEYUP;
-        }
-
-        if ((modifiers & KeyModifiers.Numlock) == KeyModifiers.Numlock)
-            inputs[count++].ki.wVk = VK_NUMLOCK;
-        else if ((inverseModifiers & KeyModifiers.Numlock) == KeyModifiers.Numlock) {
-            inputs[count].ki.wVk = VK_NUMLOCK;
-            inputs[count++].ki.dwFlags = KEYEVENTF_KEYUP;
-        }
-
-        if ((modifiers & KeyModifiers.LSuper) == KeyModifiers.LSuper)
-            inputs[count++].ki.wVk = VK_LWIN;
-        else if ((inverseModifiers & KeyModifiers.LSuper) == KeyModifiers.LSuper) {
-            inputs[count].ki.wVk = VK_LWIN;
-            inputs[count++].ki.dwFlags = KEYEVENTF_KEYUP;
-        }
-
-        if ((modifiers & KeyModifiers.RSuper) == KeyModifiers.RSuper)
-            inputs[count++].ki.wVk = VK_RWIN;
-        else if ((inverseModifiers & KeyModifiers.RSuper) == KeyModifiers.RSuper) {
-            inputs[count].ki.wVk = VK_RWIN;
-            inputs[count++].ki.dwFlags = KEYEVENTF_KEYUP;
-        }
-
-        return count;
     }
-
-    uint setKeyModifiersEnd(INPUT[] inputs, ushort modifiers, ushort inverseModifiers) {
-        uint count;
-        
-        if ((inverseModifiers & KeyModifiers.LAlt) == KeyModifiers.LAlt && HIWORD(GetKeyState(VK_LMENU)) == 0)
-            inputs[count++].ki.wVk = VK_LMENU;
-        else if ((modifiers & KeyModifiers.LAlt) == KeyModifiers.LAlt) {
-            inputs[count].ki.wVk = VK_LMENU;
-            inputs[count++].ki.dwFlags = KEYEVENTF_KEYUP;
-        }
-        
-        if ((inverseModifiers & KeyModifiers.RAlt) == KeyModifiers.RAlt && HIWORD(GetKeyState(VK_RMENU)) == 0)
-            inputs[count++].ki.wVk = VK_RMENU;
-        else if ((modifiers & KeyModifiers.RAlt) == KeyModifiers.RAlt && HIWORD(GetKeyState(VK_RMENU)) != 0) {
-            inputs[count].ki.wVk = VK_RMENU;
-            inputs[count++].ki.dwFlags = KEYEVENTF_KEYUP;
-        }
-        
-        if ((inverseModifiers & KeyModifiers.LControl) == KeyModifiers.LControl && HIWORD(GetKeyState(VK_LCONTROL)) == 0)
-            inputs[count++].ki.wVk = VK_LCONTROL;
-        else if ((modifiers & KeyModifiers.LControl) == KeyModifiers.LControl && HIWORD(GetKeyState(VK_LCONTROL)) != 0) {
-            inputs[count].ki.wVk = VK_LCONTROL;
-            inputs[count++].ki.dwFlags = KEYEVENTF_KEYUP;
-        }
-        
-        if ((inverseModifiers & KeyModifiers.RControl) == KeyModifiers.RControl && HIWORD(GetKeyState(VK_RCONTROL)) == 0)
-            inputs[count++].ki.wVk = VK_RCONTROL;
-        else if ((modifiers & KeyModifiers.RControl) == KeyModifiers.RControl && HIWORD(GetKeyState(VK_RCONTROL)) != 0) {
-            inputs[count].ki.wVk = VK_RCONTROL;
-            inputs[count++].ki.dwFlags = KEYEVENTF_KEYUP;
-        }
-        
-        if ((inverseModifiers & KeyModifiers.LShift) == KeyModifiers.LShift && HIWORD(GetKeyState(VK_LSHIFT)) == 0)
-            inputs[count++].ki.wVk = VK_LSHIFT;
-        else if ((modifiers & KeyModifiers.LShift) == KeyModifiers.LShift && HIWORD(GetKeyState(VK_LSHIFT)) != 0) {
-            inputs[count].ki.wVk = VK_LSHIFT;
-            inputs[count++].ki.dwFlags = KEYEVENTF_KEYUP;
-        }
-        
-        if ((inverseModifiers & KeyModifiers.RShift) == KeyModifiers.RShift && HIWORD(GetKeyState(VK_RSHIFT)) == 0)
-            inputs[count++].ki.wVk = VK_RSHIFT;
-        else if ((modifiers & KeyModifiers.RShift) == KeyModifiers.RShift && HIWORD(GetKeyState(VK_RSHIFT)) != 0) {
-            inputs[count].ki.wVk = VK_RSHIFT;
-            inputs[count++].ki.dwFlags = KEYEVENTF_KEYUP;
-        }
-        
-        if ((inverseModifiers & KeyModifiers.Capslock) == KeyModifiers.Capslock && HIWORD(GetKeyState(VK_CAPITAL)) == 0)
-            inputs[count++].ki.wVk = VK_CAPITAL;
-        else if ((modifiers & KeyModifiers.Capslock) == KeyModifiers.Capslock && HIWORD(GetKeyState(VK_CAPITAL)) != 0) {
-            inputs[count].ki.wVk = VK_CAPITAL;
-            inputs[count++].ki.dwFlags = KEYEVENTF_KEYUP;
-        }
-        
-        if ((inverseModifiers & KeyModifiers.Numlock) == KeyModifiers.Numlock && HIWORD(GetKeyState(VK_NUMLOCK)) == 0)
-            inputs[count++].ki.wVk = VK_NUMLOCK;
-        else if ((modifiers & KeyModifiers.Numlock) == KeyModifiers.Numlock && HIWORD(GetKeyState(VK_NUMLOCK)) != 0) {
-            inputs[count].ki.wVk = VK_NUMLOCK;
-            inputs[count++].ki.dwFlags = KEYEVENTF_KEYUP;
-        }
-        
-        if ((inverseModifiers & KeyModifiers.LSuper) == KeyModifiers.LSuper && HIWORD(GetKeyState(VK_LWIN)) == 0)
-            inputs[count++].ki.wVk = VK_LWIN;
-        else if ((modifiers & KeyModifiers.LSuper) == KeyModifiers.LSuper && HIWORD(GetKeyState(VK_LWIN)) != 0) {
-            inputs[count].ki.wVk = VK_LWIN;
-            inputs[count++].ki.dwFlags = KEYEVENTF_KEYUP;
-        }
-        
-        if ((inverseModifiers & KeyModifiers.RSuper) == KeyModifiers.RSuper && HIWORD(GetKeyState(VK_RWIN)) == 0)
-            inputs[count++].ki.wVk = VK_RWIN;
-        else if ((modifiers & KeyModifiers.RSuper) == KeyModifiers.RSuper && HIWORD(GetKeyState(VK_RWIN)) != 0) {
-            inputs[count].ki.wVk = VK_RWIN;
-            inputs[count++].ki.dwFlags = KEYEVENTF_KEYUP;
-        }
-        
-        return count;
-    }
-
+    
+    return count;
 }
