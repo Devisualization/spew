@@ -71,6 +71,7 @@ Warning: Windows 64bit for dmd is currently bugged when using the diagnostic cod
     - [x] Contexts:
        - [x] VRAM
        - [x] OpenGL
+    - [ ] Robot
   - [x] WinAPI
     - [x] Core
     - [x] Features:
@@ -84,6 +85,7 @@ Warning: Windows 64bit for dmd is currently bugged when using the diagnostic cod
     - [x] Contexts:
        - [x] VRAM
        - [x] OpenGL
+    - [x] Robot
   - [ ] Cocoa
     - [ ] Core
     - [ ] Features:
@@ -97,6 +99,7 @@ Warning: Windows 64bit for dmd is currently bugged when using the diagnostic cod
     - [ ] Contexts:
        - [ ] VRAM
        - [ ] OpenGL
+    - [ ] Robot
 
 Warning:
 - For X11 under e.g. KDE you won't get a notification window support. You must create an external [config](https://forum.kde.org/viewtopic.php?f=305&t=142838) file to make it appear.
