@@ -83,7 +83,7 @@ final class OpenGLContextImpl_WinAPI : OpenGLContextImpl {
                 0, 0, 0, WinAPI_Depth, WinAPI_Stencil, WinAPI_AntiAlias,
                 PFD_MAIN_PLANE, 0, 0, 0, 0);
 
-        if (callbacks.loadSymbol !is null && (wglCreateContext is null)) {
+        if (callbacks.loadSymbol !is null && (wglCreateContext is null || wglMakeCurrent is null || wglDeleteContext is null)) {
             wglCreateContext = cast(typeof(wglCreateContext))callbacks.loadSymbol(
                     "wglCreateContext");
             wglMakeCurrent = cast(typeof(wglMakeCurrent))callbacks.loadSymbol("wglMakeCurrent");
@@ -92,7 +92,6 @@ final class OpenGLContextImpl_WinAPI : OpenGLContextImpl {
         }
 
         if (wglCreateContext !is null && wglMakeCurrent !is null && wglDeleteContext !is null) {
-
             auto format = ChoosePixelFormat(_hdc, &pixelAttribs);
             SetPixelFormat(_hdc, format, &pixelAttribs);
 
